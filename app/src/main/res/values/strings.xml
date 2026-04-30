@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GitHubFinder</string>
+
+    <!-- Tabs -->
+    <string name="nav_search">検索</string>
+    <string name="nav_favorite">お気に入り</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Tutorial -->
+    <string name="tutorial_skip">スキップ</string>
+    <string name="tutorial_next">次へ</string>
+    <string name="tutorial_finish">はじめる</string>
+    <string name="tutorial_step_search_title">検索してみよう</string>
+    <string name="tutorial_step_search_description">キーワードを入力して\nGitHubリポジトリを検索できます</string>
+    <string name="tutorial_step_favorite_title">お気に入りに追加</string>
+    <string name="tutorial_step_favorite_description">ハートボタンをタップして\nお気に入りに追加しましょう</string>
+    <string name="tutorial_step_tab_title">お気に入り一覧</string>
+    <string name="tutorial_step_tab_description">お気に入りタブから\n保存したリポジトリを確認できます</string>
+</resources>

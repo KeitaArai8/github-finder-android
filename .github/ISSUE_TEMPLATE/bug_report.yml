@@ -1,0 +1,75 @@
+name: バグ報告
+description: アプリの不具合を報告する
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグ報告ありがとうございます。再現と修正のため、できるだけ詳しくご記入ください。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 不具合の概要
+      description: 何が起きたかを1-2文で
+      placeholder: お気に入りに追加後、検索画面のハートアイコンが赤く表示されない
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: ステップ番号付きで
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待される動作
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 端末 / Android バージョン
+      placeholder: Pixel 8 / Android 15 (API 35)
+    validations:
+      required: true
+
+  - type: input
+    id: gradle
+    attributes:
+      label: Gradle / AGP バージョン
+      placeholder: "Gradle 8.10 / AGP 8.7.3"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ / スクリーンショット
+      description: logcat 出力やクラッシュログ、画面キャプチャがあれば添付してください
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 確認事項
+      options:
+        - label: 既存の Issue を検索し、重複がないことを確認しました
+          required: true
+        - label: main ブランチの最新コードで再現することを確認しました
+          required: false

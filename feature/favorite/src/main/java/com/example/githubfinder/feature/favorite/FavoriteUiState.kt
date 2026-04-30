@@ -1,0 +1,98 @@
+/*
+ * Abstract:
+ * お気に入り一覧画面の集約UI状態。UDF単一状態原則に従い、
+ * フェーズ・リフレッシュ状態を1つのsealed interfaceに統合する。
+ * Loaded 内には sortKey / filterLanguage を保持し、表示用は displayedFavorites で導出する。
+ *
+ * 一度きりのイベント（SnackBar 表示、ナビゲーション）は FavoriteUiEvent として
+ * Channel 経由で View に流す（State には含めない）。これにより:
+ * - 画面回転やプロセス復帰時に古い SnackBar が再表示されない
+ * - State スナップショットが「画面の今の見た目」だけを表現する
+ */
+
+package com.example.githubfinder.feature.favorite
+
+import com.example.githubfinder.core.model.FavoriteEntity
+
+/** お気に入り一覧の並び替え基準。 */
+enum class FavoriteSortKey(val displayName: String) {
+    SAVED_AT_DESC("新しい順"),
+    STAR_COUNT_DESC("Star が多い順"),
+    FULL_NAME_ASC("名前順 (A→Z)"),
+}
+
+sealed interface FavoriteUiState {
+    data object Idle : FavoriteUiState
+
+    data object Loading : FavoriteUiState
+
+    data class Loaded(
+        val favorites: List<FavoriteEntity>,
+        val isRefreshing: Boolean = false,
+        val isEditMode: Boolean = false,
+        val selectedIDs: Set<Int> = emptySet(),
+        val isDeleteConfirmationShown: Boolean = false,
+        val sortKey: FavoriteSortKey = FavoriteSortKey.SAVED_AT_DESC,
+        val filterLanguage: String? = null,
+        /**
+         * Undo 待ちの削除 ID 集合。
+         * UI からは即座に消したい（楽観的更新）が、Room からは SnackBar timeout / 別 SnackBar 置換まで実削除しない。
+         * commit 後に Room から削除され、Flow 経由で favorites からも消える。
+         */
+        val pendingDeleteIDs: Set<Int> = emptySet(),
+    ) : FavoriteUiState {
+
+        /** 言語フィルタチップに出す選択肢（生データから抽出した重複なしソート済み）。 */
+        val availableLanguages: List<String>
+            get() = favorites.mapNotNull { it.language }.distinct().sorted()
+
+        /** sortKey/filterLanguage/pendingDelete を適用した表示用リスト。 */
+        val displayedFavorites: List<FavoriteEntity>
+            get() {
+                val visible = favorites.filter { it.id !in pendingDeleteIDs }
+                val filtered = if (filterLanguage != null) {
+                    visible.filter { it.language == filterLanguage }
+                } else {
+                    visible
+                }
+                return when (sortKey) {
+                    FavoriteSortKey.SAVED_AT_DESC -> filtered.sortedByDescending { it.savedAt }
+                    FavoriteSortKey.STAR_COUNT_DESC -> filtered.sortedByDescending { it.starCount }
+                    FavoriteSortKey.FULL_NAME_ASC -> filtered.sortedBy { it.fullName.lowercase() }
+                }
+            }
+
+        /**
+         * 表示中のお気に入りすべてが選択済みかどうか。
+         * 「全選択 ⇔ 全解除」トグルボタンのラベル切り替えに使う（iOS Photos.app 同等の defacto）。
+         * フィルタ後の表示集合に対する判定なので、フィルタ中は「表示中の全 5 件選択」で true になる。
+         */
+        val isAllSelected: Boolean
+            get() = displayedFavorites.isNotEmpty() &&
+                selectedIDs == displayedFavorites.map { it.id }.toSet()
+    }
+
+    data object Empty : FavoriteUiState
+
+    data class Error(val message: String) : FavoriteUiState
+}
+
+/**
+ * お気に入り画面の一度きりのイベント。
+ * State には含めず Channel 経由で発火する。
+ */
+sealed interface FavoriteUiEvent {
+    /**
+     * SnackBar を 1 回だけ表示するイベント。
+     * 「snackBar」と分割表記しているのは IDE の spell checker が "snackbar"（一語）を
+     * 辞書未登録扱いするため。意味は Material 3 の `Snackbar` と同一。
+     */
+    data class ShowSnackBar(val message: String) : FavoriteUiEvent
+
+    /**
+     * 削除に対する Undo 付き SnackBar を表示するイベント（Gmail スタイル）。
+     * - View 側で SnackbarResult.ActionPerformed → undoDelete(deletedID)
+     * - Dismissed (timeout / 置換) → commitDelete(deletedID)
+     */
+    data class ShowUndoDelete(val message: String, val deletedID: Int) : FavoriteUiEvent
+}

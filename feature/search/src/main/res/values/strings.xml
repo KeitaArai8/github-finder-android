@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_tab_title">検索</string>
+    <string name="search_placeholder">リポジトリを検索</string>
+    <string name="search_empty_idle_title">リポジトリを検索</string>
+    <string name="search_empty_idle_description">キーワードを入力して\nGitHubリポジトリを探しましょう</string>
+    <string name="search_empty_no_results_title">結果が見つかりません</string>
+    <string name="search_empty_no_results_description">別のキーワードで検索してみてください</string>
+    <string name="search_error_favorite_update">お気に入りの更新に失敗しました</string>
+    <string name="search_error_load_more">追加読み込みに失敗しました</string>
+</resources>

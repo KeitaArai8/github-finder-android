@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_tab_title">Search</string>
+    <string name="search_placeholder">Search repositories</string>
+    <string name="search_empty_idle_title">Search repositories</string>
+    <string name="search_empty_idle_description">Enter a keyword to\nfind GitHub repositories</string>
+    <string name="search_empty_no_results_title">No results found</string>
+    <string name="search_empty_no_results_description">Try a different keyword</string>
+    <string name="search_error_favorite_update">Failed to update favorite</string>
+    <string name="search_error_load_more">Failed to load more</string>
+</resources>

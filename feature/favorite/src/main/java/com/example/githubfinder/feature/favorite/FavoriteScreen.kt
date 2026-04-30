@@ -1,0 +1,633 @@
+/*
+ * Abstract:
+ * お気に入りリポジトリの一覧画面。
+ * 通常モード: スワイプ削除 / 行タップで GitHub ページを開く
+ * 編集モード: 複数選択 → 一括削除（確認ダイアログ付き）
+ */
+
+package com.example.githubfinder.feature.favorite
+
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.RemoveDone
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.example.githubfinder.core.designsystem.EmptyStateView
+import com.example.githubfinder.core.designsystem.ErrorView
+import com.example.githubfinder.core.designsystem.GitHubFinderTheme
+import com.example.githubfinder.core.designsystem.R as DesignR
+import com.example.githubfinder.core.designsystem.githubUrlFor
+import com.example.githubfinder.core.designsystem.launchCustomTab
+import com.example.githubfinder.core.model.FavoriteEntity
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavoriteScreen(
+    viewModel: FavoriteViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackBarHostState = remember { SnackbarHostState() }
+    val undoActionLabel = stringResource(R.string.favorite_undo_delete_action)
+
+    LaunchedEffect(Unit) { viewModel.load() }
+
+    // 一度きりイベント（SnackBar 表示）を Channel から消化。
+    // State から snackBarMessage を排除したことで、画面回転やプロセス復帰時に
+    // 過去の SnackBar が再表示される問題が発生しなくなった。
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is FavoriteUiEvent.ShowSnackBar -> snackBarHostState.showSnackbar(event.message)
+                is FavoriteUiEvent.ShowUndoDelete -> {
+                    // Gmail スタイル: 「元に戻す」をユーザが押す/押さないで Room への commit を分岐。
+                    // showSnackbar (Material 3 公式 API) は前の SnackBar を即座に dismiss してから新しい SnackBar を表示する仕様のため、
+                    // 連続スワイプ時は前の delete が自動 commit され、新しい Undo SnackBar に置き換わる（期待挙動）。
+                    val result = snackBarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = undoActionLabel,
+                        withDismissAction = false,
+                    )
+                    when (result) {
+                        SnackbarResult.ActionPerformed -> viewModel.undoDelete(event.deletedID)
+                        SnackbarResult.Dismissed -> viewModel.commitDelete(event.deletedID)
+                    }
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            FavoriteTopBar(state = uiState, viewModel = viewModel)
+        },
+        snackbarHost = { SnackbarHost(snackBarHostState) },
+    ) { padding ->
+        when (val state = uiState) {
+            is FavoriteUiState.Idle, is FavoriteUiState.Loading -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = stringResource(R.string.favorite_loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            is FavoriteUiState.Loaded -> {
+                val context = LocalContext.current
+                val displayed = state.displayedFavorites
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.load() },
+                    modifier = Modifier.padding(padding),
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // 編集モード中はフィルタ操作を抑止（誤操作防止）
+                        if (!state.isEditMode) {
+                            LanguageFilterBar(
+                                languages = state.availableLanguages,
+                                selected = state.filterLanguage,
+                                onSelect = { viewModel.setFilterLanguage(it) },
+                            )
+                        }
+                        if (displayed.isEmpty()) {
+                            // フィルタ後 0 件 — DesignSystem の EmptyStateView で他の Empty と統一感を出す
+                            EmptyStateView(
+                                icon = Icons.Default.FilterList,
+                                title = stringResource(R.string.favorite_filter_no_match_title),
+                                description = stringResource(R.string.favorite_filter_no_match_description),
+                            )
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(displayed, key = { it.id }) { favorite ->
+                                    FavoriteRow(
+                                        favorite = favorite,
+                                        isEditMode = state.isEditMode,
+                                        isSelected = state.selectedIDs.contains(favorite.id),
+                                        onDismiss = { viewModel.removeFavorite(favorite) },
+                                        onRowTap = {
+                                            if (state.isEditMode) {
+                                                viewModel.toggleSelection(favorite.id)
+                                            } else {
+                                                launchCustomTab(context, githubUrlFor(favorite.fullName))
+                                            }
+                                        },
+                                        onShare = {
+                                            shareRepository(context, favorite.fullName)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if (state.isDeleteConfirmationShown) {
+                    DeleteConfirmationDialog(
+                        count = state.selectedIDs.size,
+                        onConfirm = { viewModel.confirmRemoveSelected() },
+                        onDismiss = { viewModel.cancelRemoveSelected() },
+                    )
+                }
+            }
+            is FavoriteUiState.Empty -> {
+                EmptyStateView(
+                    icon = Icons.Filled.FavoriteBorder,
+                    title = stringResource(R.string.favorite_empty_title),
+                    description = stringResource(R.string.favorite_empty_description),
+                    modifier = Modifier.padding(padding),
+                )
+            }
+            is FavoriteUiState.Error -> {
+                ErrorView(
+                    message = state.message,
+                    onRetry = { viewModel.load() },
+                    modifier = Modifier.padding(padding),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel) {
+    val loaded = state as? FavoriteUiState.Loaded
+    when {
+        loaded?.isEditMode == true -> {
+            TopAppBar(
+                title = { Text(stringResource(R.string.favorite_selected_count, loaded.selectedIDs.size)) },
+                navigationIcon = {
+                    IconButton(onClick = { viewModel.exitEditMode() }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.favorite_exit_edit_mode),
+                        )
+                    }
+                },
+                actions = {
+                    SelectAllToggleButton(
+                        isAllSelected = loaded.isAllSelected,
+                        onToggle = { viewModel.toggleSelectAll() },
+                    )
+                    IconButton(
+                        onClick = { viewModel.requestRemoveSelected() },
+                        enabled = loaded.selectedIDs.isNotEmpty(),
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.favorite_delete_action),
+                            tint = if (loaded.selectedIDs.isNotEmpty()) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                    // iOS と同じ「完了」テキストボタン（Close icon と並列で提供し、ユーザに馴染みやすい選択肢を残す）
+                    TextButton(onClick = { viewModel.exitEditMode() }) {
+                        Text(stringResource(R.string.favorite_done_edit))
+                    }
+                },
+            )
+        }
+        else -> {
+            TopAppBar(
+                title = { Text(stringResource(R.string.favorite_tab_title)) },
+                actions = {
+                    if (loaded != null) {
+                        SortMenuButton(
+                            currentSortKey = loaded.sortKey,
+                            onSortSelected = { viewModel.setSortKey(it) },
+                        )
+                        TextButton(onClick = { viewModel.enterEditMode() }) {
+                            Text(stringResource(R.string.favorite_edit))
+                        }
+                    }
+                },
+            )
+        }
+    }
+}
+
+/**
+ * 「全選択 ⇔ 全解除」トグル。状態に応じてアイコンと a11y ラベルが切り替わる。
+ * 判定ロジック (isAllSelected) は ViewModel 側に集約済みで、ここはそれを描画するだけ。
+ */
+@Composable
+private fun SelectAllToggleButton(
+    isAllSelected: Boolean,
+    onToggle: () -> Unit,
+) {
+    val labelRes = if (isAllSelected) R.string.favorite_deselect_all else R.string.favorite_select_all
+    val icon = if (isAllSelected) Icons.Default.RemoveDone else Icons.Default.DoneAll
+    IconButton(onClick = onToggle) {
+        Icon(
+            imageVector = icon,
+            contentDescription = stringResource(labelRes),
+        )
+    }
+}
+
+@Composable
+private fun SortMenuButton(
+    currentSortKey: FavoriteSortKey,
+    onSortSelected: (FavoriteSortKey) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Default.SwapVert,
+                contentDescription = "並び替え",
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            FavoriteSortKey.entries.forEach { key ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = key.displayName,
+                            // 現在選択中の項目は太字表示で区別
+                            style = if (key == currentSortKey) {
+                                MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            } else {
+                                MaterialTheme.typography.bodyMedium
+                            },
+                        )
+                    },
+                    onClick = {
+                        onSortSelected(key)
+                        expanded = false
+                    },
+                    leadingIcon = if (key == currentSortKey) {
+                        { Icon(Icons.Default.CheckCircle, contentDescription = null) }
+                    } else null,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageFilterBar(
+    languages: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+) {
+    if (languages.isEmpty()) return
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // iOS と統一：FilterChip 自体の選択色変化のみで状態を表現し、leading icon は持たない
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text("すべて") },
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        languages.forEach { language ->
+            FilterChip(
+                // 同じ言語をタップで選択解除（トグル動作）
+                selected = selected == language,
+                onClick = { onSelect(if (selected == language) null else language) },
+                label = { Text(language) },
+                colors = FilterChipDefaults.filterChipColors(),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+    }
+}
+
+/** リポジトリの GitHub URL を Android 標準のシェアシートで共有する。 */
+private fun shareRepository(context: android.content.Context, fullName: String) {
+    val url = githubUrlFor(fullName)
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, url)
+        putExtra(Intent.EXTRA_SUBJECT, fullName)
+    }
+    context.startActivity(Intent.createChooser(sendIntent, "リポジトリをシェア"))
+}
+
+@Composable
+private fun DeleteConfirmationDialog(
+    count: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.favorite_delete_confirmation_title, count)) },
+        text = { Text(stringResource(R.string.favorite_delete_confirmation_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.favorite_delete_action), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(DesignR.string.common_cancel))
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FavoriteRow(
+    favorite: FavoriteEntity,
+    isEditMode: Boolean,
+    isSelected: Boolean,
+    onDismiss: () -> Unit,
+    onRowTap: () -> Unit,
+    onShare: () -> Unit,
+) {
+    // 編集モード中はスワイプ削除・シェアを無効化する（誤操作防止）
+    if (isEditMode) {
+        RowContent(
+            favorite = favorite,
+            isEditMode = true,
+            isSelected = isSelected,
+            onRowTap = onRowTap,
+            onShare = null,
+        )
+    } else {
+        val dismissState = rememberSwipeToDismissBoxState(
+            confirmValueChange = {
+                if (it == SwipeToDismissBoxValue.EndToStart) {
+                    onDismiss()
+                    true
+                } else false
+            },
+        )
+        SwipeToDismissBox(
+            state = dismissState,
+            // ★ 段階的 UX: 左スワイプで RowContent がずれた分だけ赤背景 + ゴミ箱が露出する。
+            //   完全スワイプで初めて削除実行されるため、ユーザは途中で離して取り消せる。
+            //   ※ background は常にフル描画。手前の RowContent が opaque surface のため、
+            //     スワイプしていない間は完全に隠れる（Material 3 標準パターン）。
+            backgroundContent = { DismissBackground() },
+            // 右方向スワイプ（StartToEnd）は機能割当なしのため無効化
+            enableDismissFromStartToEnd = false,
+        ) {
+            RowContent(
+                favorite = favorite,
+                isEditMode = false,
+                isSelected = false,
+                onRowTap = onRowTap,
+                onShare = onShare,
+            )
+        }
+    }
+}
+
+/**
+ * SwipeToDismissBox の背景に出る削除アクションのビジュアル。
+ *
+ * 仕組み:
+ * - この background は常にフル不透明で配置される（赤背景 + 右端ゴミ箱）
+ * - 手前の RowContent が不透明な surface 背景を持つため、スワイプしていない間は隠れる
+ * - 左スワイプで RowContent が左にずれると、ずれた分だけ赤がめくれて見える ＝ Material 3 標準挙動
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DismissBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.errorContainer),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier
+                .padding(end = 24.dp)
+                .size(28.dp),
+        )
+    }
+}
+
+@Composable
+private fun RowContent(
+    favorite: FavoriteEntity,
+    isEditMode: Boolean,
+    isSelected: Boolean,
+    onRowTap: () -> Unit,
+    onShare: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // ★ 必須: SwipeToDismissBox の backgroundContent（赤）が透けないよう surface 色で塗りつぶす。
+            //   これがないと、スワイプしていなくても背景の赤が常に表示される。
+            //   .clickable より前に置くことで、ripple が surface 上で正しく描画される。
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onRowTap)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isEditMode) {
+            Icon(
+                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                contentDescription = stringResource(
+                    if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected
+                ),
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+        AsyncImage(
+            model = favorite.ownerAvatarURL,
+            contentDescription = null,
+            placeholder = ColorPainter(Color.Gray.copy(alpha = 0.3f)),
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(favorite.fullName, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            favorite.description?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
+                Text("${favorite.starCount}", style = MaterialTheme.typography.labelSmall)
+                favorite.language?.let {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (onShare != null) {
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "${favorite.fullName} をシェア",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+private fun previewFavorite(
+    id: Int,
+    fullName: String,
+    starCount: Int,
+    language: String? = "Kotlin",
+): FavoriteEntity = FavoriteEntity(
+    id = id,
+    fullName = fullName,
+    description = "Sample repository description",
+    starCount = starCount,
+    language = language,
+    ownerAvatarURL = null,
+    savedAt = 0L,
+)
+
+@Preview(name = "Row - 通常")
+@Composable
+private fun RowContentNormalPreview() {
+    GitHubFinderTheme {
+        RowContent(
+            favorite = previewFavorite(1, "jetpackcompose/samples", 12_500),
+            isEditMode = false,
+            isSelected = false,
+            onRowTap = {},
+            onShare = {},
+        )
+    }
+}
+
+@Preview(name = "Row - 編集モード（未選択）")
+@Composable
+private fun RowContentEditModePreview() {
+    GitHubFinderTheme {
+        RowContent(
+            favorite = previewFavorite(2, "android/architecture-samples", 44_000),
+            isEditMode = true,
+            isSelected = false,
+            onRowTap = {},
+            onShare = null,
+        )
+    }
+}
+
+@Preview(name = "Row - 編集モード（選択中）")
+@Composable
+private fun RowContentSelectedPreview() {
+    GitHubFinderTheme {
+        RowContent(
+            favorite = previewFavorite(3, "android/nowinandroid", 17_500, language = "Kotlin"),
+            isEditMode = true,
+            isSelected = true,
+            onRowTap = {},
+            onShare = null,
+        )
+    }
+}
+
+@Preview(name = "LanguageFilterBar")
+@Composable
+private fun LanguageFilterBarPreview() {
+    GitHubFinderTheme {
+        LanguageFilterBar(
+            languages = listOf("Kotlin", "Swift", "TypeScript", "Rust"),
+            selected = "Kotlin",
+            onSelect = {},
+        )
+    }
+}
+
+@Preview(name = "Delete Confirmation Dialog")
+@Composable
+private fun DeleteConfirmationDialogPreview() {
+    GitHubFinderTheme {
+        DeleteConfirmationDialog(count = 3, onConfirm = {}, onDismiss = {})
+    }
+}
+

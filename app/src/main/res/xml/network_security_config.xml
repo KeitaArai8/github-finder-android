@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 全ドメインで平文通信（cleartext）を禁止する。
+         HTTPSのみを許可することで、中間者攻撃や通信盗聴のリスクを明示的に排除。 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,0 +1,82 @@
+/*
+ * Abstract:
+ * コーチマーク型チュートリアルのステップ管理と表示制御。
+ * :core:designsystem 配下に置くことで feature 層からも参照可能にしている。
+ */
+
+package com.example.githubfinder.core.designsystem.tutorial
+
+import androidx.compose.ui.geometry.Rect
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/**
+ * チュートリアルの表示ステップ。表示文言は各 UI 層で stringResource 経由で解決する
+ * （localization 対応のため、enum には文字列を持たせない）。
+ */
+enum class CoachMarkStep {
+    SearchBar,
+    FavoriteButton,
+    FavoriteTab,
+}
+
+@Singleton
+class CoachMarkManager @Inject constructor(
+    private val tutorialDataSource: TutorialLocalDataSource,
+) {
+    private val _currentStep = MutableStateFlow<CoachMarkStep?>(null)
+    val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
+
+    private val _isActive = MutableStateFlow(false)
+    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+
+    private val _targetRects = MutableStateFlow<Map<CoachMarkStep, Rect>>(emptyMap())
+    val targetRects: StateFlow<Map<CoachMarkStep, Rect>> = _targetRects.asStateFlow()
+
+    fun updateTargetRect(step: CoachMarkStep, rect: Rect) {
+        _targetRects.update { current -> current + (step to rect) }
+    }
+
+    fun startIfNeeded() {
+        if (tutorialDataSource.hasCompleted) return
+        _isActive.value = true
+        _currentStep.value = CoachMarkStep.SearchBar
+    }
+
+    fun next() {
+        val current = _currentStep.value ?: return
+        val steps = CoachMarkStep.entries
+        val currentIndex = steps.indexOf(current)
+        val nextIndex = currentIndex + 1
+
+        if (nextIndex < steps.size) {
+            _currentStep.value = steps[nextIndex]
+        } else {
+            complete()
+        }
+    }
+
+    /**
+     * 特定の操作（検索成功、お気に入り追加、タブ切替など）が完了したタイミングで
+     * 次のステップへ進める。現在ステップが一致しないときは何もしない（冪等）。
+     */
+    fun advance(after: CoachMarkStep) {
+        if (!_isActive.value) return
+        if (_currentStep.value != after) return
+        next()
+    }
+
+    fun skip() {
+        complete()
+    }
+
+    private fun complete() {
+        _currentStep.value = null
+        _isActive.value = false
+        tutorialDataSource.markCompleted()
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_tab_title">設定</string>
+    <string name="settings_section_legal">法的情報</string>
+    <string name="settings_section_app">アプリ情報</string>
+    <string name="settings_privacy_policy">プライバシーポリシー</string>
+    <string name="settings_terms_of_service">利用規約</string>
+    <string name="settings_version">バージョン</string>
+</resources>

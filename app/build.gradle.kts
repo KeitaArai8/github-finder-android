@@ -1,0 +1,43 @@
+/*
+ * App ターゲット。
+ * Convention Plugin により compileSdk / minSdk / Compose / Hilt の標準設定を継承。
+ * このファイルでは「app 固有の設定」と「依存」のみ記述する。
+ */
+
+plugins {
+    alias(libs.plugins.githubfinder.android.application)
+    alias(libs.plugins.githubfinder.android.application.compose)
+    alias(libs.plugins.githubfinder.android.hilt)
+}
+
+android {
+    namespace = "com.example.githubfinder"
+    defaultConfig {
+        applicationId = "com.example.githubfinder"
+        versionCode = 1
+        versionName = "1.0"
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+}
+
+dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:data"))
+    implementation(project(":core:network"))
+    implementation(project(":core:database"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":feature:search"))
+    implementation(project(":feature:favorite"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:widget"))
+
+    implementation(libs.activity.compose)
+    implementation(libs.navigation.compose)
+    implementation(libs.hilt.navigation.compose)
+
+    implementation(libs.timber)
+}

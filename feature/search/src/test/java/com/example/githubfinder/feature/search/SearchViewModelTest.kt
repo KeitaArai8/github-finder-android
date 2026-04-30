@@ -1,0 +1,543 @@
+package com.example.githubfinder.feature.search
+
+import app.cash.turbine.test
+import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.model.AppError
+import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.model.SearchResultEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class SearchViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private lateinit var fakeSearchRepository: FakeSearchRepository
+    private lateinit var fakeFavoriteRepository: FakeFavoriteRepository
+    private lateinit var favoriteStore: FavoriteStore
+    private lateinit var fakeSearchHistoryDataSource: FakeSearchHistoryDataSource
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        fakeSearchRepository = FakeSearchRepository()
+        fakeFavoriteRepository = FakeFavoriteRepository()
+        favoriteStore = FavoriteStore(fakeFavoriteRepository)
+        fakeSearchHistoryDataSource = FakeSearchHistoryDataSource()
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun createViewModel() = SearchViewModel(
+        searchRepository = fakeSearchRepository,
+        favoriteStore = favoriteStore,
+        searchHistoryDataSource = fakeSearchHistoryDataSource,
+    )
+
+    @Test
+    fun `初期状態はIdleである`() = runTest {
+        val viewModel = createViewModel()
+        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
+    }
+
+    @Test
+    fun `検索成功時にLoaded状態になる`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "owner/repo",
+            description = "test",
+            starCount = 100,
+            language = "Kotlin",
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+
+        // Act:
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+
+        // Assert:
+        val state = viewModel.uiState.value
+        assertTrue("Expected Loaded, got $state", state is SearchUiState.Loaded)
+        val items = (state as SearchUiState.Loaded).items
+        assertEquals(1, items.size)
+        assertEquals("owner/repo", items[0].fullName)
+    }
+
+    @Test
+    fun `検索結果が空の場合Empty状態になる`() = runTest {
+        // Arrange:
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+
+        // Act:
+        viewModel.onQueryChanged("nonexistent")
+        advanceUntilIdle()
+
+        // Assert:
+        assertTrue(viewModel.uiState.value is SearchUiState.Empty)
+    }
+
+    @Test
+    fun `検索失敗時にError状態になる`() = runTest {
+        // Arrange:
+        fakeSearchRepository.searchResult = Result.failure(AppError.Network)
+        val viewModel = createViewModel()
+
+        // Act:
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Assert:
+        assertTrue(viewModel.uiState.value is SearchUiState.Error)
+    }
+
+    @Test
+    fun `クエリを空にするとIdle状態に戻る`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act:
+        viewModel.onQueryChanged("")
+        advanceUntilIdle()
+
+        // Assert:
+        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
+    }
+
+    @Test
+    fun `お気に入りトグルでisFavoriteがtrueになる`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 42,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act:
+        val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+        viewModel.toggleFavorite(item)
+        advanceUntilIdle()
+
+        // Assert:
+        val updatedItem = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+        assertTrue(updatedItem.isFavorite)
+        assertEquals(1, fakeFavoriteRepository.addCallCount)
+    }
+
+    @Test
+    fun `お気に入り解除でisFavoriteがfalseになる`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 42,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        fakeFavoriteRepository.favoriteIDs = mutableSetOf(42)
+        fakeFavoriteRepository.favorites = mutableListOf(
+            FavoriteEntity(
+                id = 42,
+                fullName = "owner/repo",
+                description = null,
+                starCount = 10,
+                language = null,
+                ownerAvatarURL = null,
+                savedAt = 0L,
+            )
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act:
+        val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+        assertTrue(item.isFavorite)
+        viewModel.toggleFavorite(item)
+        advanceUntilIdle()
+
+        // Assert:
+        val updatedItem = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+        assertTrue(!updatedItem.isFavorite)
+        assertEquals(1, fakeFavoriteRepository.removeCallCount)
+    }
+
+    @Test
+    fun `onLoadMoreで次ページが追加される`() = runTest {
+        // Arrange:
+        val page1Repo = RepositoryEntity(
+            id = 1,
+            fullName = "page1/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(page1Repo), hasNextPage = true)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act:
+        val page2Repo = RepositoryEntity(
+            id = 2,
+            fullName = "page2/repo",
+            description = null,
+            starCount = 5,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(page2Repo), hasNextPage = false)
+        )
+        viewModel.onLoadMore()
+        advanceUntilIdle()
+
+        // Assert:
+        val items = (viewModel.uiState.value as SearchUiState.Loaded).items
+        assertEquals(2, items.size)
+        assertEquals("page1/repo", items[0].fullName)
+        assertEquals("page2/repo", items[1].fullName)
+        assertEquals(2, fakeSearchRepository.lastSearchPage)
+    }
+
+    @Test
+    fun `スペースのみのクエリはIdleにリセットされる`() = runTest {
+        // Arrange: 検索済み状態を作る
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is SearchUiState.Loaded)
+
+        // Act: スペースのみ入力
+        viewModel.onQueryChanged("   ")
+        advanceUntilIdle()
+
+        // Assert: Idle にリセット
+        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
+    }
+
+    @Test
+    fun `ページ追加読み込み失敗時に既存データが維持される`() = runTest {
+        // Arrange: 1ページ目を表示
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "page1/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act: 2ページ目でエラー
+        fakeSearchRepository.searchResult = Result.failure(AppError.Network)
+        viewModel.onLoadMore()
+        advanceUntilIdle()
+
+        // Assert: 1ページ目のデータが維持される + isLoadingMore=false
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Loaded)
+        val loaded = state as SearchUiState.Loaded
+        assertEquals(1, loaded.items.size)
+        assertEquals("page1/repo", loaded.items[0].fullName)
+        assertEquals(false, loaded.isLoadingMore)
+    }
+
+    @Test
+    fun `お気に入り追加失敗時にShowSnackBarイベントが発火する`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 42,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        fakeFavoriteRepository.shouldThrowOnAdd = true
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act + Assert: Turbine で events Flow を購読
+        viewModel.events.test {
+            val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+            viewModel.toggleFavorite(item)
+            advanceUntilIdle()
+
+            val event = awaitItem()
+            assertTrue(event is SearchUiEvent.ShowSnackBar)
+            assertEquals("お気に入りの更新に失敗しました", (event as SearchUiEvent.ShowSnackBar).message)
+        }
+    }
+
+    @Test
+    fun `onRefreshで再検索が実行され結果が更新される`() = runTest {
+        // Arrange: 初回検索
+        val repo1 = RepositoryEntity(
+            id = 1,
+            fullName = "old/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo1), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act: 新しいデータで再検索
+        val repo2 = RepositoryEntity(
+            id = 2,
+            fullName = "new/repo",
+            description = null,
+            starCount = 5,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo2), hasNextPage = false)
+        )
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // Assert: 新しいデータに更新
+        val items = (viewModel.uiState.value as SearchUiState.Loaded).items
+        assertEquals(1, items.size)
+        assertEquals("new/repo", items[0].fullName)
+    }
+
+    @Test
+    fun `hasNextPageがfalseの場合onLoadMoreは何もしない`() = runTest {
+        // Arrange: hasNextPage = false
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+        val callCountBefore = fakeSearchRepository.searchCallCount
+
+        // Act:
+        viewModel.onLoadMore()
+        advanceUntilIdle()
+
+        // Assert: 追加のAPI呼び出しなし
+        assertEquals(callCountBefore, fakeSearchRepository.searchCallCount)
+    }
+
+    @Test
+    fun `検索成功時に履歴に追加される`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+
+        // Act:
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+
+        // Assert: 履歴に "kotlin" が追加されている
+        assertEquals(1, fakeSearchHistoryDataSource.addCallCount)
+        assertEquals("kotlin", fakeSearchHistoryDataSource.lastAddedQuery)
+    }
+
+    @Test
+    fun `Idle状態でhistoryが反映される`() = runTest {
+        // Arrange: 履歴をシード
+        fakeSearchHistoryDataSource.setHistoryForTest(listOf("swift", "compose"))
+        val viewModel = createViewModel()
+
+        // Act: ViewModel 起動後に履歴 Flow が反映される
+        advanceUntilIdle()
+
+        // Assert: Idle.history に履歴が反映される
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Idle)
+        assertEquals(listOf("swift", "compose"), (state as SearchUiState.Idle).history)
+    }
+
+    @Test
+    fun `selectHistoryで即時検索が実行される`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+
+        // Act: 履歴から選択
+        viewModel.selectHistory("kotlin")
+        advanceUntilIdle()
+
+        // Assert: 検索クエリが反映され、Loaded 状態に遷移する
+        val state = viewModel.uiState.value
+        assertTrue("Expected Loaded, got $state", state is SearchUiState.Loaded)
+        assertEquals("kotlin", state.searchQuery)
+    }
+
+    @Test
+    fun `clearHistoryで履歴が全消去される`() = runTest {
+        // Arrange:
+        fakeSearchHistoryDataSource.setHistoryForTest(listOf("a", "b", "c"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act:
+        viewModel.clearHistory()
+        advanceUntilIdle()
+
+        // Assert: history Flow が空になる → Idle.history も空
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Idle)
+        assertTrue((state as SearchUiState.Idle).history.isEmpty())
+    }
+
+    @Test
+    fun `Loaded状態からクエリ消去でIdleに戻る際 履歴が反映される（combine 経由）`() = runTest {
+        // Arrange: 初期履歴をシード + 検索成功で Loaded 状態にする
+        fakeSearchHistoryDataSource.setHistoryForTest(listOf("kotlin", "swift"))
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("compose")
+        advanceUntilIdle()
+        // 検索成功で Loaded、かつ DataStore に "compose" が追加されている状態
+        assertTrue(viewModel.uiState.value is SearchUiState.Loaded)
+
+        // Act: クエリを空にして Idle に戻す
+        viewModel.onQueryChanged("")
+        advanceUntilIdle()
+
+        // Assert: Idle.history に最新スナップショット（"compose" が先頭の履歴）が反映される
+        // ※ combine + stateIn により、phase 遷移と同時に履歴 Flow の最新値が自動的に合成される
+        //   （手動キャッシュ不要・宣言的なリアクティブパターン）
+        val state = viewModel.uiState.value
+        assertTrue("Expected Idle, got $state", state is SearchUiState.Idle)
+        val idle = state as SearchUiState.Idle
+        assertEquals(listOf("compose", "kotlin", "swift"), idle.history)
+    }
+
+    @Test
+    fun `存在しないIDのtoggleFavoriteは何もしない`() = runTest {
+        // Arrange:
+        val repo = RepositoryEntity(
+            id = 1,
+            fullName = "owner/repo",
+            description = null,
+            starCount = 10,
+            language = null,
+            ownerAvatarURL = null,
+        )
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act: 存在しないIDでtoggle
+        val fakeItem = com.example.githubfinder.core.model.RepositoryDisplayItem.from(
+            RepositoryEntity(
+                id = 999,
+                fullName = "fake/repo",
+                description = null,
+                starCount = 0,
+                language = null,
+                ownerAvatarURL = null,
+            ),
+            isFavorite = false,
+        )
+        viewModel.toggleFavorite(fakeItem)
+        advanceUntilIdle()
+
+        // Assert: addもremoveも呼ばれない
+        assertEquals(0, fakeFavoriteRepository.addCallCount)
+        assertEquals(0, fakeFavoriteRepository.removeCallCount)
+    }
+
+}

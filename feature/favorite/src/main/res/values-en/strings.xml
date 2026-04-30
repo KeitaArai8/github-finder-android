@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_tab_title">Favorites</string>
+    <string name="favorite_empty_title">No favorites yet</string>
+    <string name="favorite_empty_description">Add repositories to favorites\nfrom the search screen</string>
+    <string name="favorite_loading">Loading…</string>
+
+    <!-- Edit mode -->
+    <string name="favorite_edit">Edit</string>
+    <string name="favorite_done_edit">Done</string>
+    <string name="favorite_selected_count">%1$d selected</string>
+    <string name="favorite_select_all">Select All</string>
+    <string name="favorite_deselect_all">Deselect All</string>
+    <string name="favorite_exit_edit_mode">Exit edit mode</string>
+    <string name="favorite_delete_action">Delete</string>
+
+    <!-- Delete confirmation -->
+    <string name="favorite_delete_confirmation_title">Delete %1$d favorites?</string>
+    <string name="favorite_delete_confirmation_message">This action cannot be undone.</string>
+
+    <!-- No filter match -->
+    <string name="favorite_filter_no_match_title">No matching repositories</string>
+    <string name="favorite_filter_no_match_description">Change the filter</string>
+
+    <!-- Swipe to delete (Gmail-style Undo) -->
+    <string name="favorite_undo_delete_action">Undo</string>
+
+    <!-- Errors -->
+    <string name="favorite_error_delete">Failed to delete favorite</string>
+</resources>

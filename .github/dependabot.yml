@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Gradle 依存（Retrofit / OkHttp / Room / Hilt / Compose BOM 等の更新 PR を自動生成）
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "android"
+    commit-message:
+      prefix: "chore(deps)"
+    # Compose BOM など、大きなバージョンアップは手動確認するためにグループ化
+    groups:
+      compose:
+        patterns:
+          - "androidx.compose*"
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+      hilt:
+        patterns:
+          - "com.google.dagger*"
+
+  # GitHub Actions の action バージョン更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"

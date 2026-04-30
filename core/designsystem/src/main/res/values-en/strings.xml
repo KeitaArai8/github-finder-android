@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common actions -->
+    <string name="common_retry">Retry</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_ok">OK</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_done">Done</string>
+    <string name="common_close">Close</string>
+
+    <!-- Common state labels -->
+    <string name="common_error">Error</string>
+    <string name="common_loading">Loading...</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_favorite_add">Add to favorites</string>
+    <string name="a11y_favorite_remove">Remove from favorites</string>
+    <string name="a11y_selected">Selected</string>
+    <string name="a11y_unselected">Not selected</string>
+    <string name="a11y_clear">Clear</string>
+    <string name="a11y_double_tap_toggle">Double tap to toggle</string>
+    <string name="a11y_double_tap_open">Double tap to open GitHub page</string>
+    <string name="a11y_double_tap_select">Double tap to select or deselect</string>
+</resources>

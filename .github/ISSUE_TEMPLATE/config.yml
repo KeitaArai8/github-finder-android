@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 質問・議論
+    url: https://github.com/k-arai/GitHubFinderAndroid/discussions
+    about: バグ報告・機能要望以外の質問や議論は Discussions へお願いします
+  - name: 🔒 セキュリティ脆弱性の報告
+    url: https://github.com/k-arai/GitHubFinderAndroid/security/advisories/new
+    about: 公開 Issue ではなく Private Security Advisory からご報告ください

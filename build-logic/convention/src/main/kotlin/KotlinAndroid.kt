@@ -15,14 +15,14 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
  * compileSdk / minSdk は全モジュール共通。
  */
 internal fun Project.configureKotlinAndroid(
-    commonExtension: CommonExtension<*, *, *, *, *, *>,
+    commonExtension: CommonExtension,
 ) {
     commonExtension.apply {
         compileSdk = 35
-        defaultConfig {
+        defaultConfig.apply {
             minSdk = 26
         }
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = JavaVersion.VERSION_17
             targetCompatibility = JavaVersion.VERSION_17
         }

@@ -9,7 +9,7 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
 internal fun Project.configureAndroidCompose(
-    @Suppress("UNUSED_PARAMETER") commonExtension: CommonExtension<*, *, *, *, *, *>,
+    @Suppress("UNUSED_PARAMETER") commonExtension: CommonExtension,
 ) {
     val bom = libs.findLibrary("compose-bom").get()
     val ui = libs.findLibrary("compose-ui").get()

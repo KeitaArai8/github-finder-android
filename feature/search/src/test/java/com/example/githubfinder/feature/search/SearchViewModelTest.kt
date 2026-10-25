@@ -1,6 +1,5 @@
 package com.example.githubfinder.feature.search
 
-import app.cash.turbine.test
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
@@ -8,7 +7,10 @@ import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -42,11 +44,17 @@ class SearchViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = SearchViewModel(
+    /**
+     * uiState は stateIn(WhileSubscribed) のため、購読者がいないと upstream が動かず value が更新されない。
+     * 画面（collectAsStateWithLifecycle）相当の購読者を backgroundScope に常駐させる。
+     */
+    private fun TestScope.createViewModel() = SearchViewModel(
         searchRepository = fakeSearchRepository,
         favoriteStore = favoriteStore,
         searchHistoryDataSource = fakeSearchHistoryDataSource,
-    )
+    ).also { viewModel ->
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+    }
 
     @Test
     fun `初期状態はIdleである`() = runTest {
@@ -310,8 +318,8 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `お気に入り追加失敗時にShowSnackBarイベントが発火する`() = runTest {
-        // Arrange:
+    fun `お気に入り追加失敗時にuserMessagesへ通知が積まれuserMessageShownで消える`() = runTest {
+        // Arrange: 1件ヒットした検索結果を表示し、お気に入り追加が失敗するよう設定
         val repo = RepositoryEntity(
             id = 42,
             fullName = "owner/repo",
@@ -328,16 +336,49 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Act + Assert: Turbine で events Flow を購読
-        viewModel.events.test {
-            val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
-            viewModel.toggleFavorite(item)
-            advanceUntilIdle()
+        // Act: お気に入りをトグルして失敗させる
+        val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
+        viewModel.toggleFavorite(item)
+        advanceUntilIdle()
 
-            val event = awaitItem()
-            assertTrue(event is SearchUiEvent.ShowSnackBar)
-            assertEquals("お気に入りの更新に失敗しました", (event as SearchUiEvent.ShowSnackBar).message)
-        }
+        // Assert: 失敗文言の通知が 1 件だけ積まれている
+        val messages = viewModel.userMessages.value
+        assertEquals(1, messages.size)
+        assertEquals("お気に入りの更新に失敗しました", messages[0].text)
+
+        // Act: View が表示し終えたことを通知
+        viewModel.userMessageShown(messages[0].id)
+
+        // Assert: キューが空になる
+        assertTrue(viewModel.userMessages.value.isEmpty())
+    }
+
+    @Test
+    fun `追加読み込み失敗時にuserMessagesへ通知が積まれuserMessageShownで消える`() = runTest {
+        // Arrange: 次ページありの 1 ページ目を表示
+        val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Act: 2 ページ目の取得を失敗させる
+        fakeSearchRepository.searchResult = Result.failure(AppError.Network)
+        viewModel.onLoadMore()
+        advanceUntilIdle()
+
+        // Assert: 失敗文言の通知が 1 件だけ積まれている
+        val messages = viewModel.userMessages.value
+        assertEquals(1, messages.size)
+        assertEquals("追加読み込みに失敗しました", messages[0].text)
+
+        // Act: 表示完了を通知
+        viewModel.userMessageShown(messages[0].id)
+
+        // Assert: キューが空になる
+        assertTrue(viewModel.userMessages.value.isEmpty())
     }
 
     @Test

@@ -1,0 +1,4 @@
+# Runtime state — ローカルキャッシュ扱いのため commit しない
+*
+!.gitignore
+!.gitkeep

@@ -20,14 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.content.Intent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,7 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,6 +59,9 @@ import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.designsystem.R as DesignR
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,14 +73,16 @@ fun SearchScreen(
 
     LaunchedEffect(Unit) { viewModel.refreshFavoriteIDs() }
 
-    // 一度きりイベント（SnackBar 表示）を Channel から消化。
-    // State から snackBarMessage を排除したため、画面回転時の重複表示が起きない。
+    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is SearchUiEvent.ShowSnackBar -> snackBarHostState.showSnackbar(event.message)
+        viewModel.userMessages
+            .map { it.firstOrNull() }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collect { message ->
+                snackBarHostState.showSnackbar(message.text)
+                viewModel.userMessageShown(message.id)
             }
-        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -93,11 +91,11 @@ fun SearchScreen(
                 value = uiState.searchQuery,
                 onValueChange = { viewModel.onQueryChanged(it) },
                 placeholder = { Text(stringResource(R.string.search_placeholder)) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { viewModel.onQueryChanged("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = stringResource(DesignR.string.a11y_clear))
+                            Icon(AppIcons.Close, contentDescription = stringResource(DesignR.string.a11y_clear))
                         }
                     }
                 },
@@ -118,7 +116,7 @@ fun SearchScreen(
                 is SearchUiState.Idle -> {
                     if (state.history.isEmpty()) {
                         EmptyStateView(
-                            icon = Icons.Filled.Search,
+                            icon = AppIcons.Search,
                             title = stringResource(R.string.search_empty_idle_title),
                             description = stringResource(R.string.search_empty_idle_description),
                         )
@@ -155,7 +153,7 @@ fun SearchScreen(
                 }
                 is SearchUiState.Empty -> {
                     EmptyStateView(
-                        icon = Icons.Filled.Search,
+                        icon = AppIcons.Search,
                         title = stringResource(R.string.search_empty_no_results_title),
                         description = stringResource(R.string.search_empty_no_results_description),
                     )
@@ -247,7 +245,7 @@ private fun RepositoryRow(
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
+                Icon(AppIcons.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
                 Text("${item.starCount}", style = MaterialTheme.typography.labelSmall)
                 item.language?.let {
                     Spacer(modifier = Modifier.width(12.dp))
@@ -257,14 +255,14 @@ private fun RepositoryRow(
         }
         IconButton(onClick = onShare) {
             Icon(
-                imageVector = Icons.Default.Share,
+                imageVector = AppIcons.Share,
                 contentDescription = "${item.fullName} をシェア",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         IconButton(onClick = onFavoriteTap) {
             Icon(
-                imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                imageVector = if (item.isFavorite) AppIcons.Favorite else AppIcons.FavoriteBorder,
                 contentDescription = stringResource(
                     if (item.isFavorite) DesignR.string.a11y_favorite_remove
                     else DesignR.string.a11y_favorite_add
@@ -313,7 +311,7 @@ private fun SearchHistoryList(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = Icons.Default.History,
+                        imageVector = AppIcons.History,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
@@ -331,7 +329,7 @@ private fun SearchHistoryList(
                         modifier = Modifier.size(36.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = AppIcons.Close,
                             contentDescription = "$query を履歴から削除",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),

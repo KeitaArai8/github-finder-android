@@ -10,7 +10,6 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     testImplementation("junit:junit:4.13.2")
     testImplementation(libs.coroutines.test)

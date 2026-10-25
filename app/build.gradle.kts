@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.githubfinder.android.application)
     alias(libs.plugins.githubfinder.android.application.compose)
     alias(libs.plugins.githubfinder.android.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -36,8 +37,10 @@ dependencies {
     implementation(project(":feature:widget"))
 
     implementation(libs.activity.compose)
-    implementation(libs.navigation.compose)
-    implementation(libs.hilt.navigation.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.navigation3)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
 
     implementation(libs.timber)
 }

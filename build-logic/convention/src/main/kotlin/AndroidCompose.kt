@@ -17,7 +17,6 @@ internal fun Project.configureAndroidCompose(
     val uiToolingPreview = libs.findLibrary("compose-ui-tooling-preview").get()
     val uiTooling = libs.findLibrary("compose-ui-tooling").get()
     val material3 = libs.findLibrary("compose-material3").get()
-    val materialIcons = libs.findLibrary("compose-material-icons").get()
 
     dependencies {
         add("implementation", platform(bom))
@@ -26,7 +25,6 @@ internal fun Project.configureAndroidCompose(
         add("implementation", uiGraphics)
         add("implementation", uiToolingPreview)
         add("implementation", material3)
-        add("implementation", materialIcons)
         add("debugImplementation", uiTooling)
     }
 }

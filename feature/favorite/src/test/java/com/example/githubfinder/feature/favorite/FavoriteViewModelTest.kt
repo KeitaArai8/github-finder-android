@@ -1,13 +1,19 @@
 package com.example.githubfinder.feature.favorite
 
-import app.cash.turbine.test
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.model.FavoriteEntity
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -31,6 +37,9 @@ class FavoriteViewModelTest {
         favoriteStore = FavoriteStore(fakeFavoriteRepository)
     }
 
+    private fun createViewModel(applicationScope: CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))) =
+        FavoriteViewModel(favoriteStore, applicationScope)
+
     @After
     fun tearDown() {
         Dispatchers.resetMain()
@@ -38,13 +47,13 @@ class FavoriteViewModelTest {
 
     @Test
     fun `初期状態はIdleである`() = runTest {
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         assertTrue(viewModel.uiState.value is FavoriteUiState.Idle)
     }
 
     @Test
     fun `お気に入りがある場合Loaded状態になる`() = runTest {
-        // Arrange:
+        // Arrange: 1件のお気に入りを持つ Repository
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(
                 id = 1,
@@ -56,13 +65,13 @@ class FavoriteViewModelTest {
                 savedAt = 0L,
             )
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
 
-        // Act:
+        // Act: 一覧を読み込む
         viewModel.load()
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Loaded 状態で 1 件を保持している
         val state = viewModel.uiState.value
         assertTrue(state is FavoriteUiState.Loaded)
         assertEquals(1, (state as FavoriteUiState.Loaded).favorites.size)
@@ -70,21 +79,21 @@ class FavoriteViewModelTest {
 
     @Test
     fun `お気に入りが空の場合Empty状態になる`() = runTest {
-        // Arrange:
+        // Arrange: お気に入りが 0 件の Repository
         fakeFavoriteRepository.favorites = mutableListOf()
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
 
-        // Act:
+        // Act: load を実行する
         viewModel.load()
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Empty 状態になる
         assertTrue(viewModel.uiState.value is FavoriteUiState.Empty)
     }
 
     @Test
     fun `removeFavoriteは即座にpendingDeleteIDsへ追加されdisplayedからは消えるが favorites本体は残る（Gmail スタイル楽観的更新）`() = runTest {
-        // Arrange:
+        // Arrange: 2件（id=1,2）を読み込み済みにする
         val fav1 = FavoriteEntity(
             id = 1,
             fullName = "owner/repo1",
@@ -104,13 +113,13 @@ class FavoriteViewModelTest {
             savedAt = 0L,
         )
         fakeFavoriteRepository.favorites = mutableListOf(fav1, fav2)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act: スワイプ削除（commit はまだ）
+        // Act: スワイプ削除（Undo 猶予は経過させない = commit はまだ）
         viewModel.removeFavorite(fav1)
-        advanceUntilIdle()
+        runCurrent()
 
         // Assert: UI（displayedFavorites）からは消えるが、Room は触っていない（commit 待ち）
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
@@ -121,20 +130,20 @@ class FavoriteViewModelTest {
     }
 
     @Test
-    fun `commitDeleteでRoomから実削除されpendingがクリアされfavorites本体からも消える`() = runTest {
-        // Arrange:
+    fun `Undo猶予が経過するとRoomから実削除されpendingがクリアされfavorites本体からも消える`() = runTest {
+        // Arrange: 2件（id=1,2）を読み込み済みにする
         val fav1 = FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L)
         val fav2 = FavoriteEntity(2, "owner/repo2", null, 5, null, null, 0L)
         fakeFavoriteRepository.favorites = mutableListOf(fav1, fav2)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.removeFavorite(fav1)
-        advanceUntilIdle()
+        runCurrent()
 
-        // Act: SnackBar timeout 相当 → 実削除
-        viewModel.commitDelete(fav1.id)
-        advanceUntilIdle()
+        // Act: Undo せずに猶予時間を経過させる → ViewModel のタイマーが実削除
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
 
         // Assert: Room から削除され、pendingDeleteIDs もクリアされる
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
@@ -146,19 +155,21 @@ class FavoriteViewModelTest {
 
     @Test
     fun `undoDeleteでpendingから外れUIに行が復元される（Roomは触らない）`() = runTest {
-        // Arrange:
+        // Arrange: 1件（id=1）を読み込み済みにする
         val fav = FavoriteEntity(1, "owner/repo", null, 10, null, null, 0L)
         fakeFavoriteRepository.favorites = mutableListOf(fav)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.removeFavorite(fav)
-        advanceUntilIdle()
+        runCurrent()
 
-        // Act: 「元に戻す」アクション
+        // Act: 猶予内に「元に戻す」を実行し、その後に猶予時間を経過させる
         viewModel.undoDelete(fav.id)
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
 
-        // Assert: pending クリア、Room には commit していないので removeCallCount = 0
+        // Assert: pending クリア、タイマーもキャンセルされているので Room には触れず removeCallCount = 0
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertTrue(state.pendingDeleteIDs.isEmpty())
         assertEquals(1, state.displayedFavorites.size)
@@ -166,8 +177,8 @@ class FavoriteViewModelTest {
     }
 
     @Test
-    fun `最後の1件をcommitDeleteするとEmpty状態になる`() = runTest {
-        // Arrange:
+    fun `最後の1件のUndo猶予が経過するとEmpty状態になる`() = runTest {
+        // Arrange: 1件（id=1）を読み込み済みにする
         val fav = FavoriteEntity(
             id = 1,
             fullName = "owner/repo",
@@ -178,59 +189,145 @@ class FavoriteViewModelTest {
             savedAt = 0L,
         )
         fakeFavoriteRepository.favorites = mutableListOf(fav)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act: スワイプ → commit
+        // Act: スワイプ → 猶予経過で commit
         viewModel.removeFavorite(fav)
-        advanceUntilIdle()
-        viewModel.commitDelete(fav.id)
-        advanceUntilIdle()
+        runCurrent()
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
 
-        // Assert:
+        // Assert: 最後の 1 件が実削除され Empty 状態になる
         assertTrue(viewModel.uiState.value is FavoriteUiState.Empty)
     }
 
     @Test
-    fun `removeFavoriteでShowUndoDeleteイベントが発火する`() = runTest {
-        // Arrange:
+    fun `removeFavoriteでundoID付きの通知が積まれuserMessageShownで消える`() = runTest {
+        // Arrange: 1件読み込み済み
         val fav = FavoriteEntity(42, "owner/repo", null, 10, null, null, 0L)
         fakeFavoriteRepository.favorites = mutableListOf(fav)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act + Assert:
-        viewModel.events.test {
-            viewModel.removeFavorite(fav)
-            advanceUntilIdle()
+        // Act: スワイプ削除
+        viewModel.removeFavorite(fav)
+        runCurrent()
 
-            val event = awaitItem()
-            assertTrue(event is FavoriteUiEvent.ShowUndoDelete)
-            val undoEvent = event as FavoriteUiEvent.ShowUndoDelete
-            assertEquals(42, undoEvent.deletedID)
-            assertTrue(undoEvent.message.contains("owner/repo"))
-        }
+        // Assert: 削除対象 ID が pending に入り、undoID=42 の通知が 1 件積まれている
+        val state = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertTrue(42 in state.pendingDeleteIDs)
+        val messages = viewModel.userMessages.value
+        assertEquals(1, messages.size)
+        assertEquals(42, messages[0].undoID)
+        assertTrue(messages[0].text.contains("owner/repo"))
+
+        // Act: View が表示し終えたことを通知
+        viewModel.userMessageShown(messages[0].id)
+
+        // Assert: キューが空になる
+        assertTrue(viewModel.userMessages.value.isEmpty())
+    }
+
+    @Test
+    fun `連続して2件スワイプ削除し猶予が経過すると両方がRoomから実削除される`() = runTest {
+        // Arrange: 3件読み込み済み
+        val fav1 = FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L)
+        val fav2 = FavoriteEntity(2, "owner/repo2", null, 5, null, null, 0L)
+        val fav3 = FavoriteEntity(3, "owner/repo3", null, 1, null, null, 0L)
+        fakeFavoriteRepository.favorites = mutableListOf(fav1, fav2, fav3)
+        val viewModel = createViewModel()
+        viewModel.load()
+        advanceUntilIdle()
+
+        // Act: SnackBar の表示完了を待たずに 2 件続けてスワイプし、猶予を経過させる
+        viewModel.removeFavorite(fav1)
+        viewModel.removeFavorite(fav2)
+        runCurrent()
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
+
+        // Assert: 両方とも実削除され pending は空、残りは fav3 のみ（pending 取り残しなし）
+        assertEquals(2, fakeFavoriteRepository.removeCallCount)
+        val state = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertTrue(state.pendingDeleteIDs.isEmpty())
+        assertEquals(listOf(3), state.favorites.map { it.id })
+    }
+
+    @Test
+    fun `スワイプ削除の猶予中に ViewModel が破棄されると onCleared で実削除が確定する`() = runTest {
+        // Arrange: 2件読み込み済みで、ViewModelStore 管理下の ViewModel が id=1 をスワイプ削除した（猶予は未経過）
+        val fav1 = FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L)
+        val fav2 = FavoriteEntity(2, "owner/repo2", null, 5, null, null, 0L)
+        fakeFavoriteRepository.favorites = mutableListOf(fav1, fav2)
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = createViewModel() as T
+            },
+        )[FavoriteViewModel::class.java]
+        viewModel.load()
+        advanceUntilIdle()
+        viewModel.removeFavorite(fav1)
+        runCurrent()
+        assertEquals(0, fakeFavoriteRepository.removeCallCount)
+
+        // Act: タブ切替相当で ViewModel を破棄し、アプリ寿命スコープの処理まで進める（猶予時間は進めない）
+        viewModelStore.clear()
+        advanceUntilIdle()
+
+        // Assert: 猶予を待たずに id=1 だけが 1 回実削除されている
+        assertEquals(1, fakeFavoriteRepository.removeCallCount)
+        assertEquals(listOf(2), fakeFavoriteRepository.favorites.map { it.id })
+    }
+
+    @Test
+    fun `一括削除の確定時に猶予中のスワイプ削除は非表示のまま維持される`() = runTest {
+        // Arrange: 3件読み込み済みで、id=1 をスワイプ削除（猶予中）し、編集モードで id=2 を選択した
+        val fav1 = FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L)
+        val fav2 = FavoriteEntity(2, "owner/repo2", null, 5, null, null, 0L)
+        val fav3 = FavoriteEntity(3, "owner/repo3", null, 1, null, null, 0L)
+        fakeFavoriteRepository.favorites = mutableListOf(fav1, fav2, fav3)
+        val viewModel = createViewModel()
+        viewModel.load()
+        advanceUntilIdle()
+        viewModel.removeFavorite(fav1)
+        viewModel.enterEditMode()
+        viewModel.toggleSelection(2)
+        runCurrent()
+
+        // Act: 猶予内に一括削除を確定する（実削除されるのは id=2 のみ）
+        viewModel.confirmRemoveSelected()
+        runCurrent()
+
+        // Assert: id=1 は pending のまま表示に戻らず、編集モードも維持されている
+        val state = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertEquals(setOf(1), state.pendingDeleteIDs)
+        assertEquals(listOf(3), state.displayedFavorites.map { it.id })
+        assertTrue(state.isEditMode)
     }
 
     @Test
     fun `読み込み失敗時にError状態になる`() = runTest {
-        // Arrange:
+        // Arrange: getAll が例外を投げる Repository
         fakeFavoriteRepository.shouldThrowOnGetAll = true
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
 
-        // Act:
+        // Act: load を実行する
         viewModel.load()
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Error 状態になる
         assertTrue(viewModel.uiState.value is FavoriteUiState.Error)
     }
 
     @Test
-    fun `commitDelete失敗時にpendingが戻されShowSnackBarイベントが発火する`() = runTest {
-        // Arrange: 一旦スワイプ削除を発火（pending に追加）
+    fun `実削除の失敗時にpendingが戻され失敗通知が積まれる`() = runTest {
+        // Arrange: 1件読み込み済みで、実削除が失敗するよう設定
         val fav = FavoriteEntity(
             id = 1,
             fullName = "owner/repo",
@@ -241,45 +338,38 @@ class FavoriteViewModelTest {
             savedAt = 0L,
         )
         fakeFavoriteRepository.favorites = mutableListOf(fav)
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
+        fakeFavoriteRepository.shouldThrowOnRemove = true
 
-        // Act + Assert:
-        viewModel.events.test {
-            // スワイプ削除イベント（ShowUndoDelete）を消化
-            viewModel.removeFavorite(fav)
-            advanceUntilIdle()
-            assertTrue(awaitItem() is FavoriteUiEvent.ShowUndoDelete)
+        // Act: スワイプ削除し、Undo せずに猶予を経過させる（実削除が失敗する）
+        viewModel.removeFavorite(fav)
+        runCurrent()
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
 
-            // commit が失敗するように設定 → commit 実行
-            fakeFavoriteRepository.shouldThrowOnRemove = true
-            viewModel.commitDelete(fav.id)
-            advanceUntilIdle()
-
-            // 失敗時は pending から戻り、エラー SnackBar が出る
-            val errorEvent = awaitItem()
-            assertTrue(errorEvent is FavoriteUiEvent.ShowSnackBar)
-            assertEquals("お気に入りの削除に失敗しました", (errorEvent as FavoriteUiEvent.ShowSnackBar).message)
-
-            val state = viewModel.uiState.value as FavoriteUiState.Loaded
-            assertTrue(state.pendingDeleteIDs.isEmpty())
-            // 行が UI に復元される
-            assertEquals(1, state.displayedFavorites.size)
-        }
+        // Assert: pending から戻って行が復元され、削除通知に続いて失敗通知が積まれている
+        val state = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertTrue(state.pendingDeleteIDs.isEmpty())
+        assertEquals(1, state.displayedFavorites.size)
+        assertEquals(
+            listOf("「owner/repo」を削除しました", "お気に入りの削除に失敗しました"),
+            viewModel.userMessages.value.map { it.text },
+        )
     }
 
     @Test
     fun `読み込み失敗時にAppErrorのメッセージがError状態に反映される`() = runTest {
-        // Arrange:
+        // Arrange: getAll が AppError.Network を投げる Repository
         fakeFavoriteRepository.getAllError = com.example.githubfinder.core.model.AppError.Network
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
 
-        // Act:
+        // Act: load を実行する
         viewModel.load()
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Error 状態のメッセージに「ネットワーク」が含まれる
         val state = viewModel.uiState.value
         assertTrue(state is FavoriteUiState.Error)
         assertTrue((state as FavoriteUiState.Error).message.contains("ネットワーク"))
@@ -291,7 +381,7 @@ class FavoriteViewModelTest {
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(1, "owner/repo", null, 10, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
@@ -310,7 +400,7 @@ class FavoriteViewModelTest {
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(1, "owner/repo", null, 10, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -331,7 +421,7 @@ class FavoriteViewModelTest {
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(42, "owner/repo", null, 10, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -352,7 +442,7 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "owner/b", null, 0, null, null, 0L),
             FavoriteEntity(3, "owner/c", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -373,13 +463,13 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "b/kotlin1", null, 0, "Kotlin", null, 0L),
             FavoriteEntity(3, "c/swift2", null, 0, "Swift", null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
         viewModel.setFilterLanguage("Swift")
 
-        // Act:
+        // Act: selectAll を実行する
         viewModel.selectAll()
 
         // Assert: 表示中の Swift 2 件のみが選択され、非表示の Kotlin は含まれない
@@ -394,12 +484,12 @@ class FavoriteViewModelTest {
             FavoriteEntity(1, "owner/a", null, 0, null, null, 0L),
             FavoriteEntity(2, "owner/b", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
 
-        // Act:
+        // Act: toggleSelectAll を実行する
         viewModel.toggleSelectAll()
 
         // Assert: 全選択 + isAllSelected が true
@@ -415,14 +505,14 @@ class FavoriteViewModelTest {
             FavoriteEntity(1, "owner/a", null, 0, null, null, 0L),
             FavoriteEntity(2, "owner/b", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
         viewModel.selectAll()
         assertTrue((viewModel.uiState.value as FavoriteUiState.Loaded).isAllSelected)
 
-        // Act:
+        // Act: toggleSelectAll を実行する
         viewModel.toggleSelectAll()
 
         // Assert: 全解除 + isAllSelected が false
@@ -439,7 +529,7 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "owner/b", null, 0, null, null, 0L),
             FavoriteEntity(3, "owner/c", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -448,7 +538,7 @@ class FavoriteViewModelTest {
         // Act: 部分選択中のトグル → iOS Photos.app では「全選択」扱い
         viewModel.toggleSelectAll()
 
-        // Assert:
+        // Assert: 部分選択から全 3 件が選択され isAllSelected が true になる
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertEquals(setOf(1, 2, 3), state.selectedIDs)
         assertTrue(state.isAllSelected)
@@ -460,7 +550,7 @@ class FavoriteViewModelTest {
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(1, "owner/repo", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -482,7 +572,7 @@ class FavoriteViewModelTest {
             FavoriteEntity(3, "owner/c", null, 0, null, null, 0L),
         )
         fakeFavoriteRepository.favorites = initial
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -500,6 +590,8 @@ class FavoriteViewModelTest {
         assertEquals(3, state.favorites[0].id)
         assertTrue(state.selectedIDs.isEmpty())
         assertFalse(state.isDeleteConfirmationShown)
+        // 一括削除成功の確認通知が積まれている
+        assertEquals(listOf("2件削除しました"), viewModel.userMessages.value.map { it.text })
     }
 
     @Test
@@ -510,9 +602,9 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "b/mid", null, 200, "Kotlin", null, 2_000L),
             FavoriteEntity(3, "c/new", null, 300, "Kotlin", null, 3_000L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
 
-        // Act:
+        // Act: load を実行する
         viewModel.load()
         advanceUntilIdle()
 
@@ -530,11 +622,11 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "b/repo", null, 5_000, "Kotlin", null, 0L),
             FavoriteEntity(3, "c/repo", null, 500, "Kotlin", null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act:
+        // Act: setSortKey(STAR_COUNT_DESC) を実行する
         viewModel.setSortKey(FavoriteSortKey.STAR_COUNT_DESC)
 
         // Assert: Star 多い順 (5000, 500, 100)
@@ -544,20 +636,20 @@ class FavoriteViewModelTest {
 
     @Test
     fun `setSortKeyでFULL_NAME_ASCにすると名前昇順に並ぶ`() = runTest {
-        // Arrange:
+        // Arrange: 名前順でない 3 件（zoo / apple / microsoft）を読み込み済みにする
         fakeFavoriteRepository.favorites = mutableListOf(
             FavoriteEntity(1, "zoo/repo", null, 0, null, null, 0L),
             FavoriteEntity(2, "apple/swift", null, 0, null, null, 0L),
             FavoriteEntity(3, "microsoft/vscode", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act:
+        // Act: setSortKey(FULL_NAME_ASC) を実行する
         viewModel.setSortKey(FavoriteSortKey.FULL_NAME_ASC)
 
-        // Assert:
+        // Assert: 名前昇順（apple, microsoft, zoo）に並ぶ
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertEquals(
             listOf("apple/swift", "microsoft/vscode", "zoo/repo"),
@@ -573,14 +665,14 @@ class FavoriteViewModelTest {
             FavoriteEntity(2, "b/kotlin1", null, 0, "Kotlin", null, 0L),
             FavoriteEntity(3, "c/swift2", null, 0, "Swift", null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act:
+        // Act: setFilterLanguage("Swift") を実行する
         viewModel.setFilterLanguage("Swift")
 
-        // Assert:
+        // Assert: 表示が Swift 2 件のみで filterLanguage が Swift になる
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertEquals(2, state.displayedFavorites.size)
         assertTrue(state.displayedFavorites.all { it.language == "Swift" })
@@ -594,38 +686,38 @@ class FavoriteViewModelTest {
             FavoriteEntity(1, "a/swift", null, 0, "Swift", null, 0L),
             FavoriteEntity(2, "b/kotlin", null, 0, "Kotlin", null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.setFilterLanguage("Swift")
 
-        // Act:
+        // Act: setFilterLanguage(null) を実行する
         viewModel.setFilterLanguage(null)
 
-        // Assert:
+        // Assert: フィルタが解除され全 2 件が表示される
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertEquals(2, state.displayedFavorites.size)
         assertEquals(null, state.filterLanguage)
     }
 
     @Test
-    fun `フィルタ対象の言語がcommitDeleteで消失したら自動でクリアされる`() = runTest {
+    fun `フィルタ対象の言語が実削除で消失したら自動でクリアされる`() = runTest {
         // Arrange: Swift にフィルタ
         val swiftFav = FavoriteEntity(1, "a/swift", null, 0, "Swift", null, 0L)
         fakeFavoriteRepository.favorites = mutableListOf(
             swiftFav,
             FavoriteEntity(2, "b/kotlin", null, 0, "Kotlin", null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.setFilterLanguage("Swift")
 
-        // Act: Swift のお気に入りをスワイプ → commit
+        // Act: Swift のお気に入りをスワイプ → 猶予経過で commit
         viewModel.removeFavorite(swiftFav)
-        advanceUntilIdle()
-        viewModel.commitDelete(swiftFav.id)
-        advanceUntilIdle()
+        runCurrent()
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
 
         // Assert: filterLanguage が自動クリアされ、Kotlin の 1 件が表示される
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
@@ -642,14 +734,14 @@ class FavoriteViewModelTest {
             FavoriteEntity(3, "c/repo", null, 0, "Swift", null, 0L),
             FavoriteEntity(4, "d/repo", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
 
-        // Act:
+        // Act: Loaded 状態の availableLanguages を取得する
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
 
-        // Assert:
+        // Assert: Swift の重複と null が除かれ Kotlin, Swift の昇順になる
         assertEquals(listOf("Kotlin", "Swift"), state.availableLanguages)
     }
 
@@ -660,7 +752,7 @@ class FavoriteViewModelTest {
             FavoriteEntity(1, "owner/a", null, 0, null, null, 0L),
             FavoriteEntity(2, "owner/b", null, 0, null, null, 0L),
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         viewModel.enterEditMode()
@@ -688,7 +780,7 @@ class FavoriteViewModelTest {
                 savedAt = 0L,
             )
         )
-        val viewModel = FavoriteViewModel(favoriteStore)
+        val viewModel = createViewModel()
         viewModel.load()
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value is FavoriteUiState.Loaded)

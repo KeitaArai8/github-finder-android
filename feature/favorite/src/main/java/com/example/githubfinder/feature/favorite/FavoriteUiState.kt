@@ -4,10 +4,8 @@
  * フェーズ・リフレッシュ状態を1つのsealed interfaceに統合する。
  * Loaded 内には sortKey / filterLanguage を保持し、表示用は displayedFavorites で導出する。
  *
- * 一度きりのイベント（SnackBar 表示、ナビゲーション）は FavoriteUiEvent として
- * Channel 経由で View に流す（State には含めない）。これにより:
- * - 画面回転やプロセス復帰時に古い SnackBar が再表示されない
- * - State スナップショットが「画面の今の見た目」だけを表現する
+ * 一度きりの通知（SnackBar 表示）は uiState とは別の userMessages（UserMessage のキュー）として
+ * ViewModel が保持し、View が表示し終えたら userMessageShown(id) で消す。
  */
 
 package com.example.githubfinder.feature.favorite
@@ -36,7 +34,7 @@ sealed interface FavoriteUiState {
         val filterLanguage: String? = null,
         /**
          * Undo 待ちの削除 ID 集合。
-         * UI からは即座に消したい（楽観的更新）が、Room からは SnackBar timeout / 別 SnackBar 置換まで実削除しない。
+         * UI からは即座に消したい（楽観的更新）が、Room からは Undo 猶予（ViewModel のタイマー）が経過するまで実削除しない。
          * commit 後に Room から削除され、Flow 経由で favorites からも消える。
          */
         val pendingDeleteIDs: Set<Int> = emptySet(),
@@ -75,24 +73,4 @@ sealed interface FavoriteUiState {
     data object Empty : FavoriteUiState
 
     data class Error(val message: String) : FavoriteUiState
-}
-
-/**
- * お気に入り画面の一度きりのイベント。
- * State には含めず Channel 経由で発火する。
- */
-sealed interface FavoriteUiEvent {
-    /**
-     * SnackBar を 1 回だけ表示するイベント。
-     * 「snackBar」と分割表記しているのは IDE の spell checker が "snackbar"（一語）を
-     * 辞書未登録扱いするため。意味は Material 3 の `Snackbar` と同一。
-     */
-    data class ShowSnackBar(val message: String) : FavoriteUiEvent
-
-    /**
-     * 削除に対する Undo 付き SnackBar を表示するイベント（Gmail スタイル）。
-     * - View 側で SnackbarResult.ActionPerformed → undoDelete(deletedID)
-     * - Dismissed (timeout / 置換) → commitDelete(deletedID)
-     */
-    data class ShowUndoDelete(val message: String, val deletedID: Int) : FavoriteUiEvent
 }

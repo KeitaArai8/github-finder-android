@@ -11,10 +11,10 @@ GitHubのリポジトリをキーワードで検索し、お気に入りに保�
 | DI | Hilt |
 | 永続化 | Room |
 | ネットワーク | Retrofit + kotlinx.serialization |
-| ナビゲーション | Navigation Compose |
+| ナビゲーション | Navigation 3（NavDisplay + NavKey） |
 | Widget | Glance + Material3 for Glance |
 | テスト | JUnit4 + Turbine + Compose UI Tests |
-| minSdk | 26 (Android 8.0) |
+| SDK | minSdk 26 (Android 8.0) / targetSdk 36 (Android 16) / compileSdk 37 |
 | デザイン | Material 3 |
 
 ## アーキテクチャ
@@ -78,37 +78,47 @@ sealed interface SearchUiState {
 
 `Loaded` の中に `isEditMode`・`selectedIDs` などサブ状態を持たせることで、**Loaded 状態内の状態変化**もデータクラス1つで構造化しています。
 
-### 一度きりイベント（Channel + UiEvent）
+### 一度きりの通知も State として持つ（userMessages + userMessageShown）
 
-「SnackBar 表示」「ナビゲーション」のような **一度しか発火しないイベント** は State には含めず、`Channel<UiEvent>` 経由で発火する Compose defacto パターンを採用:
+「SnackBar 表示」のような一度きりの通知は、[公式ガイド](https://developer.android.com/topic/architecture/ui-layer/events)の推奨どおり **ViewModel のイベントを必ず UI State の更新として扱う** 形にしています。`Channel` / `SharedFlow` は配信が保証されない（購読者不在時に取りこぼし得る）ため使いません。通知は `uiState` とは別の `StateFlow` に **FIFO のリスト** で持ち、View が表示し終えたら `userMessageShown(id)` で消します（フェーズごとの sealed case に載せないのは、通知がどのフェーズでも発生し得るため。ただし画面の状態であり、View は `StateFlow` として購読します）:
 
 ```kotlin
-sealed interface SearchUiEvent {
-    data class ShowSnackBar(val message: String) : SearchUiEvent
-}
+data class UserMessage(val id: Long, val text: String)  // id は同文言が連続しても別通知と扱うためだけの値
 
 @HiltViewModel
 class SearchViewModel : ViewModel() {
-    private val _events = Channel<SearchUiEvent>(Channel.BUFFERED)
-    val events: Flow<SearchUiEvent> = _events.receiveAsFlow()
+    private val _userMessages = MutableStateFlow<List<UserMessage>>(emptyList())
+    val userMessages: StateFlow<List<UserMessage>> = _userMessages.asStateFlow()
 
     fun toggleFavorite(...) {
         try { ... } catch (_: Exception) {
-            _events.send(SearchUiEvent.ShowSnackBar("お気に入りの更新に失敗しました"))
+            enqueueMessage("お気に入りの更新に失敗しました")
         }
+    }
+
+    fun userMessageShown(id: Long) {
+        _userMessages.update { messages -> messages.filterNot { it.id == id } }
     }
 }
 
-// Composable 側
+// Composable 側: 長寿命の単一 LaunchedEffect で先頭を 1 件ずつ表示 → 表示後に消す
 LaunchedEffect(Unit) {
-    viewModel.events.collect { event ->
-        // showSnackbar は Material 3 公式 API のため命名そのまま使用
-        is SearchUiEvent.ShowSnackBar -> snackBarHostState.showSnackbar(event.message)
-    }
+    viewModel.userMessages
+        .map { it.firstOrNull() }
+        .distinctUntilChanged()
+        .filterNotNull()
+        .collect { message ->
+            snackBarHostState.showSnackbar(message.text)  // Material 3 公式 API のため命名そのまま
+            viewModel.userMessageShown(message.id)
+        }
 }
 ```
 
-**メリット**: 画面回転・プロセス復帰時に古い SnackBar が再表示されない / 「画面の状態」と「一度きりのアクション」の通信路を分離できる。
+**メリット**: 配信が保証される（表示し終えて `userMessageShown` が呼ばれるまで State に残る）/ 複数の通知が近接しても順番にすべて表示される / テストは `userMessages.value` の検証だけで済む。
+
+**注意点（回転時の挙動）**: 表示が完了していない通知は、画面回転後に再表示されます（`userMessageShown` が呼ばれるまで State に残るため。以前の `Channel` 方式の「再表示されない」利点は、配信保証と引き換えに手放しています）。
+
+**Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。また、猶予中に ViewModel が破棄された場合（タブ切替で back stack から外れるなど）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
 
 ### combine + stateIn によるリアクティブ State 合成（SearchViewModel）
 
@@ -141,14 +151,14 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
-:app                    ← エントリポイント + Navigation + Hilt + TutorialScreen
+:app                    ← エントリポイント + Navigation 3 + Hilt + TutorialScreen
 :core:model             ← Entity + AppError（共有型）
 :core:data              ← Repository interface/impl + CacheDataSource + FavoriteStore + SearchHistoryDataSource
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
 :core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + Tutorial関連
-:feature:search         ← SearchViewModel + SearchScreen + SearchUiState + SearchUiEvent
-:feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + FavoriteUiEvent
+:feature:search         ← SearchViewModel + SearchScreen + SearchUiState + UserMessage
+:feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + UserMessage
 :feature:settings       ← SettingsScreen
 :feature:widget         ← Glance Widget (FavoriteWidget)
 ```

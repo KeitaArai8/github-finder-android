@@ -26,7 +26,6 @@ kotlin {
 dependencies {
     // Gradle Plugin の API を compileOnly で取得（runtime には公開しない）
     compileOnly(libs.android.gradle.plugin)
-    compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.compose.compiler.gradle.plugin)
     compileOnly(libs.ksp.gradle.plugin)
 }

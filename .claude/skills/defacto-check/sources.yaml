@@ -1,0 +1,209 @@
+# Android defacto reference sources for github-finder-android.
+# 添付の「2026 デファクトスタンダードまとめ (Android編)」より抽出。
+#
+# type:
+#   web_doc          - Web ドキュメント。WebFetch で内容差分検出
+#   github_releases  - GitHub Releases。`gh api repos/{owner}/{repo}/releases/latest` で latest tag 検出
+#   github_commits   - 任意ブランチの commits。`gh api repos/{owner}/{repo}/commits` で latest SHA 検出
+#
+# role (3 層ルール):
+#   design      - 公式アーキテクチャガイドと公式サンプル (Now in Android)。設計移行 (Nav2→Nav3 等) の根拠になりうる
+#   version     - Google/Apple 所有ライブラリ・ツールチェーンのリリースノート。バージョン bump / compileSdk・targetSdk / deprecation を駆動
+#   third-party - Google 以外の OSS (Coil, Retrofit, OkHttp, Turbine)。本 repo は NiA の採用に追従するため、
+#                 各ライブラリのリリースではなく NiA の version catalog 経由で監視する
+#
+# noise_filter.keywords:
+#   検出対象として注目するキーワード。空配列なら全変化を報告。
+
+sources:
+  # ===== role: design — 公式ガイド =====
+
+  - id: android-architecture
+    name: Android App Architecture Guide
+    url: https://developer.android.com/topic/architecture
+    type: web_doc
+    role: design
+    noise_filter:
+      keywords: [recommended, deprecated, newer, UDF, "state holder", ViewModel]
+
+  - id: android-ui-events
+    name: UI Events (UI layer guide)
+    url: https://developer.android.com/topic/architecture/ui-layer/events
+    type: web_doc
+    role: design
+    noise_filter:
+      keywords: [event, Channel, "UI state", deprecated, recommended, "one-off"]
+
+  - id: android-compose-state
+    name: Managing state in Compose
+    url: https://developer.android.com/develop/ui/compose/state
+    type: web_doc
+    role: design
+    noise_filter:
+      keywords: [State, MutableState, derivedStateOf, deprecated, "state hoisting"]
+
+  # ===== role: design — 公式サンプル (Now in Android) =====
+
+  - id: nia
+    name: Now in Android (main branch commits)
+    repo: android/nowinandroid
+    type: github_commits
+    branch: main
+    role: design
+    noise_filter:
+      keywords: ["Navigation", "Coil", "Hilt", "Metro", "Room", "compileSdk", "targetSdk", "Kotlin", "AGP", "bump", "Update"]
+
+  - id: nia-version-catalog
+    name: Now in Android gradle/libs.versions.toml
+    url: https://raw.githubusercontent.com/android/nowinandroid/main/gradle/libs.versions.toml
+    type: web_doc
+    role: design
+    noise_filter:
+      keywords: [navigation, hilt, metro, room, ksp, kotlin, agp, compose, androidx]
+
+  - id: nia-kotlin-android-convention
+    name: NiA KotlinAndroid.kt (compileSdk / minSdk / JVM target)
+    url: https://raw.githubusercontent.com/android/nowinandroid/main/build-logic/convention/src/main/kotlin/com/google/samples/apps/nowinandroid/KotlinAndroid.kt
+    type: web_doc
+    role: design
+    noise_filter:
+      keywords: [compileSdk, minSdk, JavaVersion, jvmTarget, JvmTarget]
+
+  # ===== role: version — AndroidX / Compose / ツールチェーン =====
+
+  - id: agp-releases
+    name: Android Gradle plugin release notes
+    url: https://developer.android.com/build/releases/gradle-plugin
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [stable, "compileSdk", "Gradle", deprecated, removed, "built-in Kotlin"]
+
+  - id: agp-built-in-kotlin
+    name: Migrate to built-in Kotlin (AGP 9/10 timeline)
+    url: https://developer.android.com/build/migrate-to-built-in-kotlin
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: ["AGP 10", "AGP 9", kapt, "builtInKotlin", removed, deprecated]
+
+  - id: androidx-compose-ui
+    name: Compose UI releases
+    url: https://developer.android.com/jetpack/androidx/releases/compose-ui
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: androidx-compose-material3
+    name: Compose Material 3 releases
+    url: https://developer.android.com/jetpack/androidx/releases/compose-material3
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: androidx-navigation3
+    name: Navigation 3 releases
+    url: https://developer.android.com/jetpack/androidx/releases/navigation3
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: androidx-navigation
+    name: Navigation (Nav2) releases
+    url: https://developer.android.com/jetpack/androidx/releases/navigation
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, deprecated, removed, "API change", "Navigation 3"]
+
+  - id: androidx-room
+    name: Room releases
+    url: https://developer.android.com/jetpack/androidx/releases/room
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change", KSP, KMP]
+
+  - id: androidx-glance
+    name: Glance releases
+    url: https://developer.android.com/jetpack/androidx/releases/glance
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: androidx-lifecycle
+    name: Lifecycle releases
+    url: https://developer.android.com/jetpack/androidx/releases/lifecycle
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: androidx-datastore
+    name: DataStore releases
+    url: https://developer.android.com/jetpack/androidx/releases/datastore
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: [Stable, "Release Candidate", deprecated, removed, "API change"]
+
+  - id: compose-bom-mapping
+    name: Compose BOM to library version mapping
+    url: https://developer.android.com/jetpack/compose/bom/bom-mapping
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: []
+
+  - id: kotlin-releases
+    name: Kotlin release schedule and compatibility
+    url: https://kotlinlang.org/docs/releases.html
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: ["Kotlin 2", "Kotlin 3", "K2", "Language release", "Tooling release"]
+
+  - id: ksp-releases
+    name: KSP Releases
+    repo: google/ksp
+    type: github_releases
+    role: version
+    noise_filter:
+      keywords: [breaking, deprecated, "Kotlin 2", "KSP2"]
+
+  - id: dagger-hilt
+    name: Dagger / Hilt Releases
+    repo: google/dagger
+    type: github_releases
+    role: version
+    noise_filter:
+      keywords: [hilt, breaking]
+
+  - id: play-target-api-policy
+    name: Google Play target API level requirement
+    url: https://support.google.com/googleplay/android-developer/answer/11926878
+    type: web_doc
+    role: version
+    noise_filter:
+      keywords: ["API level", targetSdk, deadline, "must target"]
+
+  # ===== role: third-party — NiA の version catalog 経由でのみ監視 =====
+  # 本 repo は Coil / Retrofit / OkHttp / Turbine については NiA の採用に追従する。
+  # 各ライブラリのアップストリーム Releases は監視しない (意図的に coil-kt/coil, square/retrofit 等は登録しない)。
+
+  - id: nia-third-party-catalog
+    name: NiA libs.versions.toml (third-party entries)
+    url: https://raw.githubusercontent.com/android/nowinandroid/main/gradle/libs.versions.toml
+    type: web_doc
+    role: third-party
+    noise_filter:
+      keywords: ["coil", "retrofit", "okhttp", "turbine"]
+
+# Issue 出力用の repo 設定。
+# `git remote get-url origin` から自動検出するが、上書きしたい場合はここで指定。
+repo_override:
+  github: null   # null なら git remote から自動検出 (推奨)

@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,7 +62,7 @@ private fun EmptyStateViewSearchPreview() {
     GitHubFinderTheme {
         Surface {
             EmptyStateView(
-                icon = Icons.Filled.Search,
+                icon = AppIcons.Search,
                 title = "結果が見つかりません",
                 description = "別のキーワードで検索してみてください",
             )
@@ -79,7 +76,7 @@ private fun EmptyStateViewFavoritePreview() {
     GitHubFinderTheme {
         Surface {
             EmptyStateView(
-                icon = Icons.Filled.FavoriteBorder,
+                icon = AppIcons.FavoriteBorder,
                 title = "お気に入りがありません",
                 description = "検索画面からリポジトリを\nお気に入りに追加しましょう",
             )

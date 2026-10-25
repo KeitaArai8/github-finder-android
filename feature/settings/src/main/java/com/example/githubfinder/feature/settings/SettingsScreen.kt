@@ -13,11 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PrivacyTip
+import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,13 +50,13 @@ fun SettingsScreen() {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             SettingsRow(
-                icon = Icons.Default.PrivacyTip,
+                icon = AppIcons.PrivacyTip,
                 title = stringResource(R.string.settings_privacy_policy),
                 onClick = { launchCustomTab(context, PRIVACY_POLICY_URL) },
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsRow(
-                icon = Icons.Default.Description,
+                icon = AppIcons.Description,
                 title = stringResource(R.string.settings_terms_of_service),
                 onClick = { launchCustomTab(context, TERMS_URL) },
             )
@@ -76,7 +72,7 @@ fun SettingsScreen() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.Info, contentDescription = null)
+                Icon(AppIcons.Info, contentDescription = null)
                 Text(stringResource(R.string.settings_version), modifier = Modifier.padding(start = 16.dp))
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
@@ -104,7 +100,7 @@ private fun SettingsRow(
         Icon(icon, contentDescription = null)
         Text(title, modifier = Modifier.padding(start = 16.dp).weight(1f))
         Icon(
-            Icons.AutoMirrored.Filled.OpenInNew,
+            AppIcons.OpenInNew,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -126,7 +122,7 @@ private fun getAppVersion(context: Context): String {
 private fun SettingsRowPreview() {
     GitHubFinderTheme {
         SettingsRow(
-            icon = Icons.Default.PrivacyTip,
+            icon = AppIcons.PrivacyTip,
             title = "プライバシーポリシー",
             onClick = {},
         )

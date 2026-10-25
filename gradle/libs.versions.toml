@@ -1,31 +1,30 @@
 [versions]
-agp = "9.3.1"
-kotlin = "2.4.10"
-ksp = "2.3.2"
+agp = "9.4.1"
+kotlin = "2.4.21"
+ksp = "2.3.12"
 hilt = "2.60.1"
-compose-bom = "2026.06.01"
-navigation = "2.9.8"
-room = "2.8.4"
+compose-bom = "2026.09.00"
+navigation3 = "1.2.0"
+room = "2.8.5"
 retrofit = "3.0.0"
-kotlinx-serialization = "1.11.0"
-okhttp = "5.4.0"
+kotlinx-serialization = "1.12.0"
+okhttp = "5.5.1"
 coil = "2.7.0"
 coroutines = "1.11.0"
 turbine = "1.2.1"
 coroutines-test = "1.11.0"
 lifecycle = "2.11.0"
-hilt-navigation-compose = "1.4.0"
+hilt-androidx = "1.4.0"
 browser = "1.10.0"
 activity-compose = "1.13.0"
-core-ktx = "1.19.0"
-glance = "1.1.1"
+core-ktx = "1.19.1"
+glance = "1.2.0"
 timber = "5.0.1"
-datastore = "1.2.1"
+datastore = "1.3.0"
 # build-logic から Gradle Plugin の API を compileOnly で取り込むためのバージョン参照
-android-gradle-plugin = "9.3.1"
-kotlin-gradle-plugin = "2.1.0"
-ksp-gradle-plugin = "2.3.2"
-compose-compiler-gradle-plugin = "2.4.10"
+android-gradle-plugin = "9.4.1"
+ksp-gradle-plugin = "2.3.12"
+compose-compiler-gradle-plugin = "2.4.21"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -34,19 +33,19 @@ compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
 browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
+hilt-lifecycle-viewmodel-compose = { group = "androidx.hilt", name = "hilt-lifecycle-viewmodel-compose", version.ref = "hilt-androidx" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
@@ -57,7 +56,7 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines-test" }
 compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version = "1.2.1" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version = "1.3.0" }
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
@@ -65,14 +64,12 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 # build-logic 用: Convention Plugin から Gradle Plugin の DSL 型を参照するための compileOnly 依存
 android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "android-gradle-plugin" }
-kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin-gradle-plugin" }
 ksp-gradle-plugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp-gradle-plugin" }
 compose-compiler-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "compose-compiler-gradle-plugin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

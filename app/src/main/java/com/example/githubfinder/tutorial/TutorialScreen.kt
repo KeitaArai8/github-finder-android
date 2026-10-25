@@ -24,12 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
+import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -116,7 +111,7 @@ private fun MockSearchBar(onTap: () -> Unit, coachMarkManager: CoachMarkManager)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(AppIcons.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             "リポジトリを検索",
@@ -153,7 +148,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.Star,
+                    AppIcons.Star,
                     contentDescription = null,
                     tint = Color(0xFFFFAB00),
                     modifier = Modifier.size(14.dp),
@@ -172,7 +167,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
             modifier = Modifier.coachMarkAnchor(CoachMarkStep.FavoriteButton, coachMarkManager),
         ) {
             Icon(
-                Icons.Default.FavoriteBorder,
+                AppIcons.FavoriteBorder,
                 contentDescription = "お気に入り",
                 tint = Color.Gray,
             )
@@ -195,20 +190,20 @@ private fun MockTabBar(onFavoriteTabTap: () -> Unit, coachMarkManager: CoachMark
             horizontalArrangement = Arrangement.SpaceAround,
         ) {
             MockTabItem(
-                icon = Icons.Default.Search,
+                icon = AppIcons.Search,
                 label = "検索",
                 isSelected = true,
                 onClick = {},
             )
             MockTabItem(
-                icon = Icons.Default.Favorite,
+                icon = AppIcons.Favorite,
                 label = "お気に入り",
                 isSelected = false,
                 onClick = onFavoriteTabTap,
                 modifier = Modifier.coachMarkAnchor(CoachMarkStep.FavoriteTab, coachMarkManager),
             )
             MockTabItem(
-                icon = Icons.Default.Settings,
+                icon = AppIcons.Settings,
                 label = "設定",
                 isSelected = false,
                 onClick = {},

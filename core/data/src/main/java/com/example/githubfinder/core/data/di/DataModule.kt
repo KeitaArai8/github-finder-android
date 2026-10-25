@@ -13,9 +13,13 @@ import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.data.repository.SearchRepositoryImpl
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -32,4 +36,12 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSearchHistoryDataSource(impl: SearchHistoryDataSourceImpl): SearchHistoryDataSource
+
+    companion object {
+        /** アプリ寿命のスコープ。SupervisorJob により、1 件の失敗が他の処理を巻き込まない。 */
+        @Provides
+        @Singleton
+        @ApplicationScope
+        fun providesApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
 }

@@ -1,7 +1,7 @@
 /*
  * 全ての Android Library モジュール共通の設定を適用する Convention Plugin。
- * - com.android.library + kotlin-android
- * - compileSdk / minSdk / Java 17 / Kotlin JVM target 17
+ * - com.android.library （Kotlin は AGP 9 の built-in Kotlin を使うため kotlin-android は適用しない）
+ * - compileSdk / minSdk / Java 17 / Kotlin JVM target 17（compileOptions から継承）
  *
  * 使用例: `feature` 配下 / `core` 配下 の build.gradle.kts で
  *   plugins { alias(libs.plugins.githubfinder.android.library) }
@@ -15,10 +15,7 @@ import org.gradle.kotlin.dsl.configure
 class AndroidLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
-            with(pluginManager) {
-                apply("com.android.library")
-                apply("org.jetbrains.kotlin.android")
-            }
+            pluginManager.apply("com.android.library")
 
             extensions.configure<LibraryExtension> {
                 configureKotlinAndroid(this)

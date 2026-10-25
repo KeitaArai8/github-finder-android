@@ -11,7 +11,8 @@
  *  - Loaded → Idle 遷移時に latestHistory を都度参照する手動キャッシュが不要
  *  - 全ての非同期入力源が「単一の純粋な変換関数」に集約され、テストしやすい
  *
- * 一度きりのイベント（SnackBar 等）は Channel<SearchUiEvent> 経由（State には含めない）。
+ * 一度きりの通知（SnackBar 等）は userMessages（StateFlow<List<UserMessage>>）に積み、
+ * View が表示し終えたら userMessageShown(id) で消す（公式ガイドの UI イベント → State 化パターン）。
  */
 
 package com.example.githubfinder.feature.search
@@ -26,18 +27,16 @@ import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -87,9 +86,15 @@ class SearchViewModel @Inject constructor(
         initialValue = SearchUiState.Idle(),
     )
 
-    /** 一度きりイベント（SnackBar 表示等）。 */
-    private val _events = Channel<SearchUiEvent>(Channel.BUFFERED)
-    val events: Flow<SearchUiEvent> = _events.receiveAsFlow()
+    /**
+     * 未表示の通知キュー（先頭から順に表示する FIFO）。
+     * uiState とは別の StateFlow にしている: 通知はどのフェーズでも発生し得るため。
+     * View が表示し終えたら [userMessageShown] で取り除く。
+     */
+    private val _userMessages = MutableStateFlow<List<UserMessage>>(emptyList())
+    val userMessages: StateFlow<List<UserMessage>> = _userMessages.asStateFlow()
+
+    private var nextMessageID = 0L
 
     private var currentPage = 1
     private var hasNextPage = false
@@ -175,9 +180,18 @@ class SearchViewModel @Inject constructor(
                 // favoriteStore.favoriteIDs は StateFlow で combine に流れているため、
                 // ここで明示的に UI を更新する必要なし（リアクティブに自動反映）
             } catch (_: Exception) {
-                _events.send(SearchUiEvent.ShowSnackBar("お気に入りの更新に失敗しました"))
+                enqueueMessage("お気に入りの更新に失敗しました")
             }
         }
+    }
+
+    /** View が通知を表示し終えたら呼ぶ。該当 ID の通知をキューから取り除く。 */
+    fun userMessageShown(id: Long) {
+        _userMessages.update { messages -> messages.filterNot { it.id == id } }
+    }
+
+    private fun enqueueMessage(text: String) {
+        _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
     }
 
     fun refreshFavoriteIDs() {
@@ -226,7 +240,7 @@ class SearchViewModel @Inject constructor(
             hasNextPage = result.hasNextPage
             updateLoaded { it.copy(items = it.items + result.items, isLoadingMore = false) }
         } catch (_: Exception) {
-            _events.send(SearchUiEvent.ShowSnackBar("追加読み込みに失敗しました"))
+            enqueueMessage("追加読み込みに失敗しました")
             updateLoaded { it.copy(isLoadingMore = false) }
         }
     }

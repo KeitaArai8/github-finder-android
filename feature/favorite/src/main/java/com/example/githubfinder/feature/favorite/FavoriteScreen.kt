@@ -25,18 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.RemoveDone
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.SwapVert
+import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -74,7 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.githubfinder.core.designsystem.EmptyStateView
@@ -84,6 +73,9 @@ import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.model.FavoriteEntity
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,30 +88,34 @@ fun FavoriteScreen(
 
     LaunchedEffect(Unit) { viewModel.load() }
 
-    // 一度きりイベント（SnackBar 表示）を Channel から消化。
-    // State から snackBarMessage を排除したことで、画面回転やプロセス復帰時に
-    // 過去の SnackBar が再表示される問題が発生しなくなった。
+    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
+    // 長寿命の単一 LaunchedEffect なので、表示中に新しい通知が積まれても前の SnackBar は途切れず、順番に表示される。
+    // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is FavoriteUiEvent.ShowSnackBar -> snackBarHostState.showSnackbar(event.message)
-                is FavoriteUiEvent.ShowUndoDelete -> {
-                    // Gmail スタイル: 「元に戻す」をユーザが押す/押さないで Room への commit を分岐。
-                    // showSnackbar (Material 3 公式 API) は前の SnackBar を即座に dismiss してから新しい SnackBar を表示する仕様のため、
-                    // 連続スワイプ時は前の delete が自動 commit され、新しい Undo SnackBar に置き換わる（期待挙動）。
+        viewModel.userMessages
+            .map { it.firstOrNull() }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collect { message ->
+                // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
+                if (message.undoID != null && !viewModel.isDeletePending(message.undoID)) {
+                    viewModel.userMessageShown(message.id)
+                    return@collect
+                }
+                if (message.undoID != null) {
+                    // Gmail スタイル: 「元に戻す」付き。duration を明示するのは、アクション付きの既定が Indefinite のため。
                     val result = snackBarHostState.showSnackbar(
-                        message = event.message,
+                        message = message.text,
                         actionLabel = undoActionLabel,
                         withDismissAction = false,
                         duration = SnackbarDuration.Short,
                     )
-                    when (result) {
-                        SnackbarResult.ActionPerformed -> viewModel.undoDelete(event.deletedID)
-                        SnackbarResult.Dismissed -> viewModel.commitDelete(event.deletedID)
-                    }
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(message.undoID)
+                } else {
+                    snackBarHostState.showSnackbar(message.text)
                 }
+                viewModel.userMessageShown(message.id)
             }
-        }
     }
 
     Scaffold(
@@ -164,7 +160,7 @@ fun FavoriteScreen(
                         if (displayed.isEmpty()) {
                             // フィルタ後 0 件 — DesignSystem の EmptyStateView で他の Empty と統一感を出す
                             EmptyStateView(
-                                icon = Icons.Default.FilterList,
+                                icon = AppIcons.FilterList,
                                 title = stringResource(R.string.favorite_filter_no_match_title),
                                 description = stringResource(R.string.favorite_filter_no_match_description),
                             )
@@ -202,7 +198,7 @@ fun FavoriteScreen(
             }
             is FavoriteUiState.Empty -> {
                 EmptyStateView(
-                    icon = Icons.Filled.FavoriteBorder,
+                    icon = AppIcons.FavoriteBorder,
                     title = stringResource(R.string.favorite_empty_title),
                     description = stringResource(R.string.favorite_empty_description),
                     modifier = Modifier.padding(padding),
@@ -230,7 +226,7 @@ private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel)
                 navigationIcon = {
                     IconButton(onClick = { viewModel.exitEditMode() }) {
                         Icon(
-                            Icons.Default.Close,
+                            AppIcons.Close,
                             contentDescription = stringResource(R.string.favorite_exit_edit_mode),
                         )
                     }
@@ -245,7 +241,7 @@ private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel)
                         enabled = loaded.selectedIDs.isNotEmpty(),
                     ) {
                         Icon(
-                            Icons.Default.Delete,
+                            AppIcons.Delete,
                             contentDescription = stringResource(R.string.favorite_delete_action),
                             tint = if (loaded.selectedIDs.isNotEmpty()) {
                                 MaterialTheme.colorScheme.error
@@ -290,7 +286,7 @@ private fun SelectAllToggleButton(
     onToggle: () -> Unit,
 ) {
     val labelRes = if (isAllSelected) R.string.favorite_deselect_all else R.string.favorite_select_all
-    val icon = if (isAllSelected) Icons.Default.RemoveDone else Icons.Default.DoneAll
+    val icon = if (isAllSelected) AppIcons.RemoveDone else AppIcons.DoneAll
     IconButton(onClick = onToggle) {
         Icon(
             imageVector = icon,
@@ -308,7 +304,7 @@ private fun SortMenuButton(
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                imageVector = Icons.Default.SwapVert,
+                imageVector = AppIcons.SwapVert,
                 contentDescription = "並び替え",
             )
         }
@@ -334,7 +330,7 @@ private fun SortMenuButton(
                         expanded = false
                     },
                     leadingIcon = if (key == currentSortKey) {
-                        { Icon(Icons.Default.CheckCircle, contentDescription = null) }
+                        { Icon(AppIcons.CheckCircle, contentDescription = null) }
                     } else null,
                 )
             }
@@ -432,14 +428,11 @@ private fun FavoriteRow(
             onShare = null,
         )
     } else {
-        val dismissState = rememberSwipeToDismissBoxState(
-            confirmValueChange = {
-                if (it == SwipeToDismissBoxValue.EndToStart) {
-                    onDismiss()
-                    true
-                } else false
-            },
-        )
+        val dismissState = rememberSwipeToDismissBoxState()
+        // 方向制限は enableDismissFromStartToEnd = false で行い、完全スワイプ（EndToStart 確定）を検知して削除する
+        LaunchedEffect(dismissState.currentValue) {
+            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) onDismiss()
+        }
         SwipeToDismissBox(
             state = dismissState,
             // ★ 段階的 UX: 左スワイプで RowContent がずれた分だけ赤背景 + ゴミ箱が露出する。
@@ -479,7 +472,7 @@ private fun DismissBackground() {
         contentAlignment = Alignment.CenterEnd,
     ) {
         Icon(
-            imageVector = Icons.Default.Delete,
+            imageVector = AppIcons.Delete,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier
@@ -510,7 +503,7 @@ private fun RowContent(
     ) {
         if (isEditMode) {
             Icon(
-                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                imageVector = if (isSelected) AppIcons.CheckCircle else AppIcons.RadioButtonUnchecked,
                 contentDescription = stringResource(
                     if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected
                 ),
@@ -532,7 +525,7 @@ private fun RowContent(
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
+                Icon(AppIcons.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
                 Text("${favorite.starCount}", style = MaterialTheme.typography.labelSmall)
                 favorite.language?.let {
                     Spacer(modifier = Modifier.width(12.dp))
@@ -546,7 +539,7 @@ private fun RowContent(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Share,
+                    imageVector = AppIcons.Share,
                     contentDescription = "${favorite.fullName} をシェア",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),

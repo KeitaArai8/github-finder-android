@@ -116,7 +116,7 @@ class SearchRepositoryImplTest {
             repository.search("swift", 1)
             fail("Expected AppError.Server")
         } catch (e: AppError.Server) {
-            assertEquals(500, e.code)
+            assertEquals(500, e.statusCode)
         }
     }
 

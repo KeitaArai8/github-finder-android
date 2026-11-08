@@ -21,8 +21,6 @@ enum class FavoriteSortKey(val displayName: String) {
 }
 
 sealed interface FavoriteUiState {
-    data object Idle : FavoriteUiState
-
     data object Loading : FavoriteUiState
 
     data class Loaded(

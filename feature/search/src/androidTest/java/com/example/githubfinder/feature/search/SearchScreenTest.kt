@@ -6,6 +6,8 @@
 
 package com.example.githubfinder.feature.search
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -123,7 +125,7 @@ class SearchScreenTest {
         searchHistory: FakeSearchHistoryDataSource = FakeSearchHistoryDataSource(),
     ): SearchViewModel = SearchViewModel(
         searchRepository = searchRepo,
-        favoriteStore = FavoriteStore(favoriteRepo),
+        favoriteStore = FavoriteStore(favoriteRepo, CoroutineScope(Dispatchers.Default)),
         searchHistoryDataSource = searchHistory,
     )
 

@@ -103,7 +103,6 @@ class SearchViewModel @Inject constructor(
 
     init {
         observeSearchQuery()
-        refreshFavoriteIDs()
     }
 
     fun onQueryChanged(query: String) {
@@ -200,16 +199,6 @@ class SearchViewModel @Inject constructor(
 
     private fun enqueueMessage(text: String) {
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
-    }
-
-    fun refreshFavoriteIDs() {
-        viewModelScope.launch {
-            try {
-                favoriteStore.refresh()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) { }
-        }
     }
 
     private suspend fun performSearch() {

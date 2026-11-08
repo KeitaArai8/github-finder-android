@@ -35,6 +35,7 @@ import androidx.glance.text.TextStyle
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 
 class FavoriteWidget : GlanceAppWidget() {
 
@@ -60,7 +61,7 @@ class FavoriteWidget : GlanceAppWidget() {
                 context,
                 WidgetEntryPoint::class.java,
             )
-            entryPoint.favoriteRepository().getAll().take(MAX_ITEMS)
+            entryPoint.favoriteRepository().favorites.first().take(MAX_ITEMS)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

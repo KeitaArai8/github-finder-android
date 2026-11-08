@@ -7,6 +7,8 @@ package com.example.githubfinder.core.database
 
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,8 +16,9 @@ import javax.inject.Singleton
 class FavoriteLocalDataSource @Inject constructor(
     private val favoriteDao: FavoriteDao,
 ) {
-    suspend fun getAll(): List<FavoriteEntity> =
-        favoriteDao.getAll().map { it.toEntity() }
+    /** Room の変更をそのまま流す（保存日時の新しい順）。 */
+    val favorites: Flow<List<FavoriteEntity>> =
+        favoriteDao.observeAll().map { list -> list.map { it.toEntity() } }
 
     suspend fun add(repository: RepositoryEntity) {
         favoriteDao.insert(
@@ -31,8 +34,4 @@ class FavoriteLocalDataSource @Inject constructor(
     }
 
     suspend fun remove(id: Int) = favoriteDao.deleteById(id)
-
-    suspend fun contains(id: Int): Boolean = favoriteDao.countById(id) > 0
-
-    suspend fun allIDs(): Set<Int> = favoriteDao.getAllIds().toSet()
 }

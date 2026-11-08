@@ -70,7 +70,6 @@ fun SearchScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackBarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { viewModel.refreshFavoriteIDs() }
 
     // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
     LaunchedEffect(Unit) {

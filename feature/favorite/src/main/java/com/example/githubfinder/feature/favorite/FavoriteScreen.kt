@@ -85,8 +85,6 @@ fun FavoriteScreen(
     val snackBarHostState = remember { SnackbarHostState() }
     val undoActionLabel = stringResource(R.string.favorite_undo_delete_action)
 
-    LaunchedEffect(Unit) { viewModel.load() }
-
     // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
     // 長寿命の単一 LaunchedEffect なので、表示中に新しい通知が積まれても前の SnackBar は途切れず、順番に表示される。
     // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
@@ -124,7 +122,7 @@ fun FavoriteScreen(
         snackbarHost = { SnackbarHost(snackBarHostState) },
     ) { padding ->
         when (val state = uiState) {
-            is FavoriteUiState.Idle, is FavoriteUiState.Loading -> {
+            is FavoriteUiState.Loading -> {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -144,7 +142,7 @@ fun FavoriteScreen(
                 val displayed = state.displayedFavorites
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.load() },
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier.padding(padding),
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -206,7 +204,7 @@ fun FavoriteScreen(
             is FavoriteUiState.Error -> {
                 ErrorView(
                     message = state.message,
-                    onRetry = { viewModel.load() },
+                    onRetry = { viewModel.retry() },
                     modifier = Modifier.padding(padding),
                 )
             }

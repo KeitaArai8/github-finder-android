@@ -2,9 +2,11 @@ package com.example.githubfinder.core.database
 
 import com.example.githubfinder.core.model.RepositoryEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -12,25 +14,25 @@ import org.junit.Test
 class FavoriteLocalDataSourceTest {
 
     @Test
-    fun `空の時getAllは空配列を返す`() = runTest {
+    fun `空の時favoritesは空配列を流す`() = runTest {
         // Arrange: 何も追加していない DataSource
         val dataSource = makeDataSource()
 
-        // Act: getAll
-        val all = dataSource.getAll()
+        // Act: favorites の最初の emission を取る
+        val all = dataSource.favorites.first()
 
         // Assert: 空
         assertTrue(all.isEmpty())
     }
 
     @Test
-    fun `add後にgetAllで取得できる`() = runTest {
+    fun `add後にfavoritesで取得できる`() = runTest {
         // Arrange: 空の DataSource
         val dataSource = makeDataSource()
 
-        // Act: id=1 を add 後に getAll
+        // Act: id=1 / fullName="owner/repo" を add 後に favorites を取る
         dataSource.add(makeRepositoryEntity(id = 1, fullName = "owner/repo"))
-        val all = dataSource.getAll()
+        val all = dataSource.favorites.first()
 
         // Assert: 追加した1件が取得でき、内容も正しい
         assertEquals(1, all.size)
@@ -39,7 +41,7 @@ class FavoriteLocalDataSourceTest {
     }
 
     @Test
-    fun `複数件add後はsavedAt降順で取得される`() = runTest {
+    fun `複数件add後はsavedAt降順で流れる`() = runTest {
         // Arrange: 明示的な savedAt（1000/2000/3000）で 3件を直接挿入
         val dao = FakeFavoriteDao()
         val dataSource = FavoriteLocalDataSource(dao)
@@ -47,30 +49,30 @@ class FavoriteLocalDataSourceTest {
         dao.insertWithSavedAt(makeDbEntity(2), savedAt = 2000L)
         dao.insertWithSavedAt(makeDbEntity(3), savedAt = 3000L)
 
-        // Act: getAll
-        val all = dataSource.getAll()
+        // Act: favorites を取る
+        val all = dataSource.favorites.first()
 
-        // Assert: savedAt 降順（3, 2, 1）で取得される
+        // Assert: savedAt 降順（3, 2, 1）で流れる
         assertEquals(listOf(3, 2, 1), all.map { it.id })
     }
 
     @Test
-    fun `containsは存在するIDでtrueを返す`() = runTest {
-        // Arrange: id=42 を追加
+    fun `購読中にadd・removeするとfavoritesが更新のたびに再送される`() = runTest {
+        // Arrange: 空の DataSource を購読して emission を集める
         val dataSource = makeDataSource()
-        dataSource.add(makeRepositoryEntity(id = 42))
+        val emissions = mutableListOf<List<Int>>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            dataSource.favorites.collect { list -> emissions.add(list.map { it.id }) }
+        }
 
-        // Act & Assert: 存在するので true
-        assertTrue(dataSource.contains(42))
-    }
+        // Act: id=1, id=2 を add してから id=1 を remove
+        dataSource.add(makeRepositoryEntity(id = 1))
+        dataSource.add(makeRepositoryEntity(id = 2))
+        dataSource.remove(1)
+        job.cancel()
 
-    @Test
-    fun `containsは存在しないIDでfalseを返す`() = runTest {
-        // Arrange: 何も追加していない DataSource
-        val dataSource = makeDataSource()
-
-        // Act & Assert: 存在しないので false
-        assertFalse(dataSource.contains(999))
+        // Assert: 空 → [1] → [2, 1]（savedAt 降順）→ [2] の順に流れた
+        assertEquals(listOf(emptyList(), listOf(1), listOf(2, 1), listOf(2)), emissions)
     }
 
     @Test
@@ -82,7 +84,7 @@ class FavoriteLocalDataSourceTest {
 
         // Act: id=1 を削除
         dataSource.remove(1)
-        val all = dataSource.getAll()
+        val all = dataSource.favorites.first()
 
         // Assert: id=2 だけ残る
         assertEquals(1, all.size)
@@ -96,25 +98,10 @@ class FavoriteLocalDataSourceTest {
 
         // Act: 存在しない id=999 を削除
         dataSource.remove(999)
-        val all = dataSource.getAll()
+        val all = dataSource.favorites.first()
 
         // Assert: 例外なく空のまま
         assertTrue(all.isEmpty())
-    }
-
-    @Test
-    fun `allIDsは全IDをSetとして返す`() = runTest {
-        // Arrange: id=1, 2, 3 を追加
-        val dataSource = makeDataSource()
-        dataSource.add(makeRepositoryEntity(id = 1))
-        dataSource.add(makeRepositoryEntity(id = 2))
-        dataSource.add(makeRepositoryEntity(id = 3))
-
-        // Act: allIDs を取得
-        val ids = dataSource.allIDs()
-
-        // Assert: 3つの ID が Set として返る
-        assertEquals(setOf(1, 2, 3), ids)
     }
 
     private fun makeDataSource(): FavoriteLocalDataSource =

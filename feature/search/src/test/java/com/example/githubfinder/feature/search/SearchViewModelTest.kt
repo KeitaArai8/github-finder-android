@@ -7,6 +7,7 @@ import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -33,6 +34,7 @@ class SearchViewModelTest {
     private lateinit var fakeSearchRepository: FakeSearchRepository
     private lateinit var fakeFavoriteRepository: FakeFavoriteRepository
     private lateinit var favoriteStore: FavoriteStore
+    private lateinit var applicationScope: CoroutineScope
     private lateinit var fakeSearchHistoryDataSource: FakeSearchHistoryDataSource
 
     @Before
@@ -40,12 +42,14 @@ class SearchViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeSearchRepository = FakeSearchRepository()
         fakeFavoriteRepository = FakeFavoriteRepository()
-        favoriteStore = FavoriteStore(fakeFavoriteRepository)
+        applicationScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))
+        favoriteStore = FavoriteStore(fakeFavoriteRepository, applicationScope)
         fakeSearchHistoryDataSource = FakeSearchHistoryDataSource()
     }
 
     @After
     fun tearDown() {
+        applicationScope.cancel()
         Dispatchers.resetMain()
     }
 
@@ -194,8 +198,7 @@ class SearchViewModelTest {
         fakeSearchRepository.searchResult = Result.success(
             SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
         )
-        fakeFavoriteRepository.favoriteIDs = mutableSetOf(42)
-        fakeFavoriteRepository.favorites = mutableListOf(
+        fakeFavoriteRepository.stored = listOf(
             FavoriteEntity(
                 id = 42,
                 fullName = "owner/repo",

@@ -3,40 +3,47 @@ package com.example.githubfinder.feature.search
 import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * MutableStateFlow を SSOT にしたテスト用 Repository（本物の Room と同様、変更のたびに最新リストが流れる）。
+ * [stored] へ代入すると購読者へ emission される。
+ */
 class FakeFavoriteRepository : FavoriteRepository {
-    var favorites: MutableList<FavoriteEntity> = mutableListOf()
-    var favoriteIDs: MutableSet<Int> = mutableSetOf()
+    private val flow = MutableStateFlow<List<FavoriteEntity>>(emptyList())
+    override val favorites: Flow<List<FavoriteEntity>> = flow
+
+    var stored: List<FavoriteEntity>
+        get() = flow.value
+        set(value) {
+            flow.value = value
+        }
+
     var addCallCount = 0
     var removeCallCount = 0
     var lastAddedRepository: RepositoryEntity? = null
     var lastRemovedID: Int? = null
     var shouldThrowOnAdd = false
 
-    override suspend fun getAll(): List<FavoriteEntity> = favorites.toList()
     override suspend fun add(repository: RepositoryEntity) {
         if (shouldThrowOnAdd) throw Exception("Mock error")
         addCallCount++
         lastAddedRepository = repository
-        favoriteIDs.add(repository.id)
-        favorites.add(
-            FavoriteEntity(
-                id = repository.id,
-                fullName = repository.fullName,
-                description = repository.description,
-                starCount = repository.starCount,
-                language = repository.language,
-                ownerAvatarURL = repository.ownerAvatarURL,
-                savedAt = System.currentTimeMillis(),
-            )
+        stored = stored + FavoriteEntity(
+            id = repository.id,
+            fullName = repository.fullName,
+            description = repository.description,
+            starCount = repository.starCount,
+            language = repository.language,
+            ownerAvatarURL = repository.ownerAvatarURL,
+            savedAt = System.currentTimeMillis(),
         )
     }
+
     override suspend fun remove(id: Int) {
         removeCallCount++
         lastRemovedID = id
-        favoriteIDs.remove(id)
-        favorites.removeAll { it.id == id }
+        stored = stored.filterNot { it.id == id }
     }
-    override suspend fun contains(id: Int): Boolean = favoriteIDs.contains(id)
-    override suspend fun allFavoriteIDs(): Set<Int> = favoriteIDs.toSet()
 }

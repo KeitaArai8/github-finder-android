@@ -39,7 +39,8 @@ class FavoriteViewModel @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<FavoriteUiState>(FavoriteUiState.Idle)
+    // 最初の emission が届くまでは Loading。以後は Room（FavoriteStore.favorites）の変更で更新される。
+    private val _uiState = MutableStateFlow<FavoriteUiState>(FavoriteUiState.Loading)
     val uiState: StateFlow<FavoriteUiState> = _uiState.asStateFlow()
 
     /**
@@ -55,28 +56,51 @@ class FavoriteViewModel @Inject constructor(
     /** Undo 猶予タイマー（削除対象の ID ごと）。undoDelete でキャンセルする。 */
     private val pendingDeleteJobs = mutableMapOf<Int, Job>()
 
-    fun load() {
-        viewModelScope.launch {
-            val isInitialLoad = _uiState.value is FavoriteUiState.Idle
-            if (isInitialLoad) {
-                _uiState.value = FavoriteUiState.Loading
-            } else {
-                setRefreshing(true)
-            }
+    /** お気に入り（Room）の購読ジョブ。[retry] で張り直す。 */
+    private var observeJob: Job? = null
+
+    init {
+        startObserving()
+    }
+
+    /**
+     * FavoriteStore.favorites（Room 由来の StateFlow）を購読し、変化のたびに uiState へ反映する。
+     * 画面側の load() 呼び出しは不要で、検索画面での追加など他画面からの変更も自動で届く。
+     */
+    private fun startObserving() {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            // StateFlow への .catch は効かない（SharedFlow は完了しない）ため try/catch で受ける。
             try {
-                favoriteStore.refresh()
-                publishFavorites(favoriteStore.favorites.value)
-            } catch (e: AppError) {
-                _uiState.update { FavoriteUiState.Error(message = e.toDisplayMessage()) }
+                favoriteStore.favorites.collect { publishFavorites(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update { FavoriteUiState.Error(message = e.message ?: "Unknown error") }
-            } finally {
-                setRefreshing(false)
+                _uiState.update { FavoriteUiState.Error(message = e.toDisplayMessage()) }
             }
         }
     }
+
+    /** Error 画面の「再試行」: 購読を張り直す（StateFlow は購読直後に最新値を流す）。 */
+    fun retry() {
+        _uiState.value = FavoriteUiState.Loading
+        startObserving()
+    }
+
+    /**
+     * プル・トゥ・リフレッシュ。Room が SSOT で常に最新のため再取得は不要で、
+     * 現在値を再公開してスピナーを閉じるだけ（UI 挙動は従来どおり）。
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            setRefreshing(true)
+            publishFavorites(favoriteStore.favorites.value)
+            setRefreshing(false)
+        }
+    }
+
+    private fun Throwable.toDisplayMessage(): String =
+        (this as? AppError)?.toDisplayMessage() ?: message ?: "Unknown error"
 
     /**
      * スワイプ削除のエントリーポイント（Gmail スタイル楽観的更新）。
@@ -125,16 +149,8 @@ class FavoriteViewModel @Inject constructor(
         try {
             favoriteStore.remove(id)
             Timber.tag(TAG).i("Favorite delete committed: id=%d", id)
-            // pending から外しつつ、最新 favorites を反映。
-            // 行は既に UI から消えているため、ここで flash は起きない。
-            _uiState.update { current ->
-                if (current is FavoriteUiState.Loaded) {
-                    current.copy(pendingDeleteIDs = current.pendingDeleteIDs - id)
-                } else {
-                    current
-                }
-            }
-            publishFavorites(favoriteStore.favorites.value)
+            // pendingDeleteIDs はここでは外さない。Room の emission（行なし）が publishFavorites で
+            // 存在しない ID を落とすため、先に外すと emission 到着前に行が一瞬復活してしまう。
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -239,27 +255,9 @@ class FavoriteViewModel @Inject constructor(
             try {
                 idsToRemove.forEach { id -> favoriteStore.remove(id) }
                 Timber.tag(TAG).i("Bulk delete succeeded: count=%d", idsToRemove.size)
-                val favorites = favoriteStore.favorites.value
-                _uiState.update { current ->
-                    if (favorites.isEmpty()) {
-                        // 全件削除されたら編集モードも自動終了（Empty 状態へ）
-                        FavoriteUiState.Empty
-                    } else {
-                        val existingLoaded = current as? FavoriteUiState.Loaded
-                        val previousFilter = existingLoaded?.filterLanguage
-                        val nextFilter = if (previousFilter != null && favorites.none { it.language == previousFilter }) {
-                            null
-                        } else {
-                            previousFilter
-                        }
-                        // copy で既存の pendingDeleteIDs / isRefreshing を引き継ぐ（猶予中のスワイプ削除を再表示させない）
-                        (existingLoaded ?: FavoriteUiState.Loaded(favorites = favorites)).copy(
-                            favorites = favorites,
-                            selectedIDs = emptySet(),
-                            filterLanguage = nextFilter,
-                        ).withDerivedFields()
-                    }
-                }
+                // 一覧本体・Empty 遷移・フィルタ自動クリアは Room の emission（publishFavorites）が担う。
+                // 選択だけはここで解除する（猶予中のスワイプ削除の pendingDeleteIDs は保持される）。
+                updateLoaded { it.copy(selectedIDs = emptySet()) }
                 // 一括削除完了の確認 SnackBar
                 enqueueMessage("${idsToRemove.size}件削除しました")
             } catch (e: CancellationException) {

@@ -17,6 +17,5 @@ annotation class Dispatcher(val dispatcher: GitHubFinderDispatchers)
 
 /** [Dispatcher] で選べる Dispatcher の種類。 */
 enum class GitHubFinderDispatchers {
-    IO,
     Default,
 }

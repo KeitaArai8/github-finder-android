@@ -16,7 +16,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
@@ -32,29 +31,34 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
         context.getSystemService(ConnectivityManager::class.java)
 
     override val isOnline: Flow<Boolean> = callbackFlow {
-        // 到達可能（INTERNET かつ VALIDATED）なネットワークの集合。コールバックは単一スレッドで直列に呼ばれる。
+        // 到達可能（INTERNET かつ VALIDATED）なネットワークの集合。
+        // 初期化はこのコルーチンのスレッド、コールバックは ConnectivityManager のスレッドで走るため、アクセスは synchronized で守る。
         val networks = mutableSetOf<Network>()
+
+        /** 集合を更新し、更新後の「到達可能なネットワークが 1 つ以上あるか」を流す（更新と判定を 1 つの排他区間にする）。 */
+        fun updateAndSend(mutate: MutableSet<Network>.() -> Unit) {
+            val isOnline = synchronized(networks) {
+                networks.mutate()
+                networks.isNotEmpty()
+            }
+            trySend(isOnline)
+        }
 
         // 購読直後に現在状態を流せるよう、コールバック登録前に activeNetwork から集合を初期化する
         connectivityManager?.activeNetwork?.let { active ->
             val capabilities = connectivityManager.getNetworkCapabilities(active)
-            if (capabilities != null && capabilities.isReachable()) networks.add(active)
+            if (capabilities != null && capabilities.isReachable()) synchronized(networks) { networks.add(active) }
         }
 
+        // onAvailable では集合に加えない。接続直後は VALIDATED 前のことがあり、
+        // 加えるとキャプティブポータル等の「未検証ネットワーク」をオンラインと誤判定するため、onCapabilitiesChanged を待つ。
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                networks.add(network)
-                trySend(networks.isNotEmpty())
-            }
-
             override fun onLost(network: Network) {
-                networks.remove(network)
-                trySend(networks.isNotEmpty())
+                updateAndSend { remove(network) }
             }
 
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                if (capabilities.isReachable()) networks.add(network) else networks.remove(network)
-                trySend(networks.isNotEmpty())
+                updateAndSend { if (capabilities.isReachable()) add(network) else remove(network) }
             }
         }
 
@@ -62,13 +66,13 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
         connectivityManager?.registerNetworkCallback(request, callback)
-        trySend(networks.isNotEmpty())
+        trySend(synchronized(networks) { networks.isNotEmpty() })
 
         awaitClose {
             connectivityManager?.unregisterNetworkCallback(callback)
         }
     }
-        .conflate()
+        // conflate() は不要: 唯一の購読側（MainViewModel の stateIn）が StateFlow で既に conflate する
         .distinctUntilChanged()
         .onEach { online -> Timber.tag(TAG).i("Network state changed: online=%s", online) }
 

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import com.example.githubfinder.R
 import com.example.githubfinder.core.designsystem.AppIcons
+import com.example.githubfinder.core.designsystem.gitHubFinderColors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -133,7 +133,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
             modifier = Modifier
                 .size(40.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(Color.Gray.copy(alpha = 0.3f)),
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -151,7 +151,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
                 Icon(
                     AppIcons.Star,
                     contentDescription = null,
-                    tint = Color(0xFFFFAB00),
+                    tint = MaterialTheme.gitHubFinderColors.star,
                     modifier = Modifier.size(14.dp),
                 )
                 Text("67k", style = MaterialTheme.typography.labelSmall)
@@ -170,7 +170,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
             Icon(
                 AppIcons.FavoriteBorder,
                 contentDescription = stringResource(R.string.nav_favorite),
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

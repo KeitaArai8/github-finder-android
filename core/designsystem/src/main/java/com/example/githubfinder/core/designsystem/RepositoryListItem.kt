@@ -4,10 +4,10 @@
  * アバター / 名前 / 説明 / Star 数 / 言語 の本体は共通で、画面ごとに違う部分
  * （編集モードの選択アイコン・お気に入りトグルの有無・操作ボタンの大きさ）だけを引数と slot で受ける。
  *
- * 色は MaterialTheme.colorScheme のロールで持ち、ハードコードしない（ダークテーマ・Dynamic Color に追従させるため）:
- *  - Star: tertiary（強調アクセントのロール。固定の琥珀色 0xFFFFAB00 の置き換え）
- *  - お気に入り済みのハート: error（赤系のロール。固定の Color.Red の置き換え。専用ロールが無いため error を流用している）
- *  - 未お気に入りのハート / アバターのプレースホルダ: onSurfaceVariant（固定の Color.Gray の置き換え）
+ * 色はハードコードせずテーマ経由で参照する（ダークテーマ・Dynamic Color に追従させるため）:
+ *  - Star / お気に入り済みのハート: [gitHubFinderColors]（色自体が意味を持つため。Dynamic Color で tertiary/error が
+ *    壁紙由来の色に変わっても琥珀色・赤を保つ）
+ *  - 未お気に入りのハート / アバターのプレースホルダ: colorScheme.onSurfaceVariant
  */
 
 package com.example.githubfinder.core.designsystem
@@ -78,7 +78,7 @@ fun RepositoryListItem(
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                Icon(AppIcons.Star, contentDescription = null, tint = MaterialTheme.gitHubFinderColors.star, modifier = Modifier.size(14.dp))
                 Text("${item.starCount}", style = MaterialTheme.typography.labelSmall)
                 item.language?.let {
                     Spacer(modifier = Modifier.width(12.dp))
@@ -106,7 +106,7 @@ fun RepositoryListItem(
                     contentDescription = stringResource(
                         if (item.isFavorite) R.string.a11y_favorite_remove else R.string.a11y_favorite_add
                     ),
-                    tint = if (item.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (item.isFavorite) MaterialTheme.gitHubFinderColors.favorite else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

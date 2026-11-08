@@ -16,6 +16,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -34,6 +39,39 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
+/**
+ * Material 3 のロールに存在しない「意味を持つ色」のホルダ（iOS DesignSystem の `Color.Brand.favorite` 相当）。
+ * Dynamic Color は tertiary 等を壁紙由来の色（紫など）に置き換えるため、Star の琥珀色やお気に入りの赤のように
+ * 色そのものが意味を持つものは colorScheme のロールに載せず、ここで固定値を持つ。
+ *
+ * @property star Star 数アイコンの色（琥珀色）。
+ * @property favorite お気に入り済みハートの色（赤）。
+ */
+@Immutable
+data class GitHubFinderColors(
+    val star: Color,
+    val favorite: Color,
+)
+
+private val LightGitHubFinderColors = GitHubFinderColors(
+    star = Color(0xFFFFAB00),
+    favorite = Color(0xFFD32F2F),
+)
+
+/** ダーク背景でも沈まないよう、明度を上げた変種。 */
+private val DarkGitHubFinderColors = GitHubFinderColors(
+    star = Color(0xFFFFC947),
+    favorite = Color(0xFFFF6B6B),
+)
+
+private val LocalGitHubFinderColors = staticCompositionLocalOf { LightGitHubFinderColors }
+
+/** [GitHubFinderTheme] が提供する意味色。`MaterialTheme.gitHubFinderColors.star` のように参照する。 */
+val MaterialTheme.gitHubFinderColors: GitHubFinderColors
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalGitHubFinderColors.current
+
 @Composable
 fun GitHubFinderTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -49,10 +87,14 @@ fun GitHubFinderTheme(
         else -> lightColorScheme()
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalGitHubFinderColors provides if (darkTheme) DarkGitHubFinderColors else LightGitHubFinderColors,
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }

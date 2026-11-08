@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ダーク時: framework の Material（ダーク）テーマ。ライト側は values/themes.xml -->
+    <style name="Theme.GitHubFinderAndroid" parent="android:Theme.Material.NoActionBar" />
+</resources>

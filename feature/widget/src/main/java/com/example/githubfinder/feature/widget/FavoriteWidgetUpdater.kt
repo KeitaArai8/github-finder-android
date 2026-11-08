@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,7 +37,7 @@ class FavoriteWidgetUpdater internal constructor(
      * 最初の emission（起動直後の現在値）も更新するが、updateAll は冪等なので drop はしない。
      */
     fun start(): Job = scope.launch {
-        favoriteStore.favorites.collect {
+        favoriteStore.favorites.filterNotNull().collect {
             try {
                 updateWidgets()
             } catch (e: CancellationException) {

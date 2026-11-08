@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -39,7 +40,7 @@ class FavoriteViewModel @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
 
-    // 最初の emission が届くまでは Loading。以後は Room（FavoriteStore.favorites）の変更で更新される。
+    // 最初の非 null emission（Room の初回読み込み完了）が届くまでは Loading。以後は Room（FavoriteStore.favorites）の変更で更新される。
     private val _uiState = MutableStateFlow<FavoriteUiState>(FavoriteUiState.Loading)
     val uiState: StateFlow<FavoriteUiState> = _uiState.asStateFlow()
 
@@ -72,7 +73,7 @@ class FavoriteViewModel @Inject constructor(
         observeJob = viewModelScope.launch {
             // StateFlow への .catch は効かない（SharedFlow は完了しない）ため try/catch で受ける。
             try {
-                favoriteStore.favorites.collect { publishFavorites(it) }
+                favoriteStore.favorites.filterNotNull().collect { publishFavorites(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -94,7 +95,7 @@ class FavoriteViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             setRefreshing(true)
-            publishFavorites(favoriteStore.favorites.value)
+            favoriteStore.favorites.value?.let { publishFavorites(it) }
             setRefreshing(false)
         }
     }

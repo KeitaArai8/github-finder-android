@@ -62,6 +62,34 @@ class FavoriteViewModelTest {
     }
 
     @Test
+    fun `Roomの初回emissionが届くまでEmptyにならずLoadingのままで届いた後に遷移する`() = runTest {
+        // Arrange: まだ emit しない Flow を持つ Repository から作った Store と ViewModel
+        val source = kotlinx.coroutines.flow.MutableSharedFlow<List<FavoriteEntity>>()
+        val repository = object : com.example.githubfinder.core.data.repository.FavoriteRepository {
+            override val favorites: kotlinx.coroutines.flow.Flow<List<FavoriteEntity>> = source
+            override suspend fun add(repository: com.example.githubfinder.core.model.RepositoryEntity) = Unit
+            override suspend fun remove(id: Int) = Unit
+        }
+        val viewModel = FavoriteViewModel(
+            FavoriteStore(repository, storeScope),
+            CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler)),
+        )
+
+        // Act: 初回 emission の前にスケジューラを進める
+        advanceUntilIdle()
+
+        // Assert: 初期値の空リストを Empty と誤認せず Loading のまま
+        assertTrue(viewModel.uiState.value is FavoriteUiState.Loading)
+
+        // Act: Room の初回 emission（0 件）が届く
+        source.emit(emptyList())
+        advanceUntilIdle()
+
+        // Assert: ここで初めて Empty になる
+        assertTrue(viewModel.uiState.value is FavoriteUiState.Empty)
+    }
+
+    @Test
     fun `お気に入りがある場合Loaded状態になる`() = runTest {
         // Arrange: 1件のお気に入りを持つ Repository
         fakeFavoriteRepository.stored = listOf(

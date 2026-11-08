@@ -36,10 +36,11 @@ private const val TERMS_URL = "https://www.apple.com/legal/internet-services/itu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     Scaffold(
+        modifier = modifier,
         topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_tab_title)) }) },
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
@@ -89,9 +90,10 @@ private fun SettingsRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),

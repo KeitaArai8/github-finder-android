@@ -269,11 +269,13 @@ private fun FavoriteTopBar(
     onExitEditMode: () -> Unit,
     onToggleSelectAll: () -> Unit,
     onRequestRemoveSelected: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val loaded = state as? FavoriteUiState.Loaded
     when {
         loaded?.isEditMode == true -> {
             TopAppBar(
+                modifier = modifier,
                 title = { Text(stringResource(R.string.favorite_selected_count, loaded.selectedIDs.size)) },
                 navigationIcon = {
                     IconButton(onClick = onExitEditMode) {
@@ -311,6 +313,7 @@ private fun FavoriteTopBar(
         }
         else -> {
             TopAppBar(
+                modifier = modifier,
                 title = { Text(stringResource(R.string.favorite_tab_title)) },
                 actions = {
                     if (loaded != null) {
@@ -336,10 +339,11 @@ private fun FavoriteTopBar(
 private fun SelectAllToggleButton(
     isAllSelected: Boolean,
     onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val labelRes = if (isAllSelected) R.string.favorite_deselect_all else R.string.favorite_select_all
     val icon = if (isAllSelected) AppIcons.RemoveDone else AppIcons.DoneAll
-    IconButton(onClick = onToggle) {
+    IconButton(onClick = onToggle, modifier = modifier) {
         Icon(
             imageVector = icon,
             contentDescription = stringResource(labelRes),
@@ -351,9 +355,10 @@ private fun SelectAllToggleButton(
 private fun SortMenuButton(
     currentSortKey: FavoriteSortKey,
     onSortSelected: (FavoriteSortKey) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier = modifier) {
         IconButton(onClick = { expanded = true }) {
             Icon(
                 imageVector = AppIcons.SwapVert,
@@ -396,11 +401,12 @@ private fun LanguageFilterBar(
     languages: List<String>,
     selected: String?,
     onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (languages.isEmpty()) return
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -431,8 +437,10 @@ private fun DeleteConfirmationDialog(
     count: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     AlertDialog(
+        modifier = modifier,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.favorite_delete_confirmation_title, count)) },
         text = { Text(stringResource(R.string.favorite_delete_confirmation_message)) },
@@ -458,10 +466,12 @@ private fun FavoriteRow(
     onDismiss: () -> Unit,
     onRowTap: () -> Unit,
     onShare: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 編集モード中はスワイプ削除・シェアを無効化する（誤操作防止）
     if (isEditMode) {
         RowContent(
+            modifier = modifier,
             favorite = favorite,
             isEditMode = true,
             isSelected = isSelected,
@@ -470,11 +480,9 @@ private fun FavoriteRow(
         )
     } else {
         val dismissState = rememberSwipeToDismissBoxState()
-        // 方向制限は enableDismissFromStartToEnd = false で行い、完全スワイプ（EndToStart 確定）を検知して削除する
-        LaunchedEffect(dismissState.currentValue) {
-            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) onDismiss()
-        }
+        // 方向制限は enableDismissFromStartToEnd = false で行い、完全スワイプ（EndToStart 確定）を onDismiss で受けて削除する
         SwipeToDismissBox(
+            modifier = modifier,
             state = dismissState,
             // ★ 段階的 UX: 左スワイプで RowContent がずれた分だけ赤背景 + ゴミ箱が露出する。
             //   完全スワイプで初めて削除実行されるため、ユーザは途中で離して取り消せる。
@@ -483,6 +491,7 @@ private fun FavoriteRow(
             backgroundContent = { DismissBackground() },
             // 右方向スワイプ（StartToEnd）は機能割当なしのため無効化
             enableDismissFromStartToEnd = false,
+            onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) onDismiss() },
         ) {
             RowContent(
                 favorite = favorite,
@@ -505,9 +514,9 @@ private fun FavoriteRow(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DismissBackground() {
+private fun DismissBackground(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.errorContainer),
         contentAlignment = Alignment.CenterEnd,
@@ -530,6 +539,7 @@ private fun RowContent(
     isSelected: Boolean,
     onRowTap: () -> Unit,
     onShare: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     RepositoryListItem(
         item = favorite.toDisplayItem(),
@@ -537,7 +547,7 @@ private fun RowContent(
         // ★ 必須: SwipeToDismissBox の backgroundContent（赤）が透けないよう surface 色で塗りつぶす。
         //   これがないと、スワイプしていなくても背景の赤が常に表示される。
         //   RepositoryListItem 内の .clickable より前に適用されるので、ripple は surface 上で正しく描画される。
-        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
         onShare = onShare,
         compactActions = true,
         leadingContent = if (isEditMode) {

@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -205,19 +206,24 @@ private fun RepositoryList(
     onRefresh: () -> Unit,
     onRowTap: (RepositoryDisplayItem) -> Unit,
     onShare: (RepositoryDisplayItem) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
 
+    // snapshotFlow を張ったままの LaunchedEffect が古い items / onLoadMore を掴み続けないよう、最新値を経由して読む
+    val currentItemCount by rememberUpdatedState(items.size)
+    val currentOnLoadMore by rememberUpdatedState(onLoadMore)
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
-                if (lastIndex != null && lastIndex >= items.size - 3) {
-                    onLoadMore()
+                if (lastIndex != null && lastIndex >= currentItemCount - 3) {
+                    currentOnLoadMore()
                 }
             }
     }
 
     PullToRefreshBox(
+        modifier = modifier,
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
     ) {
@@ -247,8 +253,9 @@ private fun SearchHistoryList(
     onSelect: (String) -> Unit,
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

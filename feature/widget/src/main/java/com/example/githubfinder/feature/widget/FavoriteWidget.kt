@@ -100,8 +100,9 @@ private fun FavoriteWidgetContent(
     context: Context,
     favorites: List<FavoriteEntity>,
     launchIntent: Intent?,
+    modifier: GlanceModifier = GlanceModifier,
 ) {
-    val rootModifier = GlanceModifier
+    val rootModifier = modifier
         .fillMaxSize()
         .background(GlanceTheme.colors.background)
         .cornerRadius(16.dp)
@@ -117,9 +118,9 @@ private fun FavoriteWidgetContent(
 }
 
 @Composable
-private fun EmptyState(context: Context) {
+private fun EmptyState(context: Context, modifier: GlanceModifier = GlanceModifier) {
     Column(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -142,8 +143,12 @@ private fun EmptyState(context: Context) {
 }
 
 @Composable
-private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
-    Column(modifier = GlanceModifier.fillMaxSize()) {
+private fun FavoriteList(
+    context: Context,
+    favorites: List<FavoriteEntity>,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
         Text(
             text = context.getString(R.string.widget_title),
             style = TextStyle(
@@ -164,9 +169,9 @@ private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
 }
 
 @Composable
-private fun FavoriteRow(favorite: FavoriteEntity) {
+private fun FavoriteRow(favorite: FavoriteEntity, modifier: GlanceModifier = GlanceModifier) {
     Row(
-        modifier = GlanceModifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

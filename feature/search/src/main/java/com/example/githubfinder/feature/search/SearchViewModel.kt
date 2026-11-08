@@ -36,14 +36,21 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -68,6 +75,16 @@ private sealed interface SearchPhase {
     data object Empty : SearchPhase
     data class Error(val message: UiText) : SearchPhase
 }
+
+/**
+ * 検索の実行要求。
+ * [isImmediate] が true の要求（履歴選択・プル・トゥ・リフレッシュ）は debounce を通さず、同じクエリの重複判定も受けない。
+ */
+private data class SearchRequest(
+    val query: String,
+    val isImmediate: Boolean = false,
+    val isRefresh: Boolean = false,
+)
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -108,6 +125,19 @@ class SearchViewModel @Inject constructor(
 
     private var nextMessageID = 0L
 
+    /**
+     * debounce を通さず今すぐ検索したい要求の入口（履歴選択・リフレッシュ）。
+     * 検索の実行は [observeSearchQuery] のパイプライン 1 本に集約し、ここからは直接 performSearch を呼ばない
+     * （直接呼ぶと同じクエリの debounce 検索と二重実行され、リクエスト・履歴追加が 2 回になるため）。
+     */
+    private val immediateSearchRequests = MutableSharedFlow<SearchRequest>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    /** 直近に検索を要求したクエリ（空白クエリは null）。履歴選択で検索済みのクエリを、後から届く debounce 検索が重複して実行しないために使う。 */
+    private var lastRequestedQuery: String? = null
+
     init {
         observeSearchQuery()
     }
@@ -118,7 +148,7 @@ class SearchViewModel @Inject constructor(
 
     fun selectHistory(query: String) {
         onQueryChanged(query)
-        viewModelScope.launch { performSearch() }
+        immediateSearchRequests.tryEmit(SearchRequest(query, isImmediate = true))
     }
 
     fun removeHistory(query: String) {
@@ -130,16 +160,27 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * クエリ変更を debounce して検索する。mapLatest により、前の検索が通信中でも新しいクエリが確定した時点で
-     * その検索をキャンセルする（遅い古いリクエストが新しい結果を待たせたり後から上書きしたりしない）。
+     * 検索の実行を 1 本のパイプラインに集約する。
+     * 入力（クエリ変更）は debounce して、履歴選択・リフレッシュは即時に、同じ流れへ合流させる。
+     * mapLatest により、前の検索が通信中でも新しい要求が確定した時点でその検索をキャンセルする
+     * （遅い古いリクエストが新しい結果を待たせたり後から上書きしたりしない）。
+     * 履歴選択で検索済みのクエリは、あとから debounce を通って届いても再検索しない
+     * （キャンセルが走らないよう、重複排除は mapLatest の手前で行う）。
      */
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private fun observeSearchQuery() {
-        // StateFlow は値が変わったときだけ emit するので distinctUntilChanged は不要
-        query
-            .debounce(500)
-            .mapLatest { query ->
-                if (query.isBlank()) resetSearch() else performSearch()
+        merge(
+            query.debounce(500).distinctUntilChanged().map { SearchRequest(it) },
+            immediateSearchRequests,
+        )
+            .filter { it.isImmediate || it.query != lastRequestedQuery }
+            .onEach { lastRequestedQuery = it.query.takeIf { query -> query.isNotBlank() } }
+            .mapLatest { request ->
+                when {
+                    request.query.isBlank() -> resetSearch()
+                    request.isRefresh -> refreshSearch(request.query)
+                    else -> performSearch(request.query)
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -148,16 +189,20 @@ class SearchViewModel @Inject constructor(
         _phase.value = SearchPhase.Idle
     }
 
-    fun onRefresh() {
-        if (query.value.isBlank()) return
-        viewModelScope.launch {
-            updateLoaded { it.copy(isRefreshing = true) }
-            try {
-                performSearch()
-            } finally {
-                updateLoaded { it.copy(isRefreshing = false) }
-            }
+    /** リフレッシュ要求の検索。完了（またはキャンセル）時に必ず isRefreshing を戻す。 */
+    private suspend fun refreshSearch(query: String) {
+        updateLoaded { it.copy(isRefreshing = true) }
+        try {
+            performSearch(query)
+        } finally {
+            updateLoaded { it.copy(isRefreshing = false) }
         }
+    }
+
+    fun onRefresh() {
+        val currentQuery = query.value
+        if (currentQuery.isBlank()) return
+        immediateSearchRequests.tryEmit(SearchRequest(currentQuery, isImmediate = true, isRefresh = true))
     }
 
     fun onLoadMore() {
@@ -195,8 +240,7 @@ class SearchViewModel @Inject constructor(
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
     }
 
-    private suspend fun performSearch() {
-        val currentQuery = query.value
+    private suspend fun performSearch(currentQuery: String) {
         _phase.value = SearchPhase.Loading
 
         Timber.tag(TAG).i("Search started: query=%s, page=1", currentQuery)
@@ -226,10 +270,16 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun loadNextPage(currentPage: Int) {
+        // 通信中にクエリが変わったら、古いクエリの 2 ページ目を新しい結果へ混ぜない（取得開始時のクエリと照合する）
+        val requestedQuery = query.value
         updateLoaded { it.copy(isLoadingMore = true) }
         try {
             val nextPage = currentPage + 1
-            val result = searchRepository.search(query.value, nextPage)
+            val result = searchRepository.search(requestedQuery, nextPage)
+            if (query.value != requestedQuery) {
+                updateLoaded { it.copy(isLoadingMore = false) }
+                return
+            }
             updateLoaded {
                 it.copy(
                     items = it.items + result.items,
@@ -241,7 +291,8 @@ class SearchViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            enqueueMessage(UiText.Resource(R.string.search_error_load_more))
+            // 古いクエリのページ取得の失敗は、今の検索結果に無関係なので通知しない
+            if (query.value == requestedQuery) enqueueMessage(UiText.Resource(R.string.search_error_load_more))
             updateLoaded { it.copy(isLoadingMore = false) }
         }
     }

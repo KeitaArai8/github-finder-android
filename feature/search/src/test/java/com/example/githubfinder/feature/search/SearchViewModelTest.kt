@@ -568,6 +568,83 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `selectHistoryは検索を1回だけ実行し履歴追加も1回だけである`() = runTest {
+        // Arrange: owner/repo 1 件を返す検索結果と ViewModel
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+
+        // Act: 履歴から "kotlin" を選び、debounce（500ms）が経過するまで仮想時間を進める
+        viewModel.selectHistory("kotlin")
+        advanceUntilIdle()
+
+        // Assert: 即時検索のあとで debounce 経由の検索が重複して走らず、リクエストも履歴追加も 1 回
+        assertEquals(1, fakeSearchRepository.searchCallCount)
+        assertEquals(1, fakeSearchHistoryDataSource.addCallCount)
+        assertEquals("kotlin", fakeSearchHistoryDataSource.lastAddedQuery)
+    }
+
+    @Test
+    fun `onRefreshは同じクエリを debounce 待ちなしで1回だけ再検索する`() = runTest {
+        // Arrange: "kotlin" で検索済み（Loaded）の ViewModel
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+        assertEquals(1, fakeSearchRepository.searchCallCount)
+
+        // Act: プル・トゥ・リフレッシュ
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // Assert: 再検索はちょうど 1 回増え（計 2 回）、結果は Loaded でスピナーは閉じている
+        assertEquals(2, fakeSearchRepository.searchCallCount)
+        val state = viewModel.uiState.value as SearchUiState.Loaded
+        assertEquals(false, state.isRefreshing)
+    }
+
+    @Test
+    fun `次ページ取得中にクエリが変わったら古いページの結果は破棄される`() = runTest {
+        // Arrange: "a" の 1 ページ目（a/page1・次ページあり）を表示中
+        val pageOne = RepositoryEntity(1, "a/page1", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(pageOne), hasNextPage = true)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("a")
+        advanceUntilIdle()
+
+        // Act: "a" の 2 ページ目を通信中のまま止め、その間にクエリを "b" へ変えて "b" の検索を完了させる
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+        viewModel.onLoadMore()
+        runCurrent()
+        fakeSearchRepository.searchGate = null
+        val newResult = RepositoryEntity(2, "b/page1", null, 5, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(newResult), hasNextPage = false)
+        )
+        viewModel.onQueryChanged("b")
+        advanceUntilIdle()
+        // その後で "a" の 2 ページ目（a/page2）の通信が完了する
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(RepositoryEntity(3, "a/page2", null, 1, null, null)), hasNextPage = false)
+        )
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Assert: "b" の結果だけが残り、a/page2 は混ざらず、読み込み中表示も残らない
+        val state = viewModel.uiState.value as SearchUiState.Loaded
+        assertEquals(listOf("b/page1"), state.items.map { it.fullName })
+        assertEquals(false, state.isLoadingMore)
+    }
+
+    @Test
     fun `clearHistoryで履歴が全消去される`() = runTest {
         // Arrange: 履歴 [a, b, c] をシードした ViewModel
         fakeSearchHistoryDataSource.setHistoryForTest(listOf("a", "b", "c"))

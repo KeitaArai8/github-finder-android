@@ -110,7 +110,10 @@ class SearchViewModelTest {
 
     @Test
     fun `初期状態はIdleである`() = runTest {
+        // Arrange & Act: 何も操作していない ViewModel を作る
         val viewModel = createViewModel()
+
+        // Assert: 検索前なので Idle
         assertTrue(viewModel.uiState.value is SearchUiState.Idle)
     }
 

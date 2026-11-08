@@ -68,11 +68,11 @@ UDF の「状態集約」原則に厳密準拠し、Screen の **画面の見た
 ```kotlin
 sealed interface SearchUiState {
     val searchQuery: String
-    data object Idle(val history: List<String> = emptyList(), ...) : SearchUiState
+    data class Idle(val history: List<String> = emptyList(), ...) : SearchUiState
     data class Loading(...) : SearchUiState
     data class Loaded(items, isLoadingMore, isRefreshing, ...) : SearchUiState
     data class Empty(...) : SearchUiState
-    data class Error(val message: String, ...) : SearchUiState
+    data class Error(val message: UiText, ...) : SearchUiState
 }
 ```
 
@@ -83,7 +83,7 @@ sealed interface SearchUiState {
 「SnackBar 表示」のような一度きりの通知は、[公式ガイド](https://developer.android.com/topic/architecture/ui-layer/events)の推奨どおり **ViewModel のイベントを必ず UI State の更新として扱う** 形にしています。`Channel` / `SharedFlow` は配信が保証されない（購読者不在時に取りこぼし得る）ため使いません。通知は `uiState` とは別の `StateFlow` に **FIFO のリスト** で持ち、View が表示し終えたら `userMessageShown(id)` で消します（フェーズごとの sealed case に載せないのは、通知がどのフェーズでも発生し得るため。ただし画面の状態であり、View は `StateFlow` として購読します）:
 
 ```kotlin
-data class UserMessage(val id: Long, val text: String)  // id は同文言が連続しても別通知と扱うためだけの値
+data class UserMessage(val id: Long, val text: UiText)  // 文言は UiText（文字列リソース ID + 引数）。 id は同文言が連続しても別通知と扱うためだけの値
 
 @HiltViewModel
 class SearchViewModel : ViewModel() {
@@ -92,7 +92,7 @@ class SearchViewModel : ViewModel() {
 
     fun toggleFavorite(...) {
         try { ... } catch (_: Exception) {
-            enqueueMessage("お気に入りの更新に失敗しました")
+            enqueueMessage(UiText.Resource(R.string.search_error_favorite_update))
         }
     }
 
@@ -118,14 +118,14 @@ LaunchedEffect(Unit) {
 
 **注意点（回転時の挙動）**: 表示が完了していない通知は、画面回転後に再表示されます（`userMessageShown` が呼ばれるまで State に残るため。以前の `Channel` 方式の「再表示されない」利点は、配信保証と引き換えに手放しています）。
 
-**Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。また、猶予中に ViewModel が破棄された場合（タブ切替で back stack から外れるなど）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
+**Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します（Room への書き込みは `@ApplicationScope` で実行し、書き込み中に ViewModel が破棄されても中断されません）。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。また、猶予中に ViewModel が破棄された場合（タブ切替で back stack から外れるなど）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
 
 ### combine + stateIn によるリアクティブ State 合成（SearchViewModel）
 
 複数の非同期入力源（フェーズ・お気に入り ID・検索履歴）から最終 UiState を合成する場合は、`combine + stateIn` で **宣言的に合成** する:
 
 ```kotlin
-private val _phase = MutableStateFlow<SearchPhase>(SearchPhase.Idle())
+private val _phase = MutableStateFlow<SearchPhase>(SearchPhase.Idle)  // Idle は data object
 
 val uiState: StateFlow<SearchUiState> = combine(
     _phase,
@@ -136,7 +136,7 @@ val uiState: StateFlow<SearchUiState> = combine(
 }.stateIn(
     scope = viewModelScope,
     started = SharingStarted.WhileSubscribed(5_000),
-    initialValue = SearchUiState.Idle(),
+    initialValue = SearchUiState.Idle(searchQuery = query.value),
 )
 ```
 
@@ -236,8 +236,9 @@ dependencies { implementation(project(":core:data")) }
 ├── SearchCacheDataSource          ← Repository の内部実装詳細（外部に公開しない）
 ├── SearchHistoryDataSource (i/f)  ← 検索履歴の永続化契約
 ├── SearchHistoryDataSourceImpl    ← DataStore Preferences 実装（テスト時は Fake 差し替え）
-├── FavoriteStore                  ← お気に入りのメモリ同期プール（@Singleton）
-├── NetworkMonitor                 ← ConnectivityManager → Flow<Boolean>
+├── FavoriteStore                  ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
+├── NetworkMonitor (i/f)           ← isOnline: Flow<Boolean> の契約
+├── ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（テスト時は Fake 差し替え）
 └── DI Module                      ← interface ↔ impl のバインド
 ```
 
@@ -272,7 +273,7 @@ Android公式に従い、各DataSourceは**単一のデータソースのみ**�
 |--------|------|------|
 | お気に入り | Room DB (ローカル) | アプリ終了後も保持。唯一の真実。Widget からも同じ DB を読む |
 | 検索結果 | API + メモリキャッシュ | API が正。キャッシュはアプリ起動中のみ |
-| チュートリアル表示済み | SharedPreferences | ローカルフラグ |
+| チュートリアル表示済み | DataStore Preferences | ローカルフラグ（旧 SharedPreferences 値は初回に移行） |
 
 ### お気に入り設計（Passive View + SSOT）
 
@@ -290,24 +291,20 @@ SearchViewModel（公開）
 
 ### オフライン検知（NetworkMonitor）
 
-`:core:data/network/NetworkMonitor.kt` で `ConnectivityManager` を `callbackFlow` でラップし、`Flow<Boolean>` として公開。`MainActivity` で Hilt inject、`MainNavigation` で `collectAsStateWithLifecycle` 観察:
+`:core:data/network/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。到達可能（INTERNET かつ VALIDATED）なネットワークの集合が空でないかで判定するため、Wi-Fi が切れてもモバイルが生きていればオンラインのままです。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
 
 ```kotlin
-@Singleton
-class NetworkMonitor @Inject constructor(
-    @ApplicationContext context: Context,
-) {
-    val isConnected: Flow<Boolean> = callbackFlow {
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { trySend(true) }
-            override fun onLost(network: Network) { trySend(false) }
-        }
-        // registerNetworkCallback / awaitClose で unregister
-    }.distinctUntilChanged()
+interface NetworkMonitor {
+    val isOnline: Flow<Boolean>
+}
+
+class MainViewModel @Inject constructor(networkMonitor: NetworkMonitor) : ViewModel() {
+    val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }
 ```
 
-UI 層は `AnimatedVisibility(visible = !isConnected)` で `OfflineBanner`（`:core:designsystem`）をスライドイン表示。
+UI 層は `AnimatedVisibility(visible = !isOnline)` で `OfflineBanner`（`:core:designsystem`）をスライドイン表示。
 
 ### 構造化ログ（Timber）
 
@@ -349,7 +346,7 @@ interface WidgetEntryPoint {
 // Widget 内
 val repo = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
     .favoriteRepository()
-val favorites = repo.getAll().take(5)
+val favorites = repo.favorites.first().take(5)
 ```
 
 Widget は Hilt スコープ外で動作するため `@AndroidEntryPoint` は使えませんが、`EntryPointAccessors` で Singleton スコープの Repository を取得できます。
@@ -424,7 +421,8 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 |------|------|
 | 機能 | お気に入り上位5件をホーム画面に表示 |
 | サイズ | resizable（horizontal+vertical）、デフォルト 3×2 セル |
-| データ取得 | Hilt `EntryPointAccessors` 経由で `FavoriteRepository.getAll()` |
+| データ取得 | Hilt `EntryPointAccessors` 経由で `FavoriteRepository.favorites.first()`（上位5件） |
+| 即時反映 | `FavoriteWidgetUpdater` が `FavoriteStore.favorites` を購読し、変化のたびに `updateAll` で再描画 |
 | 更新頻度 | `updatePeriodMillis=3600000`（1時間ごと） |
 | タップ動作 | アプリ起動 |
 | 空状態 | 「お気に入りがありません / 検索画面から追加してください」 |

@@ -9,8 +9,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -23,13 +25,23 @@ class FavoriteStoreTest {
         override suspend fun remove(id: Int) = Unit
     }
 
+    /** Store の Eagerly 購読を持つスコープ。テスト後に [tearDown] でまとめて閉じる。 */
+    private val scopes = mutableListOf<CoroutineScope>()
+
+    private fun TestScope.newScope() = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).also { scopes += it }
+
+    @After
+    fun tearDown() {
+        scopes.forEach { it.cancel() }
+    }
+
     private fun favorite(id: Int) = FavoriteEntity(id, "owner/repo$id", null, 1, null, null, 0L)
 
     @Test
     fun `Roomの最初のemissionが届くまでfavoritesはnullでfavoriteIDsは空集合`() = runTest {
         // Arrange: まだ何も emit していない Flow を持つ Repository
         val source = MutableSharedFlow<List<FavoriteEntity>>()
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val scope = newScope()
         val store = FavoriteStore(StubRepository(source), scope)
 
         // Assert: 読み込み中は null（空リストと区別できる）、ID 集合は空
@@ -42,14 +54,13 @@ class FavoriteStoreTest {
         // Assert: null が解消され、ID 集合にも反映される
         assertEquals(listOf(3), store.favorites.value?.map { it.id })
         assertEquals(setOf(3), store.favoriteIDs.value)
-        scope.cancel()
     }
 
     @Test
     fun `Roomの購読が例外で失敗しても落ちずに空リストへ倒れる`() = runTest {
         // Arrange: collect 開始時に例外を投げる Flow
         val failing = flow<List<FavoriteEntity>> { throw IllegalStateException("room failure") }
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val scope = newScope()
 
         // Act: ストアを作る（Eagerly なので即購読される。catch が無ければ scope が例外で落ちる）
         val store = FavoriteStore(StubRepository(failing), scope)
@@ -57,6 +68,5 @@ class FavoriteStoreTest {
         // Assert: 例外は伝播せず、favorites は空リスト（null ではない）になる
         assertEquals(emptyList<FavoriteEntity>(), store.favorites.value)
         assertEquals(emptySet<Int>(), store.favoriteIDs.value)
-        scope.cancel()
     }
 }

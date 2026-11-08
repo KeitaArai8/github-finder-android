@@ -11,7 +11,6 @@ import com.example.githubfinder.core.model.SearchResultEntity
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -20,20 +19,23 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(testDispatcher)
+
     private lateinit var fakeSearchRepository: FakeSearchRepository
     private lateinit var fakeFavoriteRepository: FakeFavoriteRepository
     private lateinit var favoriteStore: FavoriteStore
@@ -42,7 +44,6 @@ class SearchViewModelTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
         fakeSearchRepository = FakeSearchRepository()
         fakeFavoriteRepository = FakeFavoriteRepository()
         applicationScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))
@@ -53,7 +54,6 @@ class SearchViewModelTest {
     @After
     fun tearDown() {
         applicationScope.cancel()
-        Dispatchers.resetMain()
     }
 
     /**
@@ -116,7 +116,7 @@ class SearchViewModelTest {
 
     @Test
     fun `検索成功時にLoaded状態になる`() = runTest {
-        // Arrange:
+        // Arrange: owner/repo 1 件（★100・Kotlin）を返す検索結果と ViewModel
         val repo = RepositoryEntity(
             id = 1,
             fullName = "owner/repo",
@@ -130,11 +130,11 @@ class SearchViewModelTest {
         )
         val viewModel = createViewModel()
 
-        // Act:
+        // Act: "kotlin" で検索する
         viewModel.onQueryChanged("kotlin")
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Loaded 状態で、owner/repo の 1 件が items に入っている
         val state = viewModel.uiState.value
         assertTrue("Expected Loaded, got $state", state is SearchUiState.Loaded)
         val items = (state as SearchUiState.Loaded).items
@@ -144,27 +144,27 @@ class SearchViewModelTest {
 
     @Test
     fun `検索結果が空の場合Empty状態になる`() = runTest {
-        // Arrange:
+        // Arrange: 0 件（hasNextPage なし）を返す検索結果
         fakeSearchRepository.searchResult = Result.success(
             SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false)
         )
         val viewModel = createViewModel()
 
-        // Act:
+        // Act: ヒットしないクエリ "nonexistent" で検索する
         viewModel.onQueryChanged("nonexistent")
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Empty 状態になる
         assertTrue(viewModel.uiState.value is SearchUiState.Empty)
     }
 
     @Test
     fun `検索失敗時にError状態になる`() = runTest {
-        // Arrange:
+        // Arrange: ネットワークエラー（AppError.Network）で失敗する検索
         fakeSearchRepository.searchResult = Result.failure(AppError.Network)
         val viewModel = createViewModel()
 
-        // Act:
+        // Act: "test" で検索する
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
@@ -191,7 +191,7 @@ class SearchViewModelTest {
 
     @Test
     fun `クエリを空にするとIdle状態に戻る`() = runTest {
-        // Arrange:
+        // Arrange: 検索成功（owner/repo 1 件）で Loaded にした ViewModel
         val repo = RepositoryEntity(
             id = 1,
             fullName = "owner/repo",
@@ -207,17 +207,17 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Act:
+        // Act: クエリを空文字にする
         viewModel.onQueryChanged("")
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: Idle 状態に戻る
         assertTrue(viewModel.uiState.value is SearchUiState.Idle)
     }
 
     @Test
     fun `お気に入りトグルでisFavoriteがtrueになる`() = runTest {
-        // Arrange:
+        // Arrange: id=42 の 1 件が Loaded になっていて、お気に入りは未登録
         val repo = RepositoryEntity(
             id = 42,
             fullName = "owner/repo",
@@ -233,12 +233,12 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Act:
+        // Act: 先頭の項目をお気に入りトグルする
         val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
         viewModel.toggleFavorite(item)
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: 先頭項目が isFavorite=true になり、Repository への add が 1 回呼ばれる
         val updatedItem = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
         assertTrue(updatedItem.isFavorite)
         assertEquals(1, fakeFavoriteRepository.addCallCount)
@@ -246,7 +246,7 @@ class SearchViewModelTest {
 
     @Test
     fun `お気に入り解除でisFavoriteがfalseになる`() = runTest {
-        // Arrange:
+        // Arrange: id=42 が検索結果にあり、お気に入りにも登録済みの状態で Loaded にした ViewModel
         val repo = RepositoryEntity(
             id = 42,
             fullName = "owner/repo",
@@ -273,13 +273,13 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Act:
+        // Act: 登録済みの先頭項目をトグルする（解除）
         val item = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
         assertTrue(item.isFavorite)
         viewModel.toggleFavorite(item)
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: 先頭項目が isFavorite=false になり、Repository への remove が 1 回呼ばれる
         val updatedItem = (viewModel.uiState.value as SearchUiState.Loaded).items[0]
         assertTrue(!updatedItem.isFavorite)
         assertEquals(1, fakeFavoriteRepository.removeCallCount)
@@ -287,7 +287,7 @@ class SearchViewModelTest {
 
     @Test
     fun `onLoadMoreで次ページが追加される`() = runTest {
-        // Arrange:
+        // Arrange: page1/repo 1 件・次ページありの Loaded 状態
         val page1Repo = RepositoryEntity(
             id = 1,
             fullName = "page1/repo",
@@ -303,7 +303,7 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Act:
+        // Act: 次ページ（page2/repo・最終ページ）を返す設定にして onLoadMore する
         val page2Repo = RepositoryEntity(
             id = 2,
             fullName = "page2/repo",
@@ -318,7 +318,7 @@ class SearchViewModelTest {
         viewModel.onLoadMore()
         advanceUntilIdle()
 
-        // Assert:
+        // Assert: items が page1→page2 の順に 2 件になり、2 ページ目が要求されている
         val items = (viewModel.uiState.value as SearchUiState.Loaded).items
         assertEquals(2, items.size)
         assertEquals("page1/repo", items[0].fullName)
@@ -507,7 +507,7 @@ class SearchViewModelTest {
         advanceUntilIdle()
         val callCountBefore = fakeSearchRepository.searchCallCount
 
-        // Act:
+        // Act: 次ページが無い状態で onLoadMore する
         viewModel.onLoadMore()
         advanceUntilIdle()
 
@@ -517,14 +517,14 @@ class SearchViewModelTest {
 
     @Test
     fun `検索成功時に履歴に追加される`() = runTest {
-        // Arrange:
+        // Arrange: owner/repo 1 件を返す検索結果と ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
             SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
         )
         val viewModel = createViewModel()
 
-        // Act:
+        // Act: "kotlin" で検索する
         viewModel.onQueryChanged("kotlin")
         advanceUntilIdle()
 
@@ -550,7 +550,7 @@ class SearchViewModelTest {
 
     @Test
     fun `selectHistoryで即時検索が実行される`() = runTest {
-        // Arrange:
+        // Arrange: owner/repo 1 件を返す検索結果と ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
             SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
@@ -569,12 +569,12 @@ class SearchViewModelTest {
 
     @Test
     fun `clearHistoryで履歴が全消去される`() = runTest {
-        // Arrange:
+        // Arrange: 履歴 [a, b, c] をシードした ViewModel
         fakeSearchHistoryDataSource.setHistoryForTest(listOf("a", "b", "c"))
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act:
+        // Act: 履歴を全消去する
         viewModel.clearHistory()
         advanceUntilIdle()
 
@@ -613,7 +613,7 @@ class SearchViewModelTest {
 
     @Test
     fun `存在しないIDのtoggleFavoriteは何もしない`() = runTest {
-        // Arrange:
+        // Arrange: owner/repo 1 件が Loaded になっている ViewModel
         val repo = RepositoryEntity(
             id = 1,
             fullName = "owner/repo",

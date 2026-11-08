@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -15,28 +14,30 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavoriteViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(testDispatcher)
+
     private lateinit var fakeFavoriteRepository: FakeFavoriteRepository
     private lateinit var favoriteStore: FavoriteStore
     private lateinit var storeScope: CoroutineScope
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
         fakeFavoriteRepository = FakeFavoriteRepository()
         // FavoriteStore（Eagerly の stateIn）用のアプリ寿命スコープ。Unconfined なので Fake の更新が即 store.favorites に届く
         storeScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))
@@ -49,7 +50,6 @@ class FavoriteViewModelTest {
     @After
     fun tearDown() {
         storeScope.cancel()
-        Dispatchers.resetMain()
     }
 
     @Test

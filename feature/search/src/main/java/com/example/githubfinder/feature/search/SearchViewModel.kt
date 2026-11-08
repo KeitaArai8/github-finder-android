@@ -26,6 +26,7 @@ import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -179,6 +180,8 @@ class SearchViewModel @Inject constructor(
                 }
                 // favoriteStore.favoriteIDs は StateFlow で combine に流れているため、
                 // ここで明示的に UI を更新する必要なし（リアクティブに自動反映）
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 enqueueMessage("お気に入りの更新に失敗しました")
             }
@@ -198,6 +201,8 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 favoriteStore.refresh()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) { }
         }
     }
@@ -225,6 +230,9 @@ class SearchViewModel @Inject constructor(
         } catch (e: AppError) {
             Timber.tag(TAG).w(e, "Search failed (AppError)")
             _phase.value = SearchPhase.Error(query = query, message = e.toDisplayMessage())
+        } catch (e: CancellationException) {
+            // キャンセルは失敗ではない。Error 状態にせず呼び出し元へ伝播させる
+            throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Search failed (unknown)")
             _phase.value = SearchPhase.Error(query = query, message = e.message ?: "Unknown error")
@@ -239,6 +247,8 @@ class SearchViewModel @Inject constructor(
             currentPage = nextPage
             hasNextPage = result.hasNextPage
             updateLoaded { it.copy(items = it.items + result.items, isLoadingMore = false) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             enqueueMessage("追加読み込みに失敗しました")
             updateLoaded { it.copy(isLoadingMore = false) }

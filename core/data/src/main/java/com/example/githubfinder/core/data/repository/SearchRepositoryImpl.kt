@@ -12,6 +12,7 @@ import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 @Singleton
 class SearchRepositoryImpl @Inject constructor(
@@ -30,6 +31,8 @@ class SearchRepositoryImpl @Inject constructor(
             throw e
         } catch (e: IOException) {
             throw AppError.Decode
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             throw AppError.Unknown(e.message ?: "Unknown error")
         }

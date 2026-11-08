@@ -18,6 +18,7 @@ import com.example.githubfinder.core.data.di.ApplicationScope
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -67,6 +68,8 @@ class FavoriteViewModel @Inject constructor(
                 publishFavorites(favoriteStore.favorites.value)
             } catch (e: AppError) {
                 _uiState.value = FavoriteUiState.Error(message = e.toDisplayMessage())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = FavoriteUiState.Error(message = e.message ?: "Unknown error")
             } finally {
@@ -132,6 +135,8 @@ class FavoriteViewModel @Inject constructor(
                 }
             }
             publishFavorites(favoriteStore.favorites.value)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Favorite delete commit failed: id=%d", id)
             // 失敗時は pending から戻して、UI に行を復元
@@ -257,6 +262,8 @@ class FavoriteViewModel @Inject constructor(
                 }
                 // 一括削除完了の確認 SnackBar
                 enqueueMessage("${idsToRemove.size}件削除しました")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Bulk delete failed")
                 enqueueMessage("お気に入りの削除に失敗しました")

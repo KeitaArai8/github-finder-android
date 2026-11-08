@@ -5,14 +5,18 @@ import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -579,6 +583,29 @@ class SearchViewModelTest {
         // Assert: addもremoveも呼ばれない
         assertEquals(0, fakeFavoriteRepository.addCallCount)
         assertEquals(0, fakeFavoriteRepository.removeCallCount)
+    }
+
+    @Test
+    fun `追加読み込み中にスコープがキャンセルされても失敗通知は積まれない`() = runTest {
+        // Arrange: 次ページありの 1 ページ目を表示し、2 ページ目の取得を中断させておく
+        val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+        fakeSearchRepository.searchGate = CompletableDeferred()
+        viewModel.onLoadMore()
+        runCurrent()
+        assertEquals(2, fakeSearchRepository.searchCallCount)
+
+        // Act: 通信中に画面が閉じられた想定で viewModelScope をキャンセルする
+        viewModel.viewModelScope.cancel()
+        advanceUntilIdle()
+
+        // Assert: キャンセルは失敗ではないので「追加読み込みに失敗しました」が積まれない
+        assertTrue(viewModel.userMessages.value.isEmpty())
     }
 
 }

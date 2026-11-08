@@ -27,6 +27,7 @@ import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,7 +38,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -130,13 +131,17 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch { searchHistoryDataSource.clear() }
     }
 
-    @OptIn(FlowPreview::class)
+    /**
+     * クエリ変更を debounce して検索する。mapLatest により、前の検索が通信中でも新しいクエリが確定した時点で
+     * その検索をキャンセルする（遅い古いリクエストが新しい結果を待たせたり後から上書きしたりしない）。
+     */
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private fun observeSearchQuery() {
         _phase
             .map { it.query }
             .distinctUntilChanged()
             .debounce(500)
-            .onEach { query ->
+            .mapLatest { query ->
                 if (query.isBlank()) resetSearch() else performSearch()
             }
             .launchIn(viewModelScope)

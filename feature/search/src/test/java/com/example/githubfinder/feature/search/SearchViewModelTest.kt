@@ -635,4 +635,42 @@ class SearchViewModelTest {
         assertEquals("kotlin coroutines", state.searchQuery)
     }
 
+    @Test
+    fun `新しいクエリが確定すると通信中の古い検索がキャンセルされ最新クエリの結果だけが残る`() = runTest {
+        // Arrange: "kotlin" の検索を通信中のまま止めておく
+        val repo = RepositoryEntity(2, "owner/compose", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceTimeBy(501)
+        runCurrent()
+        assertEquals("kotlin", fakeSearchRepository.lastSearchQuery)
+
+        // Act: 通信中に "compose" を入力し、デバウンス経過で 2 件目の検索が始まる
+        viewModel.onQueryChanged("compose")
+        advanceTimeBy(501)
+        runCurrent()
+
+        // Assert: 1 件目だけがキャンセルされ、キャンセルは Error にならず 2 件目は Loading のまま
+        assertEquals(listOf("kotlin"), fakeSearchRepository.cancelledQueries)
+        assertEquals("compose", fakeSearchRepository.lastSearchQuery)
+        val loading = viewModel.uiState.value
+        assertTrue("Expected Loading, got $loading", loading is SearchUiState.Loading)
+        assertEquals("compose", loading.searchQuery)
+
+        // Act: 2 件目の通信が完了する
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Assert: 最新クエリ "compose" の結果が Loaded になり、検索は計 2 回だけ
+        val loaded = viewModel.uiState.value
+        assertTrue("Expected Loaded, got $loaded", loaded is SearchUiState.Loaded)
+        assertEquals("compose", loaded.searchQuery)
+        assertEquals(2, fakeSearchRepository.searchCallCount)
+    }
+
 }

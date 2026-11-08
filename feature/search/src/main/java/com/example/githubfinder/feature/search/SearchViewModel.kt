@@ -3,7 +3,7 @@
  * キーワード検索の状態管理を担当する ViewModel。
  *
  * 設計の二段構え:
- *  1. 内部状態 = SearchPhase（フェーズ + データ）+ お気に入り ID 集合 + 検索履歴 Flow
+ *  1. 内部状態 = SearchPhase（フェーズ + データ）+ 検索クエリ + お気に入り ID 集合 + 検索履歴 Flow
  *  2. 公開 State = combine + stateIn でリアクティブに合成した SearchUiState
  *
  * combine による合成のメリット:
@@ -11,12 +11,17 @@
  *  - Loaded → Idle 遷移時に latestHistory を都度参照する手動キャッシュが不要
  *  - 全ての非同期入力源が「単一の純粋な変換関数」に集約され、テストしやすい
  *
+ * 検索クエリは SavedStateHandle に持つ（プロセス死後の復元で入力中の文字列を失わないため）。
+ * 復元されたクエリが空でなければ、debounce 後に通常の入力時と同じ経路で再検索される。
+ * ページング位置（currentPage / hasNextPage）は結果と一体の値なので Loaded フェーズに載せる。
+ *
  * 一度きりの通知（SnackBar 等）は userMessages（StateFlow<List<UserMessage>>）に積み、
  * View が表示し終えたら userMessageShown(id) で消す（公式ガイドの UI イベント → State 化パターン）。
  */
 
 package com.example.githubfinder.feature.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
@@ -37,9 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -52,18 +55,18 @@ import javax.inject.Inject
  * これは ViewModel 内部表現で、UI 層には一切公開しない（最終的に combine で UiState に変換される）。
  */
 private sealed interface SearchPhase {
-    val query: String
-
-    data class Idle(override val query: String = "") : SearchPhase
-    data class Loading(override val query: String) : SearchPhase
+    data object Idle : SearchPhase
+    data object Loading : SearchPhase
     data class Loaded(
-        override val query: String,
         val items: List<RepositoryEntity>,
+        /** 取得済みの最後のページ番号（1 始まり）。 */
+        val currentPage: Int = 1,
+        val hasNextPage: Boolean = false,
         val isLoadingMore: Boolean = false,
         val isRefreshing: Boolean = false,
     ) : SearchPhase
-    data class Empty(override val query: String) : SearchPhase
-    data class Error(override val query: String, val message: UiText) : SearchPhase
+    data object Empty : SearchPhase
+    data class Error(val message: UiText) : SearchPhase
 }
 
 @HiltViewModel
@@ -71,23 +74,28 @@ class SearchViewModel @Inject constructor(
     private val searchRepository: SearchRepository,
     private val favoriteStore: FavoriteStore,
     private val searchHistoryDataSource: SearchHistoryDataSource,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     /** 内部フェーズ。UI 層からは隠蔽される。 */
-    private val _phase = MutableStateFlow<SearchPhase>(SearchPhase.Idle())
+    private val _phase = MutableStateFlow<SearchPhase>(SearchPhase.Idle)
 
-    /** 公開 UiState: phase × favoriteIDs × history を combine で合成したリアクティブ State。 */
+    /** 検索クエリ。SavedStateHandle 由来なのでプロセス死後も復元される。 */
+    private val query: StateFlow<String> = savedStateHandle.getStateFlow(KEY_QUERY, "")
+
+    /** 公開 UiState: phase × query × favoriteIDs × history を combine で合成したリアクティブ State。 */
     val uiState: StateFlow<SearchUiState> = combine(
         _phase,
+        query,
         favoriteStore.favoriteIDs,
         searchHistoryDataSource.history,
-    ) { phase, favoriteIDs, history ->
-        phase.toUiState(favoriteIDs, history)
+    ) { phase, query, favoriteIDs, history ->
+        phase.toUiState(query, favoriteIDs, history)
     }.stateIn(
         scope = viewModelScope,
         // WhileSubscribed: subscriber 0 になっても 5 秒は state を維持（画面回転耐性）
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SearchUiState.Idle(),
+        initialValue = SearchUiState.Idle(searchQuery = query.value),
     )
 
     /**
@@ -100,23 +108,12 @@ class SearchViewModel @Inject constructor(
 
     private var nextMessageID = 0L
 
-    private var currentPage = 1
-    private var hasNextPage = false
-
     init {
         observeSearchQuery()
     }
 
     fun onQueryChanged(query: String) {
-        _phase.update { current ->
-            when (current) {
-                is SearchPhase.Idle -> current.copy(query = query)
-                is SearchPhase.Loading -> current.copy(query = query)
-                is SearchPhase.Loaded -> current.copy(query = query)
-                is SearchPhase.Empty -> current.copy(query = query)
-                is SearchPhase.Error -> current.copy(query = query)
-            }
-        }
+        savedStateHandle[KEY_QUERY] = query
     }
 
     fun selectHistory(query: String) {
@@ -138,9 +135,8 @@ class SearchViewModel @Inject constructor(
      */
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private fun observeSearchQuery() {
-        _phase
-            .map { it.query }
-            .distinctUntilChanged()
+        // StateFlow は値が変わったときだけ emit するので distinctUntilChanged は不要
+        query
             .debounce(500)
             .mapLatest { query ->
                 if (query.isBlank()) resetSearch() else performSearch()
@@ -149,18 +145,14 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun resetSearch() {
-        currentPage = 1
-        hasNextPage = false
-        _phase.update { SearchPhase.Idle(query = it.query) }
+        _phase.value = SearchPhase.Idle
     }
 
     fun onRefresh() {
-        val query = _phase.value.query
-        if (query.isBlank()) return
+        if (query.value.isBlank()) return
         viewModelScope.launch {
             updateLoaded { it.copy(isRefreshing = true) }
             try {
-                currentPage = 1
                 performSearch()
             } finally {
                 updateLoaded { it.copy(isRefreshing = false) }
@@ -170,8 +162,8 @@ class SearchViewModel @Inject constructor(
 
     fun onLoadMore() {
         val loaded = _phase.value as? SearchPhase.Loaded ?: return
-        if (!hasNextPage || loaded.isLoadingMore) return
-        viewModelScope.launch { loadNextPage() }
+        if (!loaded.hasNextPage || loaded.isLoadingMore) return
+        viewModelScope.launch { loadNextPage(loaded.currentPage) }
     }
 
     fun toggleFavorite(item: RepositoryDisplayItem) {
@@ -204,50 +196,48 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun performSearch() {
-        val query = _phase.value.query
-        currentPage = 1
-        _phase.value = SearchPhase.Loading(query = query)
+        val currentQuery = query.value
+        _phase.value = SearchPhase.Loading
 
-        Timber.tag(TAG).i("Search started: query=%s, page=1", query)
+        Timber.tag(TAG).i("Search started: query=%s, page=1", currentQuery)
         try {
-            val result = searchRepository.search(query, 1)
-            hasNextPage = result.hasNextPage
+            val result = searchRepository.search(currentQuery, 1)
             Timber.tag(TAG).i(
                 "Search succeeded: count=%d, totalCount=%d, hasNextPage=%s",
                 result.items.size, result.totalCount, result.hasNextPage,
             )
             // 結果が 0 件でもユーザの意図的な検索なので履歴に追加する
-            searchHistoryDataSource.add(query)
-            // 通信中に入力された新しいクエリを上書きしないよう、query は検索開始時の値でなく現在値を引き継ぐ
-            _phase.update { current ->
-                if (result.items.isEmpty()) {
-                    SearchPhase.Empty(query = current.query)
-                } else {
-                    SearchPhase.Loaded(query = current.query, items = result.items)
-                }
+            searchHistoryDataSource.add(currentQuery)
+            _phase.value = if (result.items.isEmpty()) {
+                SearchPhase.Empty
+            } else {
+                SearchPhase.Loaded(items = result.items, currentPage = 1, hasNextPage = result.hasNextPage)
             }
         } catch (e: AppError) {
             Timber.tag(TAG).w(e, "Search failed (AppError)")
-            _phase.update { current -> SearchPhase.Error(query = current.query, message = e.toUiText()) }
+            _phase.value = SearchPhase.Error(message = e.toUiText())
         } catch (e: CancellationException) {
             // キャンセルは失敗ではない。Error 状態にせず呼び出し元へ伝播させる
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Search failed (unknown)")
-            _phase.update { current ->
-                SearchPhase.Error(query = current.query, message = e.toUiText())
-            }
+            _phase.value = SearchPhase.Error(message = e.toUiText())
         }
     }
 
-    private suspend fun loadNextPage() {
+    private suspend fun loadNextPage(currentPage: Int) {
         updateLoaded { it.copy(isLoadingMore = true) }
         try {
             val nextPage = currentPage + 1
-            val result = searchRepository.search(_phase.value.query, nextPage)
-            currentPage = nextPage
-            hasNextPage = result.hasNextPage
-            updateLoaded { it.copy(items = it.items + result.items, isLoadingMore = false) }
+            val result = searchRepository.search(query.value, nextPage)
+            updateLoaded {
+                it.copy(
+                    items = it.items + result.items,
+                    currentPage = nextPage,
+                    hasNextPage = result.hasNextPage,
+                    isLoadingMore = false,
+                )
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -262,25 +252,29 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    /** Phase + favoriteIDs + history → 公開 UiState への純粋な変換。 */
+    /** Phase + query + favoriteIDs + history → 公開 UiState への純粋な変換。 */
     private fun SearchPhase.toUiState(
+        query: String,
         favoriteIDs: Set<Int>,
         history: List<String>,
     ): SearchUiState = when (this) {
-        is SearchPhase.Idle -> SearchUiState.Idle(searchQuery = query, history = history)
-        is SearchPhase.Loading -> SearchUiState.Loading(searchQuery = query)
+        SearchPhase.Idle -> SearchUiState.Idle(searchQuery = query, history = history)
+        SearchPhase.Loading -> SearchUiState.Loading(searchQuery = query)
         is SearchPhase.Loaded -> SearchUiState.Loaded(
             searchQuery = query,
             items = items.map { repo -> RepositoryDisplayItem.from(repo, favoriteIDs.contains(repo.id)) },
             isLoadingMore = isLoadingMore,
             isRefreshing = isRefreshing,
         )
-        is SearchPhase.Empty -> SearchUiState.Empty(searchQuery = query)
+        SearchPhase.Empty -> SearchUiState.Empty(searchQuery = query)
         is SearchPhase.Error -> SearchUiState.Error(searchQuery = query, message = message)
     }
 
     private companion object {
         const val TAG = "Search"
+
+        /** SavedStateHandle 上の検索クエリのキー。 */
+        const val KEY_QUERY = "query"
     }
 
 }

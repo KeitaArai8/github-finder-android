@@ -1,5 +1,6 @@
 package com.example.githubfinder.feature.search
 
+import androidx.lifecycle.SavedStateHandle
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.UiText
@@ -59,12 +60,52 @@ class SearchViewModelTest {
      * uiState は stateIn(WhileSubscribed) のため、購読者がいないと upstream が動かず value が更新されない。
      * 画面（collectAsStateWithLifecycle）相当の購読者を backgroundScope に常駐させる。
      */
-    private fun TestScope.createViewModel() = SearchViewModel(
+    private fun TestScope.createViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()) = SearchViewModel(
         searchRepository = fakeSearchRepository,
         favoriteStore = favoriteStore,
         searchHistoryDataSource = fakeSearchHistoryDataSource,
+        savedStateHandle = savedStateHandle,
     ).also { viewModel ->
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+    }
+
+    @Test
+    fun `SavedStateHandleに保存済みのクエリで起動すると入力欄に復元され、debounce後に再検索される`() = runTest {
+        // Arrange: プロセス死後の復元を想定し、query="kotlin" を持つ SavedStateHandle と、1 件返す検索結果
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(RepositoryEntity(1, "JetBrains/kotlin", null, 10, "Kotlin", null)), hasNextPage = false)
+        )
+
+        // Act: そのハンドルで ViewModel を作る
+        val viewModel = createViewModel(SavedStateHandle(mapOf("query" to "kotlin")))
+
+        // Assert: 検索前でも入力欄のクエリは復元値（Idle のまま searchQuery="kotlin"）
+        assertEquals("kotlin", viewModel.uiState.value.searchQuery)
+        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
+
+        // Act: debounce（500ms）を進める
+        advanceUntilIdle()
+
+        // Assert: 通常入力時と同じ経路で再検索され、結果が復元される
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Loaded)
+        assertEquals("kotlin", state.searchQuery)
+        assertEquals(listOf("JetBrains/kotlin"), (state as SearchUiState.Loaded).items.map { it.fullName })
+    }
+
+    @Test
+    fun `onQueryChangedは入力をSavedStateHandleへ書き込む`() = runTest {
+        // Arrange: 空の SavedStateHandle で作った ViewModel
+        val handle = SavedStateHandle()
+        val viewModel = createViewModel(handle)
+
+        // Act: ユーザが "swift" と入力する
+        viewModel.onQueryChanged("swift")
+        runCurrent()
+
+        // Assert: プロセス死後に復元できるよう、ハンドルの "query" に保存されている
+        assertEquals("swift", handle.get<String>("query"))
+        assertEquals("swift", viewModel.uiState.value.searchQuery)
     }
 
     @Test

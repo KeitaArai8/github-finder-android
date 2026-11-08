@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.lifecycle.SavedStateHandle
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
@@ -127,6 +128,7 @@ class SearchScreenTest {
         searchRepository = searchRepo,
         favoriteStore = FavoriteStore(favoriteRepo, CoroutineScope(Dispatchers.Default)),
         searchHistoryDataSource = searchHistory,
+        savedStateHandle = SavedStateHandle(),
     )
 
 }

@@ -44,7 +44,7 @@ class FakeFavoriteRepository : FavoriteRepository {
             starCount = repository.starCount,
             language = repository.language,
             ownerAvatarURL = repository.ownerAvatarURL,
-            savedAt = 0L,
+            savedAt = System.currentTimeMillis(),
         )
     }
 

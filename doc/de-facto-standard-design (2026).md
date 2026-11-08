@@ -145,6 +145,15 @@ fun reduce(state: UiState, action: Action): UiState
 - **Navigation 3**：安定版で NiA も移行済みのため基準にした。単一の `rememberNavBackStack` に NiA の top-level 規則（開始タブでリセット・他タブは末尾へ・再タップは no-op）を再現する。Favorite / Settings の ViewModel はタブ切替（Search へ戻る）で release される
 - **一度きりの通知は state で持つ**：公式 UI events ガイドに従い `userMessages` + `userMessageShown(id)` にした。Undo の実削除は ViewModel が担い、破棄時は `onCleared` が残りを commit する（README「一度きりの通知も State として持つ」参照）
 - **`material-icons-extended`**：更新が止まっているため、Material Symbols の vector drawable と `AppIcons`（NiA の NiaIcons 相当）に置き換える
+- **リリースビルドのスモーク（R8 後の実機確認）**：本番用の署名設定は未整備のため、debug keystore を一時的に注入して署名する。build.gradle.kts には署名用の分岐を持たせない
+
+  ```
+  ./gradlew assembleRelease \
+    -Pandroid.injected.signing.store.file=$HOME/.android/debug.keystore \
+    -Pandroid.injected.signing.store.password=android \
+    -Pandroid.injected.signing.key.alias=androiddebugkey \
+    -Pandroid.injected.signing.key.password=android
+  ```
 - **`room-ktx`**：Room 2.7 で空のアーティファクトになったため削除した
 
 ### 意図した逸脱（2026-11 監査）

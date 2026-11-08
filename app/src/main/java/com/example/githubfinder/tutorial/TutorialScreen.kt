@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import com.example.githubfinder.R
@@ -55,7 +56,9 @@ fun TutorialScreen(coachMarkManager: CoachMarkManager) {
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            // 状態バー・ジェスチャーナビに本文が潜らないよう、モック本体だけに safeDrawing を適用する。
+            // CoachMarkOverlay は画面全体にスクリムを描くため、パディングの外側（Box 直下）に置く。
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 MockHeader()
                 MockSearchBar(
                     onTap = { coachMarkManager.advance(after = CoachMarkStep.SearchBar) },

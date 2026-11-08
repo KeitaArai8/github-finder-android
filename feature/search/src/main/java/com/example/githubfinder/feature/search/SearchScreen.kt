@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import android.content.Intent
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
@@ -100,7 +99,7 @@ fun SearchScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(32.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -236,7 +235,7 @@ private fun RepositoryRow(
             model = item.ownerAvatarURL,
             contentDescription = null,
             placeholder = ColorPainter(Color.Gray.copy(alpha = 0.3f)),
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

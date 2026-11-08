@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -516,7 +515,7 @@ private fun RowContent(
             model = favorite.ownerAvatarURL,
             contentDescription = null,
             placeholder = ColorPainter(Color.Gray.copy(alpha = 0.3f)),
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -100,7 +99,7 @@ private fun MockSearchBar(onTap: () -> Unit, coachMarkManager: CoachMarkManager)
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(32.dp))
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(
                 indication = null,
@@ -131,7 +130,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(Color.Gray.copy(alpha = 0.3f)),
         )
         Spacer(modifier = Modifier.width(12.dp))

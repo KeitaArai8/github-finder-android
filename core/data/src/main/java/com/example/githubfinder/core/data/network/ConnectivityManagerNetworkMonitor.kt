@@ -1,8 +1,9 @@
 /*
  * Abstract:
  * ConnectivityManager のコールバックから [NetworkMonitor] を実装する。
- * 複数のネットワーク（Wi-Fi とモバイルなど）が同時に存在しうるため、状態は「1 つの接続の有無」ではなく
- * 「到達可能なネットワークの集合が空でないか」で判定する（片方が切れても、もう片方が生きていればオンライン）。
+ * 「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」だけを状態とする。
+ * 複数ネットワーク（Wi-Fi とモバイル）の集合を自前で管理せず、デフォルトネットワークの選択は OS に任せる
+ * （Wi-Fi が切れてモバイルへ切り替わると、新しいデフォルトネットワークの onCapabilitiesChanged で状態が更新される）。
  */
 
 package com.example.githubfinder.core.data.network
@@ -11,7 +12,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -31,42 +31,23 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
         context.getSystemService(ConnectivityManager::class.java)
 
     override val isOnline: Flow<Boolean> = callbackFlow {
-        // 到達可能（INTERNET かつ VALIDATED）なネットワークの集合。
-        // 初期化はこのコルーチンのスレッド、コールバックは ConnectivityManager のスレッドで走るため、アクセスは synchronized で守る。
-        val networks = mutableSetOf<Network>()
-
-        /** 集合を更新し、更新後の「到達可能なネットワークが 1 つ以上あるか」を流す（更新と判定を 1 つの排他区間にする）。 */
-        fun updateAndSend(mutate: MutableSet<Network>.() -> Unit) {
-            val isOnline = synchronized(networks) {
-                networks.mutate()
-                networks.isNotEmpty()
-            }
-            trySend(isOnline)
-        }
-
-        // 購読直後に現在状態を流せるよう、コールバック登録前に activeNetwork から集合を初期化する
-        connectivityManager?.activeNetwork?.let { active ->
-            val capabilities = connectivityManager.getNetworkCapabilities(active)
-            if (capabilities != null && capabilities.isReachable()) synchronized(networks) { networks.add(active) }
-        }
-
-        // onAvailable では集合に加えない。接続直後は VALIDATED 前のことがあり、
-        // 加えるとキャプティブポータル等の「未検証ネットワーク」をオンラインと誤判定するため、onCapabilitiesChanged を待つ。
+        // onAvailable では流さない。接続直後は VALIDATED 前のことがあり、
+        // 流すとキャプティブポータル等の「未検証ネットワーク」をオンラインと誤判定するため、onCapabilitiesChanged を待つ。
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onLost(network: Network) {
-                updateAndSend { remove(network) }
+                trySend(false)
             }
 
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                updateAndSend { if (capabilities.isReachable()) add(network) else remove(network) }
+                trySend(capabilities.isReachable())
             }
         }
 
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        connectivityManager?.registerNetworkCallback(request, callback)
-        trySend(synchronized(networks) { networks.isNotEmpty() })
+        connectivityManager?.registerDefaultNetworkCallback(callback)
+
+        // 購読直後に現在状態を流す（機内モードなら activeNetwork が null で、即 false になる）
+        val active = connectivityManager?.activeNetwork
+        trySend(active?.let { connectivityManager.getNetworkCapabilities(it) }?.isReachable() == true)
 
         awaitClose {
             connectivityManager?.unregisterNetworkCallback(callback)

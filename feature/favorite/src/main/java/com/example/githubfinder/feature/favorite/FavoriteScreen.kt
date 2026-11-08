@@ -472,6 +472,13 @@ private fun FavoriteRow(
         )
     } else {
         val dismissState = rememberSwipeToDismissBoxState()
+        // Undo等でリストに復帰した際、dismissState が EndToStart（スワイプ完了状態）のまま残るのを防ぐため、
+        // 再び画面に表示されたタイミングで Settled にリセットする
+        LaunchedEffect(Unit) {
+            if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+        }
         // 方向制限は enableDismissFromStartToEnd = false で行い、完全スワイプ（EndToStart 確定）を onDismiss で受けて削除する
         SwipeToDismissBox(
             modifier = modifier,

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -606,6 +607,32 @@ class SearchViewModelTest {
 
         // Assert: キャンセルは失敗ではないので「追加読み込みに失敗しました」が積まれない
         assertTrue(viewModel.userMessages.value.isEmpty())
+    }
+
+    @Test
+    fun `通信中に入力した新しいクエリが検索結果で上書きされない`() = runTest {
+        // Arrange: "kotlin" の検索を通信中のまま止めておく（結果は 1 件）
+        val repo = RepositoryEntity(1, "owner/kotlin", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+        )
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceTimeBy(501)
+        runCurrent()
+        assertTrue(viewModel.uiState.value is SearchUiState.Loading)
+
+        // Act: 通信中（デバウンス未経過）にクエリを "kotlin coroutines" へ更新し、そのあと古い検索が完了する
+        viewModel.onQueryChanged("kotlin coroutines")
+        gate.complete(Unit)
+        runCurrent()
+
+        // Assert: 古い結果は表示されるが、入力欄のクエリは新しい "kotlin coroutines" のまま
+        val state = viewModel.uiState.value
+        assertTrue("Expected Loaded, got $state", state is SearchUiState.Loaded)
+        assertEquals("kotlin coroutines", state.searchQuery)
     }
 
 }

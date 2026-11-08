@@ -222,20 +222,25 @@ class SearchViewModel @Inject constructor(
             )
             // 結果が 0 件でもユーザの意図的な検索なので履歴に追加する
             searchHistoryDataSource.add(query)
-            _phase.value = if (result.items.isEmpty()) {
-                SearchPhase.Empty(query = query)
-            } else {
-                SearchPhase.Loaded(query = query, items = result.items)
+            // 通信中に入力された新しいクエリを上書きしないよう、query は検索開始時の値でなく現在値を引き継ぐ
+            _phase.update { current ->
+                if (result.items.isEmpty()) {
+                    SearchPhase.Empty(query = current.query)
+                } else {
+                    SearchPhase.Loaded(query = current.query, items = result.items)
+                }
             }
         } catch (e: AppError) {
             Timber.tag(TAG).w(e, "Search failed (AppError)")
-            _phase.value = SearchPhase.Error(query = query, message = e.toDisplayMessage())
+            _phase.update { current -> SearchPhase.Error(query = current.query, message = e.toDisplayMessage()) }
         } catch (e: CancellationException) {
             // キャンセルは失敗ではない。Error 状態にせず呼び出し元へ伝播させる
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Search failed (unknown)")
-            _phase.value = SearchPhase.Error(query = query, message = e.message ?: "Unknown error")
+            _phase.update { current ->
+                SearchPhase.Error(query = current.query, message = e.message ?: "Unknown error")
+            }
         }
     }
 

@@ -67,11 +67,11 @@ class FavoriteViewModel @Inject constructor(
                 favoriteStore.refresh()
                 publishFavorites(favoriteStore.favorites.value)
             } catch (e: AppError) {
-                _uiState.value = FavoriteUiState.Error(message = e.toDisplayMessage())
+                _uiState.update { FavoriteUiState.Error(message = e.toDisplayMessage()) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = FavoriteUiState.Error(message = e.message ?: "Unknown error")
+                _uiState.update { FavoriteUiState.Error(message = e.message ?: "Unknown error") }
             } finally {
                 setRefreshing(false)
             }

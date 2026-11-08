@@ -106,7 +106,7 @@ fun MainNavigation(
                     .background(MaterialTheme.colorScheme.background),
             )
             true -> TutorialScreen(coachMarkManager = coachMarkManager)
-            false -> MainScaffold(modifier = contentModifier)
+            false -> MainScaffold(modifier = contentModifier.weight(1f))
         }
     }
 }

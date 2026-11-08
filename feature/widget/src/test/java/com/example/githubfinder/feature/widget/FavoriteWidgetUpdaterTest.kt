@@ -6,13 +6,26 @@ import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavoriteWidgetUpdaterTest {
+
+    // テスト中に作った購読用スコープ。assert が失敗しても確実に cancel して購読を残さないよう @After で閉じる
+    private val scopes = mutableListOf<CoroutineScope>()
+
+    @After
+    fun tearDown() {
+        scopes.forEach { it.cancel() }
+    }
+
+    private fun TestScope.newScope(): CoroutineScope =
+        CoroutineScope(UnconfinedTestDispatcher(testScheduler)).also { scopes += it }
 
     private val addedFavorite = FavoriteEntity(
         id = 1,
@@ -28,7 +41,7 @@ class FavoriteWidgetUpdaterTest {
     fun `お気に入りが変わるたびにウィジェットが更新される`() = runTest {
         // Arrange: 空のお気に入りを持つ Store と、更新回数を数える updater を購読開始する
         val repository = FakeFavoriteRepository()
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val scope = newScope()
         var updateCount = 0
         FavoriteWidgetUpdater(FavoriteStore(repository, scope), scope) { updateCount++ }.start()
         // 起動直後の現在値（空）でも 1 回更新される（updateAll は冪等なので drop しない）
@@ -39,14 +52,13 @@ class FavoriteWidgetUpdaterTest {
 
         // Assert: 変更を受けてもう 1 回（合計 2 回）更新された
         assertEquals(2, updateCount)
-        scope.cancel()
     }
 
     @Test
     fun `更新が失敗しても購読は続き次の変更で再び更新される`() = runTest {
         // Arrange: 1 回目の更新だけ IllegalStateException("boom") を投げる updater
         val repository = FakeFavoriteRepository()
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val scope = newScope()
         var updateCount = 0
         FavoriteWidgetUpdater(FavoriteStore(repository, scope), scope) {
             updateCount++
@@ -58,6 +70,5 @@ class FavoriteWidgetUpdaterTest {
 
         // Assert: 購読が止まらず 2 回目の更新が走る
         assertEquals(2, updateCount)
-        scope.cancel()
     }
 }

@@ -12,8 +12,9 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
-    implementation(project(":core:data"))
+    // Fake が公開 API に出す型（FavoriteEntity / FavoriteRepository など）を使う側のテストが参照できるよう api で公開する
+    api(project(":core:model"))
+    api(project(":core:data"))
 
     // MainDispatcherRule のシグネチャ（TestDispatcher / TestWatcher）が公開 API に現れるため api で公開する
     api(libs.coroutines.test)

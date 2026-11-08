@@ -18,7 +18,7 @@ import javax.inject.Qualifier
 /** 全ウィジェットを再描画する `suspend () -> Unit` を示す Qualifier。 */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class WidgetUpdate
+internal annotation class WidgetUpdate
 
 @Module
 @InstallIn(SingletonComponent::class)

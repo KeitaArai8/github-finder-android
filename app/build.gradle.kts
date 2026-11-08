@@ -20,7 +20,18 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // AGP 9.4 の `optimization { }` DSL は @Incubating のため、安定版の isMinifyEnabled / isShrinkResources を使う
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // 本番用の署名設定は未整備。R8 後の実機スモーク用に、`-PlocalReleaseSmoke` 指定時だけ debug 署名で
+            // インストール可能にする（通常のリリースビルドには影響しない）。
+            if (project.hasProperty("localReleaseSmoke")) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 }

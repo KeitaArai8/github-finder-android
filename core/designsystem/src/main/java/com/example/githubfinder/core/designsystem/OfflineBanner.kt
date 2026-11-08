@@ -9,6 +9,9 @@ package com.example.githubfinder.core.designsystem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +35,8 @@ fun OfflineBanner(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.error)
+            // targetSdk 36 は edge-to-edge 強制で最上端に置かれるため、赤背景はステータスバー裏まで伸ばし、中身だけを避ける
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .semantics { contentDescription = bannerDescription },
         horizontalArrangement = Arrangement.Center,

@@ -12,7 +12,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -91,16 +94,18 @@ fun MainNavigation(
             OfflineBanner()
         }
 
+        // バナーがステータスバー領域を使っている間は、下の画面で同じ inset を二重に避けないよう消費済みにする
+        val contentModifier = if (isOnline) Modifier else Modifier.consumeWindowInsets(WindowInsets.statusBars)
         if (isActive) {
             TutorialScreen(coachMarkManager = coachMarkManager)
         } else {
-            MainScaffold()
+            MainScaffold(modifier = contentModifier)
         }
     }
 }
 
 @Composable
-private fun MainScaffold() {
+private fun MainScaffold(modifier: Modifier = Modifier) {
     val backStack = rememberNavBackStack(SearchKey)
 
     // NiA の goToTopLevel と同じ規則: 検索（start）は stack をリセットし、他タブは末尾へ移動する。
@@ -117,6 +122,7 @@ private fun MainScaffold() {
     }
 
     Scaffold(
+        modifier = modifier,
         bottomBar = {
             NavigationBar {
                 TopLevelRoute.entries.forEach { route ->
@@ -143,7 +149,11 @@ private fun MainScaffold() {
                 entry<FavoriteKey> { FavoriteRoute() }
                 entry<SettingsKey> { SettingsScreen() }
             },
-            modifier = Modifier.padding(padding),
+            // Scaffold の padding（status / navigation bar 分）を適用した上で消費済みにし、
+            // 内側の画面の Scaffold / TopAppBar が同じ inset をもう一度加算（二重 padding）しないようにする。
+            modifier = Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding),
         )
     }
 }

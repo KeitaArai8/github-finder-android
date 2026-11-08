@@ -2,7 +2,8 @@
  * Abstract:
  * お気に入り一覧画面の集約UI状態。UDF単一状態原則に従い、
  * フェーズ・リフレッシュ状態を1つのsealed interfaceに統合する。
- * Loaded 内には sortKey / filterLanguage を保持し、表示用は displayedFavorites で導出する。
+ * Loaded 内には sortKey / filterLanguage を保持し、表示用の displayedFavorites / availableLanguages は
+ * ViewModel が入力の変化時に計算して Loaded に載せる（アクセスのたびに再ソートしない）。
  *
  * 一度きりの通知（SnackBar 表示）は uiState とは別の userMessages（UserMessage のキュー）として
  * ViewModel が保持し、View が表示し終えたら userMessageShown(id) で消す。
@@ -38,27 +39,14 @@ sealed interface FavoriteUiState {
          * commit 後に Room から削除され、Flow 経由で favorites からも消える。
          */
         val pendingDeleteIDs: Set<Int> = emptySet(),
+        /**
+         * sortKey/filterLanguage/pendingDelete を適用した表示用リスト（ViewModel が計算済みの値を載せる）。
+         * favorites 等の入力を変えたら ViewModel 側で再計算する。既定の空リストのまま公開しないこと。
+         */
+        val displayedFavorites: List<FavoriteEntity> = emptyList(),
+        /** 言語フィルタチップに出す選択肢（生データから抽出した重複なしソート済み。ViewModel が計算済みの値を載せる）。 */
+        val availableLanguages: List<String> = emptyList(),
     ) : FavoriteUiState {
-
-        /** 言語フィルタチップに出す選択肢（生データから抽出した重複なしソート済み）。 */
-        val availableLanguages: List<String>
-            get() = favorites.mapNotNull { it.language }.distinct().sorted()
-
-        /** sortKey/filterLanguage/pendingDelete を適用した表示用リスト。 */
-        val displayedFavorites: List<FavoriteEntity>
-            get() {
-                val visible = favorites.filter { it.id !in pendingDeleteIDs }
-                val filtered = if (filterLanguage != null) {
-                    visible.filter { it.language == filterLanguage }
-                } else {
-                    visible
-                }
-                return when (sortKey) {
-                    FavoriteSortKey.SAVED_AT_DESC -> filtered.sortedByDescending { it.savedAt }
-                    FavoriteSortKey.STAR_COUNT_DESC -> filtered.sortedByDescending { it.starCount }
-                    FavoriteSortKey.FULL_NAME_ASC -> filtered.sortedBy { it.fullName.lowercase() }
-                }
-            }
 
         /**
          * 表示中のお気に入りすべてが選択済みかどうか。

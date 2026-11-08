@@ -815,4 +815,29 @@ class FavoriteViewModelTest {
         assertEquals(2, (state as FavoriteUiState.Loaded).favorites.size)
     }
 
+    @Test
+    fun `一括削除後にdisplayedFavoritesとavailableLanguagesが再計算される`() = runTest {
+        // Arrange: Swift 1件・Kotlin 2件を読み込み、Swift の1件だけを選択する
+        fakeFavoriteRepository.favorites = mutableListOf(
+            FavoriteEntity(1, "a/swift", null, 0, "Swift", null, 0L),
+            FavoriteEntity(2, "b/kotlin", null, 0, "Kotlin", null, 0L),
+            FavoriteEntity(3, "c/kotlin", null, 0, "Kotlin", null, 0L),
+        )
+        val viewModel = createViewModel()
+        viewModel.load()
+        advanceUntilIdle()
+        viewModel.enterEditMode()
+        viewModel.toggleSelection(1)
+
+        // Act: 選択中の Swift を一括削除する
+        viewModel.requestRemoveSelected()
+        viewModel.confirmRemoveSelected()
+        advanceUntilIdle()
+
+        // Assert: 事前計算済みの表示リストと言語チップから Swift が消えている
+        val state = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertEquals(listOf(2, 3), state.displayedFavorites.map { it.id }.sorted())
+        assertEquals(listOf("Kotlin"), state.availableLanguages)
+    }
+
 }

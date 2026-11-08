@@ -81,7 +81,7 @@ class FavoriteViewModel @Inject constructor(
     /**
      * スワイプ削除のエントリーポイント（Gmail スタイル楽観的更新）。
      *
-     * 1. pendingDeleteIDs に追加 → UI から即座に行が消える（displayedFavorites でフィルタ）
+     * 1. pendingDeleteIDs に追加 → UI から即座に行が消える（displayedFavorites から除外）
      * 2. undoID 付きの UserMessage を積む → SnackBar に「元に戻す」を表示
      * 3. [UNDO_WINDOW_MS] の猶予タイマーを ViewModel のスコープで開始し、経過したら [commitDelete]。
      *    猶予中に ViewModel が破棄される場合（タブ切替で back stack から外れる等）は [onCleared] が残りを即 commit する
@@ -257,7 +257,7 @@ class FavoriteViewModel @Inject constructor(
                             favorites = favorites,
                             selectedIDs = emptySet(),
                             filterLanguage = nextFilter,
-                        )
+                        ).withDerivedFields()
                     }
                 }
                 // 一括削除完了の確認 SnackBar
@@ -301,7 +301,7 @@ class FavoriteViewModel @Inject constructor(
                     //   これがないと publishFavorites の emission で false にリセットされ、
                     //   Material 3 PullToRefreshBox の hide アニメーションが正しくトリガされない。
                     isRefreshing = existingLoaded?.isRefreshing ?: false,
-                )
+                ).withDerivedFields()
             }
         }
     }
@@ -312,8 +312,39 @@ class FavoriteViewModel @Inject constructor(
 
     private fun updateLoaded(transform: (FavoriteUiState.Loaded) -> FavoriteUiState.Loaded) {
         _uiState.update { current ->
-            if (current is FavoriteUiState.Loaded) transform(current) else current
+            if (current is FavoriteUiState.Loaded) {
+                val next = transform(current)
+                // 選択・編集モード等、表示リストの入力が変わらない更新では再ソートしない
+                if (next.hasSameDisplayInputs(current)) next else next.withDerivedFields()
+            } else {
+                current
+            }
         }
+    }
+
+    private fun FavoriteUiState.Loaded.hasSameDisplayInputs(other: FavoriteUiState.Loaded): Boolean =
+        favorites == other.favorites &&
+            sortKey == other.sortKey &&
+            filterLanguage == other.filterLanguage &&
+            pendingDeleteIDs == other.pendingDeleteIDs
+
+    /** 入力（favorites / sortKey / filterLanguage / pendingDeleteIDs）から displayedFavorites / availableLanguages を計算して載せる。 */
+    private fun FavoriteUiState.Loaded.withDerivedFields(): FavoriteUiState.Loaded {
+        val visible = favorites.filter { it.id !in pendingDeleteIDs }
+        val filtered = if (filterLanguage != null) {
+            visible.filter { it.language == filterLanguage }
+        } else {
+            visible
+        }
+        val sorted = when (sortKey) {
+            FavoriteSortKey.SAVED_AT_DESC -> filtered.sortedByDescending { it.savedAt }
+            FavoriteSortKey.STAR_COUNT_DESC -> filtered.sortedByDescending { it.starCount }
+            FavoriteSortKey.FULL_NAME_ASC -> filtered.sortedBy { it.fullName.lowercase() }
+        }
+        return copy(
+            displayedFavorites = sorted,
+            availableLanguages = favorites.mapNotNull { it.language }.distinct().sorted(),
+        )
     }
 
     private companion object {

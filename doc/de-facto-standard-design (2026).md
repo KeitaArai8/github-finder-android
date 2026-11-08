@@ -154,19 +154,22 @@ fun reduce(state: UiState, action: Action): UiState
 1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：タブ復帰時の Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
 2. **Undo 削除の commit は ViewModel から `@ApplicationScope` で起動する**（Repository の suspend 関数内で外部スコープを使う形ではない）：ViewModel 破棄後も commit を完了させる所有者を ViewModel 側に置くため
 3. **NetworkMonitor は INTERNET + VALIDATED で判定する**（NiA は INTERNET のみ）：公式ガイドに従い、疎通できない接続をオンラインと誤判定しないため
-4. **`MainDispatcherRule` を 3 つのテスト source set に複製している**：`core:testing` モジュールがまだ無いため
-5. **`@TutorialScope` の DI Provider で `Dispatchers.Default` を直書きしている**（NiA が Dispatcher を直書きする場所と同じ）：core:designsystem は core:data の `@ApplicationScope` に依存できないため
+4. **`@TutorialScope` の DI Provider で `Dispatchers.Default` を直書きしている**（NiA が Dispatcher を直書きする場所と同じ）：core:designsystem は core:data の `@ApplicationScope` に依存できないため
+
+2026-11 の 3 巡目確認（a-10）で、①②⑤（旧番号。FavoriteStore の `stateIn(Eagerly)`、Undo commit の ViewModel 起動、`Dispatchers.Default` の直書き）は上記のまま意図した逸脱として残す。旧④（`MainDispatcherRule` の複製）は `core:testing` の追加で解消したため削除した。
 
 ### 未対応
 
-- NavigationSuiteScaffold（adaptive）
-- release の R8 最適化（AGP 9.3+ の `optimization { enable = true }`）
-- Baseline Profile / Startup Profile
+- Baseline Profile / Startup Profile：サンプルを配布するまで保留する
 - Coil 3（NiA は 2.7 のまま）
-- Room 3（評価予定）
 - Material 3 Expressive（beta）
-- アプリのプロセスが無いときのウィジェット更新経路（WorkManager / `updatePeriodMillis`）
-- ウィジェット updater のテスト
+- ウィジェットのプロセス外更新：既存の `updatePeriodMillis`（1 時間）で足りるため、WorkManager は追加しない（2026-11 監査 a-7 / a-15 は対応済み扱い）
+- 検索 UI の `SearchBar`（a-13）：NiA が使っていないため採用しない（`TextField` のまま）
+- Room 3（評価結果。2026-11 時点）
+  - 変わること：パッケージが `androidx.room3`（artifact は `room3-runtime` / `room3-compiler`）に変わる。SupportSQLite を使わず `SQLiteDriver` が必須になり、Migration / Callback の引数は `SQLiteConnection` になる。DAO は coroutine ベース、コード生成は Kotlin のみ（KSP 必須。本アプリは KSP 済み）。KMP 対応が主目的
+  - 安定版は 3.0.3（3.0.0 は 2026-07-01、3.1 は alpha）。2.x は 2.8.5（2026-09-09）まで更新が続いており、公式ページに deprecated の記載は見つからない
+  - 推奨：今は 2.8.5 を維持する。追従規則（Google 製ライブラリは最新安定版）では対象だが、パッケージ名と `SQLiteDriver` 必須化を伴う major なので、公式アーキテクチャガイド / NiA が Room 3 へ移った時点で 1 PR として移行する
+  - 参照：https://developer.android.com/jetpack/androidx/releases/room3
 
 ---
 

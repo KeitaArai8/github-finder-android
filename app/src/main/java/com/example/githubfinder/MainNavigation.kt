@@ -17,15 +17,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -130,22 +127,22 @@ private fun MainScaffold(modifier: Modifier = Modifier) {
         }
     }
 
-    Scaffold(
+    // 画面幅に応じて NavigationBar（compact）/ NavigationRail（medium 以上）を自動で切り替える。
+    // スイート自身がナビゲーション要素の inset を処理するため、別途 Scaffold の padding は持たない。
+    NavigationSuiteScaffold(
         modifier = modifier,
-        bottomBar = {
-            NavigationBar {
-                TopLevelRoute.entries.forEach { route ->
-                    val label = stringResource(route.labelRes)
-                    NavigationBarItem(
-                        icon = { Icon(route.icon, contentDescription = label) },
-                        label = { Text(label) },
-                        selected = backStack.lastOrNull() == route.key,
-                        onClick = { select(route.key) },
-                    )
-                }
+        navigationSuiteItems = {
+            TopLevelRoute.entries.forEach { route ->
+                // navigationSuiteItems は Composable ではないため、リソース解決は各スロットの中で行う
+                item(
+                    icon = { Icon(route.icon, contentDescription = stringResource(route.labelRes)) },
+                    label = { Text(stringResource(route.labelRes)) },
+                    selected = backStack.lastOrNull() == route.key,
+                    onClick = { select(route.key) },
+                )
             }
         },
-    ) { padding ->
+    ) {
         // システム Back は stack の履歴を辿る（Search → Favorite → Settings なら Favorite → Search → 終了）。
         NavDisplay(
             backStack = backStack,
@@ -158,11 +155,6 @@ private fun MainScaffold(modifier: Modifier = Modifier) {
                 entry<FavoriteKey> { FavoriteRoute() }
                 entry<SettingsKey> { SettingsScreen() }
             },
-            // Scaffold の padding（status / navigation bar 分）を適用した上で消費済みにし、
-            // 内側の画面の Scaffold / TopAppBar が同じ inset をもう一度加算（二重 padding）しないようにする。
-            modifier = Modifier
-                .padding(padding)
-                .consumeWindowInsets(padding),
         )
     }
 }

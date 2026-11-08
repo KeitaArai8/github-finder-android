@@ -37,6 +37,7 @@ dependencies {
     implementation(project(":feature:widget"))
 
     implementation(libs.activity.compose)
+    implementation(libs.compose.material3.adaptive.navigation.suite)
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
     implementation(libs.lifecycle.viewmodel.navigation3)

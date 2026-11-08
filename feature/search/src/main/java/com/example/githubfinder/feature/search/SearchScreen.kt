@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -109,7 +110,9 @@ fun SearchScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // この画面は Scaffold を持たないため、自分で safeDrawing を適用する。
+    // 親（NavigationSuiteScaffold・オフラインバナー）が消費済みの inset は 0 として扱われ、二重にはならない。
+    Box(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TextField(
                 value = uiState.searchQuery,

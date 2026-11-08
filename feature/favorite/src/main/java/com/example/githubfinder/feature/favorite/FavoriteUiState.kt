@@ -12,7 +12,6 @@
 package com.example.githubfinder.feature.favorite
 
 import androidx.annotation.StringRes
-import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity
 
 /** お気に入り一覧の並び替え基準。 */
@@ -59,6 +58,4 @@ sealed interface FavoriteUiState {
     }
 
     data object Empty : FavoriteUiState
-
-    data class Error(val message: UiText) : FavoriteUiState
 }

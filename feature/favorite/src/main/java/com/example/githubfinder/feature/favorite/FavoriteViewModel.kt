@@ -16,7 +16,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
 import com.example.githubfinder.core.designsystem.UiText
-import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -58,35 +57,13 @@ class FavoriteViewModel @Inject constructor(
     /** Undo 猶予タイマー（削除対象の ID ごと）。undoDelete でキャンセルする。 */
     private val pendingDeleteJobs = mutableMapOf<Int, Job>()
 
-    /** お気に入り（Room）の購読ジョブ。[retry] で張り直す。 */
-    private var observeJob: Job? = null
-
     init {
-        startObserving()
-    }
-
-    /**
-     * FavoriteStore.favorites（Room 由来の StateFlow）を購読し、変化のたびに uiState へ反映する。
-     * 画面側の load() 呼び出しは不要で、検索画面での追加など他画面からの変更も自動で届く。
-     */
-    private fun startObserving() {
-        observeJob?.cancel()
-        observeJob = viewModelScope.launch {
-            // StateFlow への .catch は効かない（SharedFlow は完了しない）ため try/catch で受ける。
-            try {
-                favoriteStore.favorites.filterNotNull().collect { publishFavorites(it) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _uiState.update { FavoriteUiState.Error(message = e.toUiText()) }
-            }
+        // 最初の非 null emission（Room の初回読み込み完了）が届くまでは Loading のまま。
+        // FavoriteStore.favorites は例外を流さない（失敗時は store 側で空リストに倒す）ため、ここでは catch しない。
+        // 画面側の load() 呼び出しは不要で、検索画面での追加など他画面からの変更も自動で届く。
+        viewModelScope.launch {
+            favoriteStore.favorites.filterNotNull().collect { publishFavorites(it) }
         }
-    }
-
-    /** Error 画面の「再試行」: 購読を張り直す（StateFlow は購読直後に最新値を流す）。 */
-    fun retry() {
-        _uiState.value = FavoriteUiState.Loading
-        startObserving()
     }
 
     /**
@@ -120,7 +97,8 @@ class FavoriteViewModel @Inject constructor(
         pendingDeleteJobs[favorite.id] = viewModelScope.launch {
             delay(UNDO_WINDOW_MS)
             pendingDeleteJobs.remove(favorite.id)
-            commitDelete(favorite.id)
+            // ViewModel が破棄されても Room の実削除が中断されないよう、アプリ寿命スコープで実行する
+            applicationScope.launch { commitDelete(favorite.id) }
         }
     }
 

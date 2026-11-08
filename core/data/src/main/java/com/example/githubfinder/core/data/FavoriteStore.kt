@@ -11,6 +11,7 @@
  * favorites は「Room の最初の emission が届くまで null」。空リストを初期値にすると、
  * コールドスタート直後に購読者が「お気に入り 0 件」と誤認して Empty を一瞬描画してしまうため。
  * アプリ寿命スコープでの購読なので、Room のエラーでプロセスが落ちないよう upstream で catch して空リストに倒す。
+ * 注意: Room の読み取りに失敗すると、アプリを再起動するまで favorites は空リストに劣化したまま（購読は再開しない）。
  */
 
 package com.example.githubfinder.core.data
@@ -38,7 +39,7 @@ class FavoriteStore @Inject constructor(
     /** お気に入り一覧。最初の emission が届くまで null（= 読み込み中）。 */
     val favorites: StateFlow<List<FavoriteEntity>?> = favoriteRepository.favorites
         .catch { e ->
-            // アプリスコープの購読が例外で落ちるとプロセスごと落ちるため、記録して空として扱う
+            // アプリスコープの購読が例外で落ちるとプロセスごと落ちるため、ログに残して空リストとして扱う
             Timber.tag("FavoriteStore").e(e, "Favorites collection failed")
             emit(emptyList())
         }

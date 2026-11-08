@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.githubfinder.core.designsystem.EmptyStateView
-import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.R as DesignR
@@ -88,7 +87,6 @@ fun FavoriteRoute(
         onUserMessageShown = viewModel::userMessageShown,
         onUndoDelete = viewModel::undoDelete,
         onRefresh = viewModel::refresh,
-        onRetry = viewModel::retry,
         onRemoveFavorite = viewModel::removeFavorite,
         onSetFilterLanguage = viewModel::setFilterLanguage,
         onSetSortKey = viewModel::setSortKey,
@@ -112,7 +110,6 @@ fun FavoriteScreen(
     onUserMessageShown: (Long) -> Unit,
     onUndoDelete: (Int) -> Unit,
     onRefresh: () -> Unit,
-    onRetry: () -> Unit,
     onRemoveFavorite: (FavoriteEntity) -> Unit,
     onSetFilterLanguage: (String?) -> Unit,
     onSetSortKey: (FavoriteSortKey) -> Unit,
@@ -248,13 +245,6 @@ fun FavoriteScreen(
                     icon = AppIcons.FavoriteBorder,
                     title = stringResource(R.string.favorite_empty_title),
                     description = stringResource(R.string.favorite_empty_description),
-                    modifier = Modifier.padding(padding),
-                )
-            }
-            is FavoriteUiState.Error -> {
-                ErrorView(
-                    message = state.message.asString(),
-                    onRetry = onRetry,
                     modifier = Modifier.padding(padding),
                 )
             }

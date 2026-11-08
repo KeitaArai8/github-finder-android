@@ -6,6 +6,7 @@ import com.example.githubfinder.core.model.FavoriteEntity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -314,6 +315,38 @@ class FavoriteViewModelTest {
         advanceUntilIdle()
 
         // Assert: 猶予を待たずに id=1 だけが 1 回実削除されている
+        assertEquals(1, fakeFavoriteRepository.removeCallCount)
+        assertEquals(listOf(2), fakeFavoriteRepository.stored.map { it.id })
+    }
+
+    @Test
+    fun `Undo 猶予経過後の Room 削除中に ViewModel が破棄されても実削除は完了する`() = runTest {
+        // Arrange: id=1 を含む 2 件を読み込み済みで、Room 書き込みが完了待ちで止まる Repository + ViewModelStore 管理下の ViewModel
+        val fav1 = FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L)
+        val fav2 = FavoriteEntity(2, "owner/repo2", null, 5, null, null, 0L)
+        fakeFavoriteRepository.stored = listOf(fav1, fav2)
+        val gate = CompletableDeferred<Unit>()
+        fakeFavoriteRepository.removeGate = gate
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = createViewModel() as T
+            },
+        )[FavoriteViewModel::class.java]
+        advanceUntilIdle()
+        viewModel.removeFavorite(fav1)
+        advanceTimeBy(UNDO_WINDOW_MS + 1)
+        runCurrent()
+        assertEquals(0, fakeFavoriteRepository.removeCallCount)
+
+        // Act: 実削除が Room 書き込みで中断している最中に ViewModel を破棄し、その後に書き込みを完了させる
+        viewModelStore.clear()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Assert: viewModelScope の取り消しに巻き込まれず、id=1 だけが 1 回実削除されている
         assertEquals(1, fakeFavoriteRepository.removeCallCount)
         assertEquals(listOf(2), fakeFavoriteRepository.stored.map { it.id })
     }
@@ -895,22 +928,6 @@ class FavoriteViewModelTest {
         // Assert: スピナーは閉じ、一覧は同じ 1 件のまま
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertFalse(state.isRefreshing)
-        assertEquals(listOf(1), state.displayedFavorites.map { it.id })
-    }
-
-    @Test
-    fun `retryで購読が張り直され最新の一覧がLoadedで表示される`() = runTest {
-        // Arrange: 1件を表示中
-        fakeFavoriteRepository.stored = listOf(FavoriteEntity(1, "owner/repo1", null, 10, null, null, 0L))
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act: 再試行（Loading に戻して購読をやり直す）
-        viewModel.retry()
-        advanceUntilIdle()
-
-        // Assert: 購読直後の最新値で Loaded に戻り、id=1 が表示されている
-        val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertEquals(listOf(1), state.displayedFavorites.map { it.id })
     }
 

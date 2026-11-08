@@ -16,22 +16,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FavoriteWidgetUpdater internal constructor(
+class FavoriteWidgetUpdater @Inject constructor(
     private val favoriteStore: FavoriteStore,
-    private val scope: CoroutineScope,
-    private val updateWidgets: suspend () -> Unit,
+    @ApplicationScope private val scope: CoroutineScope,
+    @ApplicationContext private val context: Context,
 ) {
-    @Inject
-    constructor(
-        favoriteStore: FavoriteStore,
-        @ApplicationScope scope: CoroutineScope,
-        @ApplicationContext context: Context,
-    ) : this(favoriteStore, scope, { FavoriteWidget().updateAll(context) })
-
     /**
      * 購読を開始する（Application.onCreate から 1 回呼ぶ）。
      * 最初の emission（起動直後の現在値）も更新するが、updateAll は冪等なので drop はしない。
@@ -39,11 +33,12 @@ class FavoriteWidgetUpdater internal constructor(
     fun start(): Job = scope.launch {
         favoriteStore.favorites.filterNotNull().collect {
             try {
-                updateWidgets()
+                FavoriteWidget().updateAll(context)
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // 更新失敗で購読を止めない（次の変更でまた更新される）
+                Timber.tag("FavoriteWidget").w(e, "Widget update failed")
             }
         }
     }

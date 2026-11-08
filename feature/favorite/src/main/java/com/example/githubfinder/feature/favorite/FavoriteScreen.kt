@@ -541,7 +541,7 @@ private fun RowContent(
         //   RepositoryListItem 内の .clickable より前に適用されるので、ripple は surface 上で正しく描画される。
         modifier = modifier.background(MaterialTheme.colorScheme.surface),
         onShare = onShare,
-        compactActions = true,
+        actionModifier = Modifier.size(40.dp),
         leadingContent = if (isEditMode) {
             {
                 Icon(

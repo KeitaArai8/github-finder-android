@@ -118,9 +118,9 @@ private fun FavoriteWidgetContent(
 }
 
 @Composable
-private fun EmptyState(context: Context, modifier: GlanceModifier = GlanceModifier) {
+private fun EmptyState(context: Context) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -143,12 +143,8 @@ private fun EmptyState(context: Context, modifier: GlanceModifier = GlanceModifi
 }
 
 @Composable
-private fun FavoriteList(
-    context: Context,
-    favorites: List<FavoriteEntity>,
-    modifier: GlanceModifier = GlanceModifier,
-) {
-    Column(modifier = modifier.fillMaxSize()) {
+private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
+    Column(modifier = GlanceModifier.fillMaxSize()) {
         Text(
             text = context.getString(R.string.widget_title),
             style = TextStyle(
@@ -169,9 +165,9 @@ private fun FavoriteList(
 }
 
 @Composable
-private fun FavoriteRow(favorite: FavoriteEntity, modifier: GlanceModifier = GlanceModifier) {
+private fun FavoriteRow(favorite: FavoriteEntity) {
     Row(
-        modifier = modifier
+        modifier = GlanceModifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -7,11 +7,11 @@
 
 package com.example.githubfinder.core.designsystem
 
-import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.example.githubfinder.core.model.AppError
+import java.io.IOException
 
 sealed interface UiText {
 
@@ -27,12 +27,6 @@ sealed interface UiText {
         is Resource -> stringResource(resId, *args.toTypedArray())
         is Raw -> value
     }
-
-    /** Context を使って文字列化する（Composable 外。Glance ウィジェット等）。 */
-    fun asString(context: Context): String = when (this) {
-        is Resource -> context.getString(resId, *args.toTypedArray())
-        is Raw -> value
-    }
 }
 
 /** [AppError] → 表示文言。ドメイン層（core:model）は文言を持たず、UI 層がこの変換で決める。 */
@@ -43,8 +37,12 @@ fun AppError.toUiText(): UiText = when (this) {
     is AppError.Unknown -> UiText.Raw(message)
 }
 
-/** 任意の例外 → 表示文言。[AppError] ならその文言、それ以外は例外メッセージ（無ければ汎用の不明エラー）。 */
-fun Throwable.toUiText(): UiText =
-    (this as? AppError)?.toUiText()
-        ?: message?.let { UiText.Raw(it) }
-        ?: UiText.Resource(R.string.error_unknown)
+/**
+ * 任意の例外 → 表示文言。[AppError] ならその文言、通信失敗（[IOException]）はネットワークエラー、
+ * それ以外は汎用の不明エラー。例外の生メッセージ（技術的な文言）は画面に出さない。
+ */
+fun Throwable.toUiText(): UiText = when (this) {
+    is AppError -> toUiText()
+    is IOException -> AppError.Network.toUiText()
+    else -> UiText.Resource(R.string.error_unknown)
+}

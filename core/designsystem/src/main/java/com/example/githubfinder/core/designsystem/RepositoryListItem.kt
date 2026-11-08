@@ -45,7 +45,7 @@ import com.example.githubfinder.core.model.RepositoryDisplayItem
  * @param onClick 行タップ。
  * @param onShare 非 null ならシェアボタンを出す。
  * @param onFavoriteToggle 非 null ならお気に入りトグルを出す（お気に入り一覧のように常に登録済みの画面は null）。
- * @param compactActions true ならシェアボタンを 40dp（アイコン 20dp）に小さくする（お気に入り一覧の既存レイアウト）。
+ * @param actionModifier シェアボタンに足す Modifier。お気に入り一覧は size(40.dp) で小さくする。
  * @param leadingContent 行頭の slot。編集モードの選択アイコンなど。アバターとの間隔（12dp）は呼び出し側が持たない。
  */
 @Composable
@@ -55,7 +55,7 @@ fun RepositoryListItem(
     modifier: Modifier = Modifier,
     onShare: (() -> Unit)? = null,
     onFavoriteToggle: (() -> Unit)? = null,
-    compactActions: Boolean = false,
+    actionModifier: Modifier = Modifier,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -93,13 +93,12 @@ fun RepositoryListItem(
         if (onShare != null) {
             IconButton(
                 onClick = onShare,
-                modifier = if (compactActions) Modifier.size(40.dp) else Modifier,
+                modifier = actionModifier,
             ) {
                 Icon(
                     imageVector = AppIcons.Share,
                     contentDescription = stringResource(R.string.a11y_share_repository, item.fullName),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = if (compactActions) Modifier.size(20.dp) else Modifier,
                 )
             }
         }

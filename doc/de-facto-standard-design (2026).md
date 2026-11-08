@@ -147,6 +147,27 @@ fun reduce(state: UiState, action: Action): UiState
 - **`material-icons-extended`**：更新が止まっているため、Material Symbols の vector drawable と `AppIcons`（NiA の NiaIcons 相当）に置き換える
 - **`room-ktx`**：Room 2.7 で空のアーティファクトになったため削除した
 
+### 意図した逸脱（2026-11 監査）
+
+公式・NiA と異なる実装を、理由つきで意図的に残している。
+
+1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：タブ復帰時の Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
+2. **Undo 削除の commit は ViewModel から `@ApplicationScope` で起動する**（Repository の suspend 関数内で外部スコープを使う形ではない）：ViewModel 破棄後も commit を完了させる所有者を ViewModel 側に置くため
+3. **NetworkMonitor は INTERNET + VALIDATED で判定する**（NiA は INTERNET のみ）：公式ガイドに従い、疎通できない接続をオンラインと誤判定しないため
+4. **`MainDispatcherRule` を 3 つのテスト source set に複製している**：`core:testing` モジュールがまだ無いため
+5. **`@TutorialScope` の DI Provider で `Dispatchers.Default` を直書きしている**（NiA が Dispatcher を直書きする場所と同じ）：core:designsystem は core:data の `@ApplicationScope` に依存できないため
+
+### 未対応
+
+- NavigationSuiteScaffold（adaptive）
+- release の R8 最適化（AGP 9.3+ の `optimization { enable = true }`）
+- Baseline Profile / Startup Profile
+- Coil 3（NiA は 2.7 のまま）
+- Room 3（評価予定）
+- Material 3 Expressive（beta）
+- アプリのプロセスが無いときのウィジェット更新経路（WorkManager / `updatePeriodMillis`）
+- ウィジェット updater のテスト
+
 ---
 
 # 🧠 OS共通設計原則（最重要）

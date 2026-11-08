@@ -147,7 +147,7 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ## モジュール構成（NiA準拠）
 
-[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、10 モジュール + `build-logic`（Convention Plugin）の構成です。
+[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、11 モジュール + `build-logic`（Convention Plugin）の構成です。
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
@@ -161,6 +161,7 @@ val uiState: StateFlow<SearchUiState> = combine(
 :feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + UserMessage
 :feature:settings       ← SettingsScreen
 :feature:widget         ← Glance Widget (FavoriteWidget)
+:core:testing           ← テスト専用（MainDispatcherRule + 共有 Fake。本番コードからは依存しない）
 ```
 
 ### Convention Plugin（`build-logic/`）
@@ -221,6 +222,10 @@ dependencies { implementation(project(":core:data")) }
 :core:network / :core:database
 └── :core:model
 
+:core:testing（テスト専用。各モジュールの testImplementation からのみ参照）
+├── :core:model
+└── :core:data
+
 :core:designsystem
 └── (Hilt / Compose / Browser / AndroidX)
 ```
@@ -238,7 +243,7 @@ dependencies { implementation(project(":core:data")) }
 ├── SearchHistoryDataSourceImpl    ← DataStore Preferences 実装（テスト時は Fake 差し替え）
 ├── FavoriteStore                  ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
 ├── NetworkMonitor (i/f)           ← isOnline: Flow<Boolean> の契約
-├── ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（テスト時は Fake 差し替え）
+├── ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（デフォルトネットワークの状態を 1 つ持つ）
 └── DI Module                      ← interface ↔ impl のバインド
 ```
 
@@ -291,7 +296,7 @@ SearchViewModel（公開）
 
 ### オフライン検知（NetworkMonitor）
 
-`:core:data/network/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。到達可能（INTERNET かつ VALIDATED）なネットワークの集合が空でないかで判定するため、Wi-Fi が切れてもモバイルが生きていればオンラインのままです。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
+`:core:data/network/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。`registerDefaultNetworkCallback` で「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」という単一の状態だけを持ちます（ネットワークの集合は自前で管理しません）。Wi-Fi が切れてモバイルへ切り替わるときのデフォルトネットワークの選択は OS が行い、新しいデフォルトネットワークの通知で状態が更新されます。切り替え時に届く旧ネットワークの `onLost` は、現在のネットワークと一致するときだけオフラインとして扱います。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
 
 ```kotlin
 interface NetworkMonitor {
@@ -409,6 +414,8 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 | メモリキャッシュ | 検索結果をアプリ起動中キャッシュ |
 | プルリフレッシュ | 検索・お気に入り両画面（`PullToRefreshBox`） |
 | **オフライン検知** | `ConnectivityManager` を `Flow<Boolean>` で公開、切断時に画面上部にバナー表示 |
+| **アダプティブナビゲーション** | `NavigationSuiteScaffold` で画面幅に応じて切り替え（compact は `NavigationBar`、medium 以上は `NavigationRail`）。キーボード表示時はナビゲーション要素ごとキーボードの上に載る |
+| **予測型「戻る」** | `enableOnBackInvokedCallback`（targetSdk 36 では既定で有効）。Navigation 3 の `NavDisplay` が戻るジェスチャーのプレビューアニメーションを提供 |
 | **構造化ログ** | Timber による tag 別 Logcat 出力（DEBUG ビルドのみ） |
 | チュートリアル | **スポットライト型専用画面**（TutorialScreen）、初回起動時のみ |
 | 設定画面 | プライバシーポリシー/利用規約（Custom Tab） |
@@ -443,7 +450,7 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 |------|------|
 | HTTPS 強制 | `res/xml/network_security_config.xml` で `cleartextTrafficPermitted="false"` |
 | URL 構築 | `Uri.encode(fullName, "/")` で自動 percent-encode（`githubUrlFor`） |
-| パーミッション | `INTERNET` のみ（最小） |
+| パーミッション | `INTERNET`（API 通信）と `ACCESS_NETWORK_STATE`（オフライン検知）のみ（最小） |
 | Receiver export | Widget Receiver は `exported="false"` |
 | DB バックアップ除外 | `res/xml/backup_rules.xml` + `res/xml/data_extraction_rules.xml` で `github_finder.db` を除外 |
 | SQL インジェクション | Room `@Query` のパラメータ化で型安全 |
@@ -454,10 +461,15 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 
 | モジュール | テストファイル | 件数 |
 |---|---|---|
-| `:feature:search` | SearchViewModelTest（FakeSearchRepository / FakeFavoriteRepository） | 13 |
-| `:feature:favorite` | FavoriteViewModelTest（一括削除含む） | 15 |
-| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest | 18 |
-| `:core:database` | FavoriteLocalDataSourceTest（FakeDao） | 8 |
+| `:feature:search` | SearchViewModelTest | 29 |
+| `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 37 |
+| `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
+| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest | 20 |
+| `:core:database` | FavoriteLocalDataSourceTest（FakeDao） | 6 |
+| `:core:designsystem` | UiTextTest, CoachMarkManagerTest, TutorialLocalDataSourceTest | 11 |
+| `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
+
+合計 107 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 
@@ -527,19 +539,20 @@ GitHub API は認証なし（Rate Limit: 10 req/min）で動作します。
 
 ### リリースビルドの注意点
 
-サンプル目的のため `app/build.gradle.kts` の `release` ブロックは:
+`app/build.gradle.kts` の `release` ブロックは R8 によるコード縮小・難読化とリソース縮小を有効にしています（`isMinifyEnabled = true` / `isShrinkResources = true`、ルールは `proguard-android-optimize.txt` の既定のみ。実機で失敗を観測した keep ルールが出たら、観測内容とともに追記します）。
 
-```kotlin
-release {
-    isMinifyEnabled = false  // サンプル用、本番では true 推奨
-}
+**署名設定は未整備**のため、プロダクション利用する場合は**リリース keystore による署名設定を必ず追加してください**。
+
+R8 後の動作を実機やエミュレータで確認したいだけなら、build.gradle.kts を変えずに、debug keystore を注入してビルドします:
+
 ```
-
-になっています。**プロダクション利用する場合は必ず以下を有効化してください**:
-
-- `isMinifyEnabled = true`（R8 によるコード難読化）
-- 専用 ProGuard ルール（`proguard-rules.pro`）の整備
-- リリース keystore による署名設定
+./gradlew assembleRelease \
+  -Pandroid.injected.signing.store.file=$HOME/.android/debug.keystore \
+  -Pandroid.injected.signing.store.password=android \
+  -Pandroid.injected.signing.key.alias=androiddebugkey \
+  -Pandroid.injected.signing.key.password=android
+adb install app/build/outputs/apk/release/app-release.apk
+```
 
 ### GitHub 商標について
 

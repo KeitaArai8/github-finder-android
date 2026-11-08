@@ -154,26 +154,28 @@ fun reduce(state: UiState, action: Action): UiState
     -Pandroid.injected.signing.key.alias=androiddebugkey \
     -Pandroid.injected.signing.key.password=android
   ```
+- **採用済みの項目**：`NavigationSuiteScaffold`（画面幅に応じて NavigationBar / NavigationRail を自動切替。IME はスイート全体で避ける）、R8 とリソース縮小（release で有効）、予測型「戻る」（`enableOnBackInvokedCallback`、targetSdk 36 の既定に合わせて明示）、`core:testing`（`MainDispatcherRule` と共有 Fake をテスト専用モジュールに集約）
 - **`room-ktx`**：Room 2.7 で空のアーティファクトになったため削除した
 
-### 意図した逸脱（2026-11 監査）
+### 意図した逸脱
 
 公式・NiA と異なる実装を、理由つきで意図的に残している。
 
 1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：タブ復帰時の Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
 2. **Undo 削除の commit は ViewModel から `@ApplicationScope` で起動する**（Repository の suspend 関数内で外部スコープを使う形ではない）：ViewModel 破棄後も commit を完了させる所有者を ViewModel 側に置くため
 3. **NetworkMonitor は INTERNET + VALIDATED で判定する**（NiA は INTERNET のみ）：公式ガイドに従い、疎通できない接続をオンラインと誤判定しないため
+5. **NetworkMonitor は `registerDefaultNetworkCallback` で単一の状態を持つ**（NiA は `registerNetworkCallback` でネットワークの集合を自前管理する）：このアプリが知りたいのは「いま使われている接続で通信できるか」だけで、複数ネットワークの追跡は不要なため。Wi-Fi とモバイルの切り替えは OS がデフォルトネットワークとして選ぶので、新しいデフォルトの通知で状態が更新される。切り替え時に旧ネットワークの `onLost` が遅れて届いても、現在のネットワークと一致しなければ無視する
 4. **`@TutorialScope` の DI Provider で `Dispatchers.Default` を直書きしている**（NiA が Dispatcher を直書きする場所と同じ）：core:designsystem は core:data の `@ApplicationScope` に依存できないため
 
-2026-11 の 3 巡目確認（a-10）で、①②⑤（旧番号。FavoriteStore の `stateIn(Eagerly)`、Undo commit の ViewModel 起動、`Dispatchers.Default` の直書き）は上記のまま意図した逸脱として残す。旧④（`MainDispatcherRule` の複製）は `core:testing` の追加で解消したため削除した。
+`MainDispatcherRule` の複製は `core:testing` の追加で解消したため、逸脱から外した。
 
 ### 未対応
 
 - Baseline Profile / Startup Profile：サンプルを配布するまで保留する
 - Coil 3（NiA は 2.7 のまま）
 - Material 3 Expressive（beta）
-- ウィジェットのプロセス外更新：既存の `updatePeriodMillis`（1 時間）で足りるため、WorkManager は追加しない（2026-11 監査 a-7 / a-15 は対応済み扱い）
-- 検索 UI の `SearchBar`（a-13）：NiA が使っていないため採用しない（`TextField` のまま）
+- ウィジェットのプロセス外更新：既存の `updatePeriodMillis`（1 時間）で足りるため、WorkManager は追加しない
+- 検索 UI の `SearchBar`：NiA が使っていないため採用しない（`TextField` のまま）
 - Room 3（評価結果。2026-11 時点）
   - 変わること：パッケージが `androidx.room3`（artifact は `room3-runtime` / `room3-compiler`）に変わる。SupportSQLite を使わず `SQLiteDriver` が必須になり、Migration / Callback の引数は `SQLiteConnection` になる。DAO は coroutine ベース、コード生成は Kotlin のみ（KSP 必須。本アプリは KSP 済み）。KMP 対応が主目的
   - 安定版は 3.0.3（3.0.0 は 2026-07-01、3.1 は alpha）。2.x は 2.8.5（2026-09-09）まで更新が続いており、公式ページに deprecated の記載は見つからない

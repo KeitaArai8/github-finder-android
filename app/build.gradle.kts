@@ -43,4 +43,7 @@ dependencies {
     implementation(libs.hilt.lifecycle.viewmodel.compose)
 
     implementation(libs.timber)
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.coroutines.test)
 }

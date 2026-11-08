@@ -26,6 +26,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -33,7 +34,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.example.githubfinder.core.data.network.NetworkMonitor
 import com.example.githubfinder.core.designsystem.OfflineBanner
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.feature.favorite.FavoriteRoute
@@ -73,10 +73,10 @@ enum class TopLevelRoute(
 @Composable
 fun MainNavigation(
     coachMarkManager: CoachMarkManager,
-    networkMonitor: NetworkMonitor,
+    viewModel: MainViewModel = hiltViewModel(),
 ) {
     val isActive by coachMarkManager.isActive.collectAsStateWithLifecycle()
-    val isConnected by networkMonitor.isConnected.collectAsStateWithLifecycle(initialValue = true)
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         coachMarkManager.startIfNeeded()
@@ -84,7 +84,7 @@ fun MainNavigation(
 
     Column {
         AnimatedVisibility(
-            visible = !isConnected,
+            visible = !isOnline,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {

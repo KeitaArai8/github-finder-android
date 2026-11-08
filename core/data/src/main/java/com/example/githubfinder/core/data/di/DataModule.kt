@@ -7,6 +7,8 @@ package com.example.githubfinder.core.data.di
 
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSourceImpl
+import com.example.githubfinder.core.data.network.ConnectivityManagerNetworkMonitor
+import com.example.githubfinder.core.data.network.NetworkMonitor
 import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.data.repository.FavoriteRepositoryImpl
 import com.example.githubfinder.core.data.repository.SearchRepository
@@ -36,6 +38,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSearchHistoryDataSource(impl: SearchHistoryDataSourceImpl): SearchHistoryDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkMonitor(impl: ConnectivityManagerNetworkMonitor): NetworkMonitor
 
     companion object {
         /** アプリ寿命のスコープ。SupervisorJob により、1 件の失敗が他の処理を巻き込まない。 */

@@ -7,6 +7,11 @@ android {
     namespace = "com.example.githubfinder.core.database"
 }
 
+// Room のスキーマ JSON を出力してバージョン管理する（マイグレーション検証・差分レビューのため）
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":core:model"))
     implementation(libs.room.runtime)

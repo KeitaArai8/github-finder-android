@@ -18,6 +18,7 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(libs.coil.compose)
+    implementation(libs.datastore.preferences)
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     api(libs.compose.ui.graphics)
@@ -25,4 +26,7 @@ dependencies {
     api(libs.compose.material3)
     api(libs.browser)
     debugApi(libs.compose.ui.tooling)
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.coroutines.test)
 }

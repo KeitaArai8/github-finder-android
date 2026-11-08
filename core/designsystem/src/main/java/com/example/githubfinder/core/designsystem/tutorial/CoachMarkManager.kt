@@ -9,10 +9,13 @@ package com.example.githubfinder.core.designsystem.tutorial
 import androidx.compose.ui.geometry.Rect
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * チュートリアルの表示ステップ。表示文言は各 UI 層で stringResource 経由で解決する
@@ -27,6 +30,7 @@ enum class CoachMarkStep {
 @Singleton
 class CoachMarkManager @Inject constructor(
     private val tutorialDataSource: TutorialLocalDataSource,
+    @TutorialScope private val scope: CoroutineScope,
 ) {
     private val _currentStep = MutableStateFlow<CoachMarkStep?>(null)
     val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
@@ -41,8 +45,9 @@ class CoachMarkManager @Inject constructor(
         _targetRects.update { current -> current + (step to rect) }
     }
 
-    fun startIfNeeded() {
-        if (tutorialDataSource.hasCompleted) return
+    /** 表示済みフラグを DataStore から読み、未表示ならチュートリアルを開始する。 */
+    suspend fun startIfNeeded() {
+        if (tutorialDataSource.isShown.first()) return
         _isActive.value = true
         _currentStep.value = CoachMarkStep.SearchBar
     }
@@ -77,6 +82,7 @@ class CoachMarkManager @Inject constructor(
     private fun complete() {
         _currentStep.value = null
         _isActive.value = false
-        tutorialDataSource.markCompleted()
+        // UI 操作（next / skip）は同期のまま、永続化だけ非同期で行う
+        scope.launch { tutorialDataSource.setShown() }
     }
 }

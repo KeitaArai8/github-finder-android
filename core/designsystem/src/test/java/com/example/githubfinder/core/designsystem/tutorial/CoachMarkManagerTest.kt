@@ -1,15 +1,18 @@
 package com.example.githubfinder.core.designsystem.tutorial
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,6 +32,27 @@ class CoachMarkManagerTest {
         CoachMarkManager(dataSource, scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
 
     @Test
+    fun `startIfNeededがDataStoreの答えを得るまでisActiveは未確定のnullである`() = runTest {
+        // Arrange: 読み取り完了を外から制御できるデータソース（DataStore の初回読み取り待ちを再現）
+        val gate = CompletableDeferred<Boolean>()
+        val dataSource = object : TutorialLocalDataSource {
+            override val isShown: Flow<Boolean> = flow { emit(gate.await()) }
+            override suspend fun setShown() = Unit
+        }
+        val manager = makeManager(dataSource)
+
+        // Act: 開始判定を始めるが、読み取りは未完了のまま
+        val job = launch { manager.startIfNeeded() }
+        runCurrent()
+
+        // Assert: 答えが出るまでは null（本画面もチュートリアルも描画しない）で、表示済みの答えが届くと false に確定する
+        assertNull(manager.isActive.value)
+        gate.complete(true)
+        job.join()
+        assertEquals(false, manager.isActive.value)
+    }
+
+    @Test
     fun `未表示ならstartIfNeededで最初のステップが有効になる`() = runTest {
         // Arrange: 表示済みフラグが false のデータソース
         val manager = makeManager(FakeTutorialLocalDataSource(initialShown = false))
@@ -37,7 +61,7 @@ class CoachMarkManagerTest {
         manager.startIfNeeded()
 
         // Assert: SearchBar ステップでアクティブになる
-        assertTrue(manager.isActive.value)
+        assertEquals(true, manager.isActive.value)
         assertEquals(CoachMarkStep.SearchBar, manager.currentStep.value)
     }
 
@@ -50,7 +74,7 @@ class CoachMarkManagerTest {
         manager.startIfNeeded()
 
         // Assert: 非アクティブのまま
-        assertFalse(manager.isActive.value)
+        assertEquals(false, manager.isActive.value)
         assertNull(manager.currentStep.value)
     }
 
@@ -67,8 +91,8 @@ class CoachMarkManagerTest {
         relaunched.startIfNeeded()
 
         // Assert: 1 回目は非アクティブになり、再起動後は表示されない
-        assertFalse(manager.isActive.value)
-        assertFalse(relaunched.isActive.value)
+        assertEquals(false, manager.isActive.value)
+        assertEquals(false, relaunched.isActive.value)
     }
 
     @Test
@@ -83,7 +107,7 @@ class CoachMarkManagerTest {
 
         // Assert: 完了してステップが null、永続化済み
         assertNull(manager.currentStep.value)
-        assertFalse(manager.isActive.value)
+        assertEquals(false, manager.isActive.value)
         assertTrue(dataSource.isShownNow())
     }
 }

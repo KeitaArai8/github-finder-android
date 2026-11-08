@@ -11,13 +11,17 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -96,10 +100,15 @@ fun MainNavigation(
 
         // バナーがステータスバー領域を使っている間は、下の画面で同じ inset を二重に避けないよう消費済みにする
         val contentModifier = if (isOnline) Modifier else Modifier.consumeWindowInsets(WindowInsets.statusBars)
-        if (isActive) {
-            TutorialScreen(coachMarkManager = coachMarkManager)
-        } else {
-            MainScaffold(modifier = contentModifier)
+        when (isActive) {
+            // DataStore の答えが出るまでは背景だけを描く（本画面がチュートリアルの前に一瞬映るのを防ぐ）
+            null -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            )
+            true -> TutorialScreen(coachMarkManager = coachMarkManager)
+            false -> MainScaffold(modifier = contentModifier)
         }
     }
 }

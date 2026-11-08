@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,9 +106,11 @@ fun CoachMarkOverlay(
 
         SkipButton(
             onSkip = onSkip,
+            // edge-to-edge でステータスバー／ジェスチャー領域の下に潜るとタップが届かないため、inset の分だけ下げる
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 24.dp, end = 16.dp),
+                .statusBarsPadding()
+                .padding(top = 8.dp, end = 16.dp),
         )
     }
 }

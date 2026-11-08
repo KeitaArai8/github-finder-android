@@ -35,8 +35,12 @@ class CoachMarkManager @Inject constructor(
     private val _currentStep = MutableStateFlow<CoachMarkStep?>(null)
     val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
 
-    private val _isActive = MutableStateFlow(false)
-    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+    /**
+     * チュートリアルを表示中か。[startIfNeeded] が DataStore の答えを得るまでは null（未確定）。
+     * 未確定の間に本画面を描画すると、初回起動でチュートリアルの前に一瞬ちらつくため、呼び出し側は null のとき何も描画しない。
+     */
+    private val _isActive = MutableStateFlow<Boolean?>(null)
+    val isActive: StateFlow<Boolean?> = _isActive.asStateFlow()
 
     private val _targetRects = MutableStateFlow<Map<CoachMarkStep, Rect>>(emptyMap())
     val targetRects: StateFlow<Map<CoachMarkStep, Rect>> = _targetRects.asStateFlow()
@@ -47,7 +51,10 @@ class CoachMarkManager @Inject constructor(
 
     /** 表示済みフラグを DataStore から読み、未表示ならチュートリアルを開始する。 */
     suspend fun startIfNeeded() {
-        if (tutorialDataSource.isShown.first()) return
+        if (tutorialDataSource.isShown.first()) {
+            _isActive.value = false
+            return
+        }
         _isActive.value = true
         _currentStep.value = CoachMarkStep.SearchBar
     }
@@ -70,7 +77,7 @@ class CoachMarkManager @Inject constructor(
      * 次のステップへ進める。現在ステップが一致しないときは何もしない（冪等）。
      */
     fun advance(after: CoachMarkStep) {
-        if (!_isActive.value) return
+        if (_isActive.value != true) return
         if (_currentStep.value != after) return
         next()
     }

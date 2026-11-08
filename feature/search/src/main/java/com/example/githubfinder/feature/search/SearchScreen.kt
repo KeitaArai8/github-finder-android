@@ -37,9 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -47,10 +45,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
+import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
@@ -58,9 +56,6 @@ import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.designsystem.R as DesignR
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
 
 /** 検索画面の入口。ViewModel から State を集め、ViewModel を知らない [SearchScreen] へ値とラムダだけを渡す。 */
 @Composable
@@ -228,11 +223,11 @@ private fun RepositoryList(
     ) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(items, key = { it.id }) { item ->
-                RepositoryRow(
+                RepositoryListItem(
                     item = item,
-                    onFavoriteTap = { onFavoriteTap(item) },
-                    onRowTap = { onRowTap(item) },
+                    onClick = { onRowTap(item) },
                     onShare = { onShare(item) },
+                    onFavoriteToggle = { onFavoriteTap(item) },
                 )
             }
             if (isLoadingMore) {
@@ -242,61 +237,6 @@ private fun RepositoryList(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun RepositoryRow(
-    item: RepositoryDisplayItem,
-    onFavoriteTap: () -> Unit,
-    onRowTap: () -> Unit,
-    onShare: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onRowTap)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = item.ownerAvatarURL,
-            contentDescription = null,
-            placeholder = ColorPainter(Color.Gray.copy(alpha = 0.3f)),
-            modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.fullName, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            item.description?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
-                Text("${item.starCount}", style = MaterialTheme.typography.labelSmall)
-                item.language?.let {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        IconButton(onClick = onShare) {
-            Icon(
-                imageVector = AppIcons.Share,
-                contentDescription = stringResource(DesignR.string.a11y_share_repository, item.fullName),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onFavoriteTap) {
-            Icon(
-                imageVector = if (item.isFavorite) AppIcons.Favorite else AppIcons.FavoriteBorder,
-                contentDescription = stringResource(
-                    if (item.isFavorite) DesignR.string.a11y_favorite_remove
-                    else DesignR.string.a11y_favorite_add
-                ),
-                tint = if (item.isFavorite) Color.Red else Color.Gray,
-            )
         }
     }
 }
@@ -392,15 +332,15 @@ private fun previewRepositoryItem(
 @Composable
 private fun RepositoryRowPreview() {
     GitHubFinderTheme {
-        RepositoryRow(
+        RepositoryListItem(
             item = previewRepositoryItem(
                 id = 1,
                 fullName = "jetpackcompose/samples",
                 starCount = 12_500,
             ),
-            onFavoriteTap = {},
-            onRowTap = {},
+            onClick = {},
             onShare = {},
+            onFavoriteToggle = {},
         )
     }
 }
@@ -409,7 +349,7 @@ private fun RepositoryRowPreview() {
 @Composable
 private fun RepositoryRowFavoritePreview() {
     GitHubFinderTheme {
-        RepositoryRow(
+        RepositoryListItem(
             item = previewRepositoryItem(
                 id = 2,
                 fullName = "android/architecture-samples",
@@ -417,9 +357,9 @@ private fun RepositoryRowFavoritePreview() {
                 language = "Kotlin",
                 isFavorite = true,
             ),
-            onFavoriteTap = {},
-            onRowTap = {},
+            onClick = {},
             onShare = {},
+            onFavoriteToggle = {},
         )
     }
 }

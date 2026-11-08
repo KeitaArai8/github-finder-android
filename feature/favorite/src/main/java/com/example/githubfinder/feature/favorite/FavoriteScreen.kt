@@ -48,33 +48,28 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
+import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.FavoriteEntity
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
+import com.example.githubfinder.core.model.RepositoryDisplayItem
 
 /** お気に入り画面の入口。ViewModel から State を集め、ViewModel を知らない [FavoriteScreen] へ値とラムダだけを渡す。 */
 @Composable
@@ -536,64 +531,42 @@ private fun RowContent(
     onRowTap: () -> Unit,
     onShare: (() -> Unit)?,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // ★ 必須: SwipeToDismissBox の backgroundContent（赤）が透けないよう surface 色で塗りつぶす。
-            //   これがないと、スワイプしていなくても背景の赤が常に表示される。
-            //   .clickable より前に置くことで、ripple が surface 上で正しく描画される。
-            .background(MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onRowTap)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (isEditMode) {
-            Icon(
-                imageVector = if (isSelected) AppIcons.CheckCircle else AppIcons.RadioButtonUnchecked,
-                contentDescription = stringResource(
-                    if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected
-                ),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-        }
-        AsyncImage(
-            model = favorite.ownerAvatarURL,
-            contentDescription = null,
-            placeholder = ColorPainter(Color.Gray.copy(alpha = 0.3f)),
-            modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(favorite.fullName, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            favorite.description?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.Star, contentDescription = null, tint = Color(0xFFFFAB00), modifier = Modifier.size(14.dp))
-                Text("${favorite.starCount}", style = MaterialTheme.typography.labelSmall)
-                favorite.language?.let {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        if (onShare != null) {
-            IconButton(
-                onClick = onShare,
-                modifier = Modifier.size(40.dp),
-            ) {
+    RepositoryListItem(
+        item = favorite.toDisplayItem(),
+        onClick = onRowTap,
+        // ★ 必須: SwipeToDismissBox の backgroundContent（赤）が透けないよう surface 色で塗りつぶす。
+        //   これがないと、スワイプしていなくても背景の赤が常に表示される。
+        //   RepositoryListItem 内の .clickable より前に適用されるので、ripple は surface 上で正しく描画される。
+        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+        onShare = onShare,
+        compactActions = true,
+        leadingContent = if (isEditMode) {
+            {
                 Icon(
-                    imageVector = AppIcons.Share,
-                    contentDescription = stringResource(DesignR.string.a11y_share_repository, favorite.fullName),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    imageVector = if (isSelected) AppIcons.CheckCircle else AppIcons.RadioButtonUnchecked,
+                    contentDescription = stringResource(
+                        if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected
+                    ),
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
                 )
             }
-        }
-    }
+        } else {
+            null
+        },
+    )
 }
+
+/** お気に入り（常に登録済み）を共通行 UI の表示モデルへ変換する。 */
+private fun FavoriteEntity.toDisplayItem() = RepositoryDisplayItem(
+    id = id,
+    fullName = fullName,
+    description = description,
+    starCount = starCount,
+    language = language,
+    ownerAvatarURL = ownerAvatarURL,
+    isFavorite = true,
+)
 
 private fun previewFavorite(
     id: Int,

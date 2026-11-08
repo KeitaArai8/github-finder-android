@@ -13,4 +13,7 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
     implementation(libs.coroutines.android)
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.coroutines.test)
 }

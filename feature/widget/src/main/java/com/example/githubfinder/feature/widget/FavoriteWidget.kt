@@ -55,6 +55,20 @@ class FavoriteWidget : GlanceAppWidget() {
         }
     }
 
+    /**
+     * ウィジェットピッカー用のプレビュー（Glance 1.2）。実データに依存せず、固定のサンプルを描画する。
+     */
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        provideContent {
+            GlanceTheme {
+                FavoriteWidgetContent(
+                    favorites = PREVIEW_FAVORITES,
+                    launchIntent = null,
+                )
+            }
+        }
+    }
+
     private suspend fun loadFavorites(context: Context): List<FavoriteEntity> =
         try {
             val entryPoint = EntryPointAccessors.fromApplication(
@@ -70,6 +84,12 @@ class FavoriteWidget : GlanceAppWidget() {
 
     companion object {
         private const val MAX_ITEMS = 5
+
+        private val PREVIEW_FAVORITES = listOf(
+            FavoriteEntity(1, "JetBrains/kotlin", null, 53_548, "Kotlin", null, 0L),
+            FavoriteEntity(2, "square/okhttp", null, 47_107, "Kotlin", null, 0L),
+            FavoriteEntity(3, "android/compose-samples", null, 20_100, "Kotlin", null, 0L),
+        )
     }
 }
 

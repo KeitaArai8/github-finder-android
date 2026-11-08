@@ -24,9 +24,7 @@ class GitHubRemoteDataSource @Inject constructor(
         } catch (e: HttpException) {
             when (e.code()) {
                 403 -> throw AppError.RateLimit
-                in 400..499 -> throw AppError.Server(e.code())
-                in 500..599 -> throw AppError.Server(e.code())
-                else -> throw AppError.Unknown("Unexpected status code: ${e.code()}")
+                else -> throw AppError.Server(e.code())
             }
         } catch (e: IOException) {
             throw AppError.Network

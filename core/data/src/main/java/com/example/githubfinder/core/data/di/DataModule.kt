@@ -17,8 +17,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 @Module
@@ -42,6 +42,8 @@ abstract class DataModule {
         @Provides
         @Singleton
         @ApplicationScope
-        fun providesApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        fun providesApplicationScope(
+            @Dispatcher(GitHubFinderDispatchers.Default) dispatcher: CoroutineDispatcher,
+        ): CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
     }
 }

@@ -9,7 +9,6 @@ import com.example.githubfinder.core.data.datasource.SearchCacheDataSource
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.SearchResultEntity
 import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -29,8 +28,6 @@ class SearchRepositoryImpl @Inject constructor(
             remoteDataSource.searchRepositories(query, page)
         } catch (e: AppError) {
             throw e
-        } catch (e: IOException) {
-            throw AppError.Decode
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

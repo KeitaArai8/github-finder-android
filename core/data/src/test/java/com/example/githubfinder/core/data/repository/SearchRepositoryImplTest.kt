@@ -19,6 +19,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchRepositoryImplTest {
@@ -131,6 +132,36 @@ class SearchRepositoryImplTest {
             repository.search("swift", 1)
             fail("Expected AppError.Network")
         } catch (e: AppError.Network) {
+            // expected
+        }
+    }
+
+    @Test
+    fun `404応答でAppError_Serverが透過する`() = runTest {
+        // Arrange: 404 HttpException を投げる Fake API
+        val fakeApi = FakeGitHubApiService().apply { errorToThrow = makeHttpException(404) }
+        val repository = makeRepository(fakeApi)
+
+        // Act & Assert: 4xx も 5xx と同じく AppError.Server(code=404) になる
+        try {
+            repository.search("swift", 1)
+            fail("Expected AppError.Server")
+        } catch (e: AppError.Server) {
+            assertEquals(404, e.statusCode)
+        }
+    }
+
+    @Test
+    fun `通信中のキャンセルはAppError_Unknownに変換されずCancellationExceptionのまま伝播する`() = runTest {
+        // Arrange: API 呼び出しが CancellationException を投げる Fake API
+        val fakeApi = FakeGitHubApiService().apply { errorToThrow = CancellationException("cancelled") }
+        val repository = makeRepository(fakeApi)
+
+        // Act & Assert: AppError ではなく CancellationException がそのまま届く
+        try {
+            repository.search("swift", 1)
+            fail("Expected CancellationException")
+        } catch (e: CancellationException) {
             // expected
         }
     }

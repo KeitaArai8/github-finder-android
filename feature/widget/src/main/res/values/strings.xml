@@ -2,4 +2,7 @@
 <resources>
     <string name="widget_label">お気に入り</string>
     <string name="widget_description">GitHub Finder のお気に入り上位5件を表示</string>
+    <string name="widget_title">お気に入り</string>
+    <string name="widget_empty_title">お気に入りがありません</string>
+    <string name="widget_empty_description">検索画面から追加してください</string>
 </resources>

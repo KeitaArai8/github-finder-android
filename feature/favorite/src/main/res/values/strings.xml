@@ -27,4 +27,15 @@
 
     <!-- エラー -->
     <string name="favorite_error_delete">お気に入りの削除に失敗しました</string>
+
+    <!-- 通知 -->
+    <string name="favorite_deleted_with_name">「%1$s」を削除しました</string>
+    <string name="favorite_bulk_deleted">%1$d件削除しました</string>
+
+    <!-- 並び替え・フィルタ -->
+    <string name="favorite_sort_a11y">並び替え</string>
+    <string name="favorite_sort_saved_at_desc">新しい順</string>
+    <string name="favorite_sort_star_count_desc">Star が多い順</string>
+    <string name="favorite_sort_full_name_asc">名前順 (A→Z)</string>
+    <string name="favorite_filter_all">すべて</string>
 </resources>

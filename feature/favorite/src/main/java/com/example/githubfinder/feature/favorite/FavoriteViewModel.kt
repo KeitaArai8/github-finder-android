@@ -15,7 +15,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
-import com.example.githubfinder.core.model.AppError
+import com.example.githubfinder.core.designsystem.UiText
+import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -77,7 +78,7 @@ class FavoriteViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update { FavoriteUiState.Error(message = e.toDisplayMessage()) }
+                _uiState.update { FavoriteUiState.Error(message = e.toUiText()) }
             }
         }
     }
@@ -100,9 +101,6 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    private fun Throwable.toDisplayMessage(): String =
-        (this as? AppError)?.toDisplayMessage() ?: message ?: "Unknown error"
-
     /**
      * スワイプ削除のエントリーポイント（Gmail スタイル楽観的更新）。
      *
@@ -118,7 +116,7 @@ class FavoriteViewModel @Inject constructor(
         // UI からは二重削除できない。万一来ても猶予を延長せず無視する。
         if (favorite.id in pendingDeleteJobs) return
         updateLoaded { it.copy(pendingDeleteIDs = it.pendingDeleteIDs + favorite.id) }
-        enqueueMessage("「${favorite.fullName}」を削除しました", undoID = favorite.id)
+        enqueueMessage(UiText.Resource(R.string.favorite_deleted_with_name, listOf(favorite.fullName)), undoID = favorite.id)
         pendingDeleteJobs[favorite.id] = viewModelScope.launch {
             delay(UNDO_WINDOW_MS)
             pendingDeleteJobs.remove(favorite.id)
@@ -158,7 +156,7 @@ class FavoriteViewModel @Inject constructor(
             Timber.tag(TAG).e(e, "Favorite delete commit failed: id=%d", id)
             // 失敗時は pending から戻して、UI に行を復元
             updateLoaded { it.copy(pendingDeleteIDs = it.pendingDeleteIDs - id) }
-            enqueueMessage("お気に入りの削除に失敗しました")
+            enqueueMessage(UiText.Resource(R.string.favorite_error_delete))
         }
     }
 
@@ -171,7 +169,7 @@ class FavoriteViewModel @Inject constructor(
         _userMessages.update { messages -> messages.filterNot { it.id == id } }
     }
 
-    private fun enqueueMessage(text: String, undoID: Int? = null) {
+    private fun enqueueMessage(text: UiText, undoID: Int? = null) {
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text, undoID = undoID) }
     }
 
@@ -260,12 +258,12 @@ class FavoriteViewModel @Inject constructor(
                 // 選択だけはここで解除する（猶予中のスワイプ削除の pendingDeleteIDs は保持される）。
                 updateLoaded { it.copy(selectedIDs = emptySet()) }
                 // 一括削除完了の確認 SnackBar
-                enqueueMessage("${idsToRemove.size}件削除しました")
+                enqueueMessage(UiText.Resource(R.string.favorite_bulk_deleted, listOf(idsToRemove.size)))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Bulk delete failed")
-                enqueueMessage("お気に入りの削除に失敗しました")
+                enqueueMessage(UiText.Resource(R.string.favorite_error_delete))
             }
         }
     }

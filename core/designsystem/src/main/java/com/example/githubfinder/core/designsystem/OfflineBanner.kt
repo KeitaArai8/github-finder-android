@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -26,12 +27,13 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun OfflineBanner(modifier: Modifier = Modifier) {
+    val bannerDescription = stringResource(R.string.offline_banner_a11y)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.error)
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .semantics { contentDescription = "ネットワークに接続されていません" },
+            .semantics { contentDescription = bannerDescription },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -42,7 +44,7 @@ fun OfflineBanner(modifier: Modifier = Modifier) {
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = "オフライン",
+            text = stringResource(R.string.offline_banner_label),
             color = MaterialTheme.colorScheme.onError,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.labelMedium,

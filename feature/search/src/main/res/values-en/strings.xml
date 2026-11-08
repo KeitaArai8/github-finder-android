@@ -8,4 +8,9 @@
     <string name="search_empty_no_results_description">Try a different keyword</string>
     <string name="search_error_favorite_update">Failed to update favorite</string>
     <string name="search_error_load_more">Failed to load more</string>
+
+    <string name="search_history_title">Recent searches</string>
+    <string name="search_history_clear_all">Clear all</string>
+    <string name="search_history_research_a11y">Search %1$s again</string>
+    <string name="search_history_remove_a11y">Remove %1$s from history</string>
 </resources>

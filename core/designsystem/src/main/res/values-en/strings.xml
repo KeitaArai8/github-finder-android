@@ -21,4 +21,18 @@
     <string name="a11y_double_tap_toggle">Double tap to toggle</string>
     <string name="a11y_double_tap_open">Double tap to open GitHub page</string>
     <string name="a11y_double_tap_select">Double tap to select or deselect</string>
+
+    <!-- Errors -->
+    <string name="error_network">Unable to connect to the network</string>
+    <string name="error_server">A server error occurred (%1$d)</string>
+    <string name="error_rate_limit">API rate limit reached. Please wait and try again</string>
+    <string name="error_unknown">An unknown error occurred</string>
+
+    <!-- Offline banner -->
+    <string name="offline_banner_label">Offline</string>
+    <string name="offline_banner_a11y">Not connected to the network</string>
+
+    <!-- Share -->
+    <string name="share_repository_chooser_title">Share repository</string>
+    <string name="a11y_share_repository">Share %1$s</string>
 </resources>

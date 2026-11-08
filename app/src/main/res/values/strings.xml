@@ -17,4 +17,5 @@
     <string name="tutorial_step_favorite_description">ハートボタンをタップして\nお気に入りに追加しましょう</string>
     <string name="tutorial_step_tab_title">お気に入り一覧</string>
     <string name="tutorial_step_tab_description">お気に入りタブから\n保存したリポジトリを確認できます</string>
+    <string name="tutorial_mock_search_placeholder">リポジトリを検索</string>
 </resources>

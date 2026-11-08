@@ -8,4 +8,9 @@
     <string name="search_empty_no_results_description">別のキーワードで検索してみてください</string>
     <string name="search_error_favorite_update">お気に入りの更新に失敗しました</string>
     <string name="search_error_load_more">追加読み込みに失敗しました</string>
+
+    <string name="search_history_title">最近の検索</string>
+    <string name="search_history_clear_all">すべて消去</string>
+    <string name="search_history_research_a11y">%1$s を再検索</string>
+    <string name="search_history_remove_a11y">%1$s を履歴から削除</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.example.githubfinder.feature.favorite
 
 import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -253,7 +254,10 @@ class FavoriteViewModelTest {
         val messages = viewModel.userMessages.value
         assertEquals(1, messages.size)
         assertEquals(42, messages[0].undoID)
-        assertTrue(messages[0].text.contains("owner/repo"))
+        assertEquals(
+            UiText.Resource(R.string.favorite_deleted_with_name, listOf("owner/repo")),
+            messages[0].text,
+        )
 
         // Act: View が表示し終えたことを通知
         viewModel.userMessageShown(messages[0].id)
@@ -367,7 +371,10 @@ class FavoriteViewModelTest {
         assertTrue(state.pendingDeleteIDs.isEmpty())
         assertEquals(1, state.displayedFavorites.size)
         assertEquals(
-            listOf("「owner/repo」を削除しました", "お気に入りの削除に失敗しました"),
+            listOf(
+                UiText.Resource(R.string.favorite_deleted_with_name, listOf("owner/repo")),
+                UiText.Resource(R.string.favorite_error_delete),
+            ),
             viewModel.userMessages.value.map { it.text },
         )
     }
@@ -578,7 +585,10 @@ class FavoriteViewModelTest {
         assertTrue(state.selectedIDs.isEmpty())
         assertFalse(state.isDeleteConfirmationShown)
         // 一括削除成功の確認通知が積まれている
-        assertEquals(listOf("2件削除しました"), viewModel.userMessages.value.map { it.text })
+        assertEquals(
+            listOf(UiText.Resource(R.string.favorite_bulk_deleted, listOf(2))),
+            viewModel.userMessages.value.map { it.text },
+        )
     }
 
     @Test

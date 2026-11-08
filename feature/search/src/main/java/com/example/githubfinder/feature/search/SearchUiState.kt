@@ -9,6 +9,7 @@
 
 package com.example.githubfinder.feature.search
 
+import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 
 sealed interface SearchUiState {
@@ -37,6 +38,6 @@ sealed interface SearchUiState {
 
     data class Error(
         override val searchQuery: String,
-        val message: String,
+        val message: UiText,
     ) : SearchUiState
 }

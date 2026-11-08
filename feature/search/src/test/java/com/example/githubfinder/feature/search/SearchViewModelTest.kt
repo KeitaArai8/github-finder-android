@@ -1,6 +1,8 @@
 package com.example.githubfinder.feature.search
 
 import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.designsystem.R as DesignR
+import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
@@ -125,8 +127,25 @@ class SearchViewModelTest {
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
-        // Assert:
-        assertTrue(viewModel.uiState.value is SearchUiState.Error)
+        // Assert: Error 状態で、文言は日本語ではなく error_network のリソース ID を指す
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Error)
+        assertEquals(UiText.Resource(DesignR.string.error_network), (state as SearchUiState.Error).message)
+    }
+
+    @Test
+    fun `サーバーエラーはステータスコードを引数に持つerror_serverになる`() = runTest {
+        // Arrange: HTTP 503 で失敗する検索
+        fakeSearchRepository.searchResult = Result.failure(AppError.Server(503))
+        val viewModel = createViewModel()
+
+        // Act: 検索を実行する
+        viewModel.onQueryChanged("test")
+        advanceUntilIdle()
+
+        // Assert: error_server のリソース ID + 引数 [503]（文字列化は UI 層）
+        val state = viewModel.uiState.value as SearchUiState.Error
+        assertEquals(UiText.Resource(DesignR.string.error_server, listOf(503)), state.message)
     }
 
     @Test
@@ -352,7 +371,7 @@ class SearchViewModelTest {
         // Assert: 失敗文言の通知が 1 件だけ積まれている
         val messages = viewModel.userMessages.value
         assertEquals(1, messages.size)
-        assertEquals("お気に入りの更新に失敗しました", messages[0].text)
+        assertEquals(UiText.Resource(R.string.search_error_favorite_update), messages[0].text)
 
         // Act: View が表示し終えたことを通知
         viewModel.userMessageShown(messages[0].id)
@@ -380,7 +399,7 @@ class SearchViewModelTest {
         // Assert: 失敗文言の通知が 1 件だけ積まれている
         val messages = viewModel.userMessages.value
         assertEquals(1, messages.size)
-        assertEquals("追加読み込みに失敗しました", messages[0].text)
+        assertEquals(UiText.Resource(R.string.search_error_load_more), messages[0].text)
 
         // Act: 表示完了を通知
         viewModel.userMessageShown(messages[0].id)

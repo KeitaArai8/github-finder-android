@@ -17,4 +17,5 @@
     <string name="tutorial_step_favorite_description">Tap the heart button to\nadd to favorites</string>
     <string name="tutorial_step_tab_title">Favorites</string>
     <string name="tutorial_step_tab_description">Check saved repositories\nfrom the favorites tab</string>
+    <string name="tutorial_mock_search_placeholder">Search repositories</string>
 </resources>

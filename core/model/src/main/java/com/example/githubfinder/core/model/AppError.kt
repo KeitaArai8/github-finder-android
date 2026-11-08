@@ -12,11 +12,4 @@ sealed class AppError : Exception() {
     data class Server(val statusCode: Int) : AppError()
     data object RateLimit : AppError()
     data class Unknown(override val message: String) : AppError()
-
-    fun toDisplayMessage(): String = when (this) {
-        Network -> "ネットワークに接続できません"
-        is Server -> "サーバーエラーが発生しました（$statusCode）"
-        RateLimit -> "API制限に達しました。しばらく待ってから再試行してください"
-        is Unknown -> message
-    }
 }

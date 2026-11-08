@@ -11,13 +11,15 @@
 
 package com.example.githubfinder.feature.favorite
 
+import androidx.annotation.StringRes
+import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity
 
 /** お気に入り一覧の並び替え基準。 */
-enum class FavoriteSortKey(val displayName: String) {
-    SAVED_AT_DESC("新しい順"),
-    STAR_COUNT_DESC("Star が多い順"),
-    FULL_NAME_ASC("名前順 (A→Z)"),
+enum class FavoriteSortKey(@StringRes val labelRes: Int) {
+    SAVED_AT_DESC(R.string.favorite_sort_saved_at_desc),
+    STAR_COUNT_DESC(R.string.favorite_sort_star_count_desc),
+    FULL_NAME_ASC(R.string.favorite_sort_full_name_asc),
 }
 
 sealed interface FavoriteUiState {
@@ -58,5 +60,5 @@ sealed interface FavoriteUiState {
 
     data object Empty : FavoriteUiState
 
-    data class Error(val message: String) : FavoriteUiState
+    data class Error(val message: UiText) : FavoriteUiState
 }

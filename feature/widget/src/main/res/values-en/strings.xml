@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Favorites</string>
+    <string name="widget_description">Shows your top 5 GitHub Finder favorites</string>
+    <string name="widget_title">Favorites</string>
+    <string name="widget_empty_title">No favorites yet</string>
+    <string name="widget_empty_description">Add some from the search screen</string>
+</resources>

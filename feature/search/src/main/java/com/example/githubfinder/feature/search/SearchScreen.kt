@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import android.content.Intent
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +54,7 @@ import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
+import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.designsystem.R as DesignR
@@ -104,9 +104,11 @@ fun SearchScreen(
     // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら onUserMessageShown で消す。
     // 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れず、順番に表示される。
     val currentMessage = userMessages.firstOrNull()
+    // LaunchedEffect 内は Composable でないため、文字列化は外で済ませてから渡す
+    val messageText = currentMessage?.text?.asString()
     LaunchedEffect(currentMessage?.id) {
-        if (currentMessage != null) {
-            snackBarHostState.showSnackbar(currentMessage.text)
+        if (currentMessage != null && messageText != null) {
+            snackBarHostState.showSnackbar(messageText)
             onUserMessageShown(currentMessage.id)
         }
     }
@@ -173,7 +175,7 @@ fun SearchScreen(
                             launchCustomTab(context, githubUrlFor(item.fullName))
                         },
                         onShare = { item ->
-                            shareRepository(context, item.fullName)
+                            context.shareRepository(item.fullName)
                         },
                     )
                 }
@@ -185,7 +187,7 @@ fun SearchScreen(
                     )
                 }
                 is SearchUiState.Error -> {
-                    ErrorView(message = state.message, onRetry = onRefresh)
+                    ErrorView(message = state.message.asString(), onRetry = onRefresh)
                 }
             }
         }
@@ -282,7 +284,7 @@ private fun RepositoryRow(
         IconButton(onClick = onShare) {
             Icon(
                 imageVector = AppIcons.Share,
-                contentDescription = "${item.fullName} をシェア",
+                contentDescription = stringResource(DesignR.string.a11y_share_repository, item.fullName),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -314,14 +316,14 @@ private fun SearchHistoryList(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "最近の検索",
+                text = stringResource(R.string.search_history_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             androidx.compose.material3.TextButton(onClick = onClearAll) {
                 Text(
-                    text = "すべて消去",
+                    text = stringResource(R.string.search_history_clear_all),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -329,6 +331,7 @@ private fun SearchHistoryList(
         }
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(history, key = { it }) { query ->
+                val researchDescription = stringResource(R.string.search_history_research_a11y, query)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -348,7 +351,7 @@ private fun SearchHistoryList(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier
                             .weight(1f)
-                            .semantics { contentDescription = "$query を再検索" },
+                            .semantics { contentDescription = researchDescription },
                     )
                     IconButton(
                         onClick = { onRemove(query) },
@@ -356,7 +359,7 @@ private fun SearchHistoryList(
                     ) {
                         Icon(
                             imageVector = AppIcons.Close,
-                            contentDescription = "$query を履歴から削除",
+                            contentDescription = stringResource(R.string.search_history_remove_a11y, query),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
@@ -365,17 +368,6 @@ private fun SearchHistoryList(
             }
         }
     }
-}
-
-/** リポジトリの GitHub URL を Android 標準のシェアシートで共有する。 */
-private fun shareRepository(context: android.content.Context, fullName: String) {
-    val url = githubUrlFor(fullName)
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, url)
-        putExtra(Intent.EXTRA_SUBJECT, fullName)
-    }
-    context.startActivity(Intent.createChooser(sendIntent, "リポジトリをシェア"))
 }
 
 private fun previewRepositoryItem(

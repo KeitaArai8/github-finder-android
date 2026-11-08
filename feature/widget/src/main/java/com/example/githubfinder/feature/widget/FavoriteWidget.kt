@@ -48,6 +48,7 @@ class FavoriteWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 FavoriteWidgetContent(
+                    context = context,
                     favorites = favorites,
                     launchIntent = launchIntent,
                 )
@@ -62,6 +63,7 @@ class FavoriteWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 FavoriteWidgetContent(
+                    context = context,
                     favorites = PREVIEW_FAVORITES,
                     launchIntent = null,
                 )
@@ -95,6 +97,7 @@ class FavoriteWidget : GlanceAppWidget() {
 
 @Composable
 private fun FavoriteWidgetContent(
+    context: Context,
     favorites: List<FavoriteEntity>,
     launchIntent: Intent?,
 ) {
@@ -109,19 +112,19 @@ private fun FavoriteWidgetContent(
         }
 
     Box(modifier = rootModifier) {
-        if (favorites.isEmpty()) EmptyState() else FavoriteList(favorites = favorites)
+        if (favorites.isEmpty()) EmptyState(context) else FavoriteList(context, favorites)
     }
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(context: Context) {
     Column(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "お気に入りがありません",
+            text = context.getString(R.string.widget_empty_title),
             style = TextStyle(
                 color = GlanceTheme.colors.onBackground,
                 fontSize = 14.sp,
@@ -129,7 +132,7 @@ private fun EmptyState() {
             ),
         )
         Text(
-            text = "検索画面から追加してください",
+            text = context.getString(R.string.widget_empty_description),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
                 fontSize = 12.sp,
@@ -139,10 +142,10 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun FavoriteList(favorites: List<FavoriteEntity>) {
+private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
     Column(modifier = GlanceModifier.fillMaxSize()) {
         Text(
-            text = "お気に入り",
+            text = context.getString(R.string.widget_title),
             style = TextStyle(
                 color = GlanceTheme.colors.primary,
                 fontSize = 14.sp,

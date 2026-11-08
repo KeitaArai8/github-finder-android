@@ -27,4 +27,15 @@
 
     <!-- Errors -->
     <string name="favorite_error_delete">Failed to delete favorite</string>
+
+    <!-- Messages -->
+    <string name="favorite_deleted_with_name">Deleted \u201c%1$s\u201d</string>
+    <string name="favorite_bulk_deleted">Deleted %1$d</string>
+
+    <!-- Sort and filter -->
+    <string name="favorite_sort_a11y">Sort</string>
+    <string name="favorite_sort_saved_at_desc">Newest first</string>
+    <string name="favorite_sort_star_count_desc">Most stars</string>
+    <string name="favorite_sort_full_name_asc">Name (A→Z)</string>
+    <string name="favorite_filter_all">All</string>
 </resources>

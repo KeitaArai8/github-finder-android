@@ -21,4 +21,18 @@
     <string name="a11y_double_tap_toggle">ダブルタップで切り替え</string>
     <string name="a11y_double_tap_open">ダブルタップで GitHub ページを開く</string>
     <string name="a11y_double_tap_select">ダブルタップで選択/解除</string>
+
+    <!-- Errors -->
+    <string name="error_network">ネットワークに接続できません</string>
+    <string name="error_server">サーバーエラーが発生しました（%1$d）</string>
+    <string name="error_rate_limit">API制限に達しました。しばらく待ってから再試行してください</string>
+    <string name="error_unknown">不明なエラーが発生しました</string>
+
+    <!-- Offline banner -->
+    <string name="offline_banner_label">オフライン</string>
+    <string name="offline_banner_a11y">ネットワークに接続されていません</string>
+
+    <!-- Share -->
+    <string name="share_repository_chooser_title">リポジトリをシェア</string>
+    <string name="a11y_share_repository">%1$s をシェア</string>
 </resources>

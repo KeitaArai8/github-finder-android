@@ -20,6 +20,8 @@ package com.example.githubfinder.feature.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.designsystem.UiText
+import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.model.AppError
@@ -61,7 +63,7 @@ private sealed interface SearchPhase {
         val isRefreshing: Boolean = false,
     ) : SearchPhase
     data class Empty(override val query: String) : SearchPhase
-    data class Error(override val query: String, val message: String) : SearchPhase
+    data class Error(override val query: String, val message: UiText) : SearchPhase
 }
 
 @HiltViewModel
@@ -187,7 +189,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                enqueueMessage("お気に入りの更新に失敗しました")
+                enqueueMessage(UiText.Resource(R.string.search_error_favorite_update))
             }
         }
     }
@@ -197,7 +199,7 @@ class SearchViewModel @Inject constructor(
         _userMessages.update { messages -> messages.filterNot { it.id == id } }
     }
 
-    private fun enqueueMessage(text: String) {
+    private fun enqueueMessage(text: UiText) {
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
     }
 
@@ -226,14 +228,14 @@ class SearchViewModel @Inject constructor(
             }
         } catch (e: AppError) {
             Timber.tag(TAG).w(e, "Search failed (AppError)")
-            _phase.update { current -> SearchPhase.Error(query = current.query, message = e.toDisplayMessage()) }
+            _phase.update { current -> SearchPhase.Error(query = current.query, message = e.toUiText()) }
         } catch (e: CancellationException) {
             // キャンセルは失敗ではない。Error 状態にせず呼び出し元へ伝播させる
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Search failed (unknown)")
             _phase.update { current ->
-                SearchPhase.Error(query = current.query, message = e.message ?: "Unknown error")
+                SearchPhase.Error(query = current.query, message = e.toUiText())
             }
         }
     }
@@ -249,7 +251,7 @@ class SearchViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            enqueueMessage("追加読み込みに失敗しました")
+            enqueueMessage(UiText.Resource(R.string.search_error_load_more))
             updateLoaded { it.copy(isLoadingMore = false) }
         }
     }

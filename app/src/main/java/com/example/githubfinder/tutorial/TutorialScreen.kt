@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.example.githubfinder.R
 import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,7 +88,7 @@ fun TutorialScreen(coachMarkManager: CoachMarkManager) {
 @Composable
 private fun MockHeader() {
     Text(
-        text = "検索",
+        text = stringResource(R.string.nav_search),
         style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
@@ -113,7 +115,7 @@ private fun MockSearchBar(onTap: () -> Unit, coachMarkManager: CoachMarkManager)
         Icon(AppIcons.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            "リポジトリを検索",
+            stringResource(R.string.tutorial_mock_search_placeholder),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -167,7 +169,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
         ) {
             Icon(
                 AppIcons.FavoriteBorder,
-                contentDescription = "お気に入り",
+                contentDescription = stringResource(R.string.nav_favorite),
                 tint = Color.Gray,
             )
         }
@@ -190,20 +192,20 @@ private fun MockTabBar(onFavoriteTabTap: () -> Unit, coachMarkManager: CoachMark
         ) {
             MockTabItem(
                 icon = AppIcons.Search,
-                label = "検索",
+                label = stringResource(R.string.nav_search),
                 isSelected = true,
                 onClick = {},
             )
             MockTabItem(
                 icon = AppIcons.Favorite,
-                label = "お気に入り",
+                label = stringResource(R.string.nav_favorite),
                 isSelected = false,
                 onClick = onFavoriteTabTap,
                 modifier = Modifier.coachMarkAnchor(CoachMarkStep.FavoriteTab, coachMarkManager),
             )
             MockTabItem(
                 icon = AppIcons.Settings,
-                label = "設定",
+                label = stringResource(R.string.nav_settings),
                 isSelected = false,
                 onClick = {},
             )

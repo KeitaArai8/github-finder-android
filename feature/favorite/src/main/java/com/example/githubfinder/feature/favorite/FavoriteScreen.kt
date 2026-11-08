@@ -7,7 +7,6 @@
 
 package com.example.githubfinder.feature.favorite
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -71,6 +70,7 @@ import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
+import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -135,8 +135,11 @@ fun FavoriteScreen(
     // 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れず、順番に表示される。
     // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
     val currentMessage = userMessages.firstOrNull()
+    // LaunchedEffect 内は Composable でないため、文字列化は外で済ませてから渡す
+    val messageText = currentMessage?.text?.asString()
     LaunchedEffect(currentMessage?.id) {
         val message = currentMessage ?: return@LaunchedEffect
+        if (messageText == null) return@LaunchedEffect
         // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
         if (message.undoID != null && !isDeletePending(message.undoID)) {
             onUserMessageShown(message.id)
@@ -145,14 +148,14 @@ fun FavoriteScreen(
         if (message.undoID != null) {
             // Gmail スタイル: 「元に戻す」付き。duration を明示するのは、アクション付きの既定が Indefinite のため。
             val result = snackBarHostState.showSnackbar(
-                message = message.text,
+                message = messageText,
                 actionLabel = undoActionLabel,
                 withDismissAction = false,
                 duration = SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed) onUndoDelete(message.undoID)
         } else {
-            snackBarHostState.showSnackbar(message.text)
+            snackBarHostState.showSnackbar(messageText)
         }
         onUserMessageShown(message.id)
     }
@@ -227,7 +230,7 @@ fun FavoriteScreen(
                                             }
                                         },
                                         onShare = {
-                                            shareRepository(context, favorite.fullName)
+                                            context.shareRepository(favorite.fullName)
                                         },
                                     )
                                 }
@@ -253,7 +256,7 @@ fun FavoriteScreen(
             }
             is FavoriteUiState.Error -> {
                 ErrorView(
-                    message = state.message,
+                    message = state.message.asString(),
                     onRetry = onRetry,
                     modifier = Modifier.padding(padding),
                 )
@@ -359,7 +362,7 @@ private fun SortMenuButton(
         IconButton(onClick = { expanded = true }) {
             Icon(
                 imageVector = AppIcons.SwapVert,
-                contentDescription = "並び替え",
+                contentDescription = stringResource(R.string.favorite_sort_a11y),
             )
         }
         DropdownMenu(
@@ -370,7 +373,7 @@ private fun SortMenuButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = key.displayName,
+                            text = stringResource(key.labelRes),
                             // 現在選択中の項目は太字表示で区別
                             style = if (key == currentSortKey) {
                                 MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -412,7 +415,7 @@ private fun LanguageFilterBar(
         FilterChip(
             selected = selected == null,
             onClick = { onSelect(null) },
-            label = { Text("すべて") },
+            label = { Text(stringResource(R.string.favorite_filter_all)) },
         )
         Spacer(modifier = Modifier.width(8.dp))
         languages.forEach { language ->
@@ -426,17 +429,6 @@ private fun LanguageFilterBar(
             Spacer(modifier = Modifier.width(8.dp))
         }
     }
-}
-
-/** リポジトリの GitHub URL を Android 標準のシェアシートで共有する。 */
-private fun shareRepository(context: android.content.Context, fullName: String) {
-    val url = githubUrlFor(fullName)
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, url)
-        putExtra(Intent.EXTRA_SUBJECT, fullName)
-    }
-    context.startActivity(Intent.createChooser(sendIntent, "リポジトリをシェア"))
 }
 
 @Composable
@@ -594,7 +586,7 @@ private fun RowContent(
             ) {
                 Icon(
                     imageVector = AppIcons.Share,
-                    contentDescription = "${favorite.fullName} をシェア",
+                    contentDescription = stringResource(DesignR.string.a11y_share_repository, favorite.fullName),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )

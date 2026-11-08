@@ -20,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -56,30 +56,34 @@ fun EmptyStateView(
     }
 }
 
-@Preview(name = "Search Empty")
+@PreviewLightDark
 @Composable
 private fun EmptyStateViewSearchPreview() {
     GitHubFinderTheme {
         Surface {
-            EmptyStateView(
-                icon = AppIcons.Search,
-                title = "結果が見つかりません",
-                description = "別のキーワードで検索してみてください",
-            )
+            Surface {
+                EmptyStateView(
+                    icon = AppIcons.Search,
+                    title = "結果が見つかりません",
+                    description = "別のキーワードで検索してみてください",
+                )
+            }
         }
     }
 }
 
-@Preview(name = "Favorite Empty")
+@PreviewLightDark
 @Composable
 private fun EmptyStateViewFavoritePreview() {
     GitHubFinderTheme {
         Surface {
-            EmptyStateView(
-                icon = AppIcons.FavoriteBorder,
-                title = "お気に入りがありません",
-                description = "検索画面からリポジトリを\nお気に入りに追加しましょう",
-            )
+            Surface {
+                EmptyStateView(
+                    icon = AppIcons.FavoriteBorder,
+                    title = "お気に入りがありません",
+                    description = "検索画面からリポジトリを\nお気に入りに追加しましょう",
+                )
+            }
         }
     }
 }

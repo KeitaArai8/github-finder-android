@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.githubfinder.core.model.RepositoryDisplayItem
@@ -109,6 +113,66 @@ fun RepositoryListItem(
                     tint = if (item.isFavorite) MaterialTheme.gitHubFinderColors.favorite else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+/** [RepositoryListItem] のプレビュー用の状態: お気に入り済み / 未 / 長い名前・説明 / 言語なし。 */
+private class RepositoryDisplayItemProvider : PreviewParameterProvider<RepositoryDisplayItem> {
+    override val values = sequenceOf(
+        RepositoryDisplayItem(
+            id = 1,
+            fullName = "jetpackcompose/samples",
+            description = "Sample repository description",
+            starCount = 12_500,
+            language = "Kotlin",
+            ownerAvatarURL = null,
+            isFavorite = false,
+        ),
+        RepositoryDisplayItem(
+            id = 2,
+            fullName = "android/architecture-samples",
+            description = "お気に入り済みの行（ハートが赤で塗られる）",
+            starCount = 44_000,
+            language = "Kotlin",
+            ownerAvatarURL = null,
+            isFavorite = true,
+        ),
+        RepositoryDisplayItem(
+            id = 3,
+            fullName = "a-very-long-organization-name/an-extremely-long-repository-name-that-overflows",
+            description = "A deliberately long description that should wrap to two lines and then be truncated " +
+                "so that the row height stays bounded no matter how much text the API returns.",
+            starCount = 1_234_567,
+            language = "TypeScript",
+            ownerAvatarURL = null,
+            isFavorite = true,
+        ),
+        RepositoryDisplayItem(
+            id = 4,
+            fullName = "octocat/no-description",
+            description = null,
+            starCount = 0,
+            language = null,
+            ownerAvatarURL = null,
+            isFavorite = false,
+        ),
+    )
+}
+
+@PreviewLightDark
+@Composable
+private fun RepositoryListItemPreview(
+    @PreviewParameter(RepositoryDisplayItemProvider::class) item: RepositoryDisplayItem,
+) {
+    GitHubFinderTheme {
+        Surface {
+            RepositoryListItem(
+                item = item,
+                onClick = {},
+                onShare = {},
+                onFavoriteToggle = {},
+            )
         }
     }
 }

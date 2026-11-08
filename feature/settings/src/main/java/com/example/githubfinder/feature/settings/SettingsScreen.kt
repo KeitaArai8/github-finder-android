@@ -19,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -26,7 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.launchCustomTab
@@ -119,14 +120,16 @@ private fun getAppVersion(context: Context): String {
     }
 }
 
-@Preview
+@PreviewLightDark
 @Composable
 private fun SettingsRowPreview() {
     GitHubFinderTheme {
-        SettingsRow(
-            icon = AppIcons.PrivacyTip,
-            title = "プライバシーポリシー",
-            onClick = {},
-        )
+        Surface {
+            SettingsRow(
+                icon = AppIcons.PrivacyTip,
+                title = "プライバシーポリシー",
+                onClick = {},
+            )
+        }
     }
 }

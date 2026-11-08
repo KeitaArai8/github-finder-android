@@ -20,7 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -48,25 +48,29 @@ fun ErrorView(
     }
 }
 
-@Preview(name = "Network Error")
+@PreviewLightDark
 @Composable
 private fun ErrorViewNetworkPreview() {
     GitHubFinderTheme {
         Surface {
-            ErrorView(message = "ネットワークに接続できません", onRetry = {})
+            Surface {
+                ErrorView(message = "ネットワークに接続できません", onRetry = {})
+            }
         }
     }
 }
 
-@Preview(name = "Rate Limit")
+@PreviewLightDark
 @Composable
 private fun ErrorViewRateLimitPreview() {
     GitHubFinderTheme {
         Surface {
-            ErrorView(
-                message = "API 利用制限に達しました。しばらく待ってから再試行してください。",
-                onRetry = {},
-            )
+            Surface {
+                ErrorView(
+                    message = "API 利用制限に達しました。しばらく待ってから再試行してください。",
+                    onRetry = {},
+                )
+            }
         }
     }
 }

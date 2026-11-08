@@ -41,6 +41,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -57,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -593,57 +595,65 @@ private fun previewFavorite(
     savedAt = 0L,
 )
 
-@Preview(name = "Row - 通常")
+@PreviewLightDark
 @Composable
 private fun RowContentNormalPreview() {
     GitHubFinderTheme {
-        RowContent(
-            favorite = previewFavorite(1, "jetpackcompose/samples", 12_500),
-            isEditMode = false,
-            isSelected = false,
-            onRowTap = {},
-            onShare = {},
-        )
+        Surface {
+            RowContent(
+                favorite = previewFavorite(1, "jetpackcompose/samples", 12_500),
+                isEditMode = false,
+                isSelected = false,
+                onRowTap = {},
+                onShare = {},
+            )
+        }
     }
 }
 
-@Preview(name = "Row - 編集モード（未選択）")
+@PreviewLightDark
 @Composable
 private fun RowContentEditModePreview() {
     GitHubFinderTheme {
-        RowContent(
-            favorite = previewFavorite(2, "android/architecture-samples", 44_000),
-            isEditMode = true,
-            isSelected = false,
-            onRowTap = {},
-            onShare = null,
-        )
+        Surface {
+            RowContent(
+                favorite = previewFavorite(2, "android/architecture-samples", 44_000),
+                isEditMode = true,
+                isSelected = false,
+                onRowTap = {},
+                onShare = null,
+            )
+        }
     }
 }
 
-@Preview(name = "Row - 編集モード（選択中）")
+@PreviewLightDark
 @Composable
 private fun RowContentSelectedPreview() {
     GitHubFinderTheme {
-        RowContent(
-            favorite = previewFavorite(3, "android/nowinandroid", 17_500, language = "Kotlin"),
-            isEditMode = true,
-            isSelected = true,
-            onRowTap = {},
-            onShare = null,
-        )
+        Surface {
+            RowContent(
+                favorite = previewFavorite(3, "android/nowinandroid", 17_500, language = "Kotlin"),
+                isEditMode = true,
+                isSelected = true,
+                onRowTap = {},
+                onShare = null,
+            )
+        }
     }
 }
 
-@Preview(name = "LanguageFilterBar")
+@PreviewLightDark
 @Composable
 private fun LanguageFilterBarPreview() {
     GitHubFinderTheme {
-        LanguageFilterBar(
-            languages = listOf("Kotlin", "Swift", "TypeScript", "Rust"),
-            selected = "Kotlin",
-            onSelect = {},
-        )
+        Surface {
+            LanguageFilterBar(
+                languages = listOf("Kotlin", "Swift", "TypeScript", "Rust"),
+                selected = "Kotlin",
+                onSelect = {},
+            )
+        }
     }
 }
 
@@ -651,7 +661,9 @@ private fun LanguageFilterBarPreview() {
 @Composable
 private fun DeleteConfirmationDialogPreview() {
     GitHubFinderTheme {
-        DeleteConfirmationDialog(count = 3, onConfirm = {}, onDismiss = {})
+        Surface {
+            DeleteConfirmationDialog(count = 3, onConfirm = {}, onDismiss = {})
+        }
     }
 }
 

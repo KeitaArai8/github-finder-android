@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -46,7 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.RepositoryListItem
@@ -55,7 +56,6 @@ import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.RepositoryDisplayItem
-import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.designsystem.R as DesignR
 
 /** 検索画面の入口。ViewModel から State を集め、ViewModel を知らない [SearchScreen] へ値とラムダだけを渡す。 */
@@ -317,70 +317,18 @@ private fun SearchHistoryList(
     }
 }
 
-private fun previewRepositoryItem(
-    id: Int,
-    fullName: String,
-    starCount: Int,
-    language: String? = "Kotlin",
-    isFavorite: Boolean = false,
-): RepositoryDisplayItem = RepositoryDisplayItem.from(
-    repository = RepositoryEntity(
-        id = id,
-        fullName = fullName,
-        description = "Sample repository description",
-        starCount = starCount,
-        language = language,
-        ownerAvatarURL = null,
-    ),
-    isFavorite = isFavorite,
-)
-
-@Preview(name = "Row - 通常")
-@Composable
-private fun RepositoryRowPreview() {
-    GitHubFinderTheme {
-        RepositoryListItem(
-            item = previewRepositoryItem(
-                id = 1,
-                fullName = "jetpackcompose/samples",
-                starCount = 12_500,
-            ),
-            onClick = {},
-            onShare = {},
-            onFavoriteToggle = {},
-        )
-    }
-}
-
-@Preview(name = "Row - お気に入り済")
-@Composable
-private fun RepositoryRowFavoritePreview() {
-    GitHubFinderTheme {
-        RepositoryListItem(
-            item = previewRepositoryItem(
-                id = 2,
-                fullName = "android/architecture-samples",
-                starCount = 44_000,
-                language = "Kotlin",
-                isFavorite = true,
-            ),
-            onClick = {},
-            onShare = {},
-            onFavoriteToggle = {},
-        )
-    }
-}
-
-@Preview(name = "Search History List")
+@PreviewLightDark
 @Composable
 private fun SearchHistoryListPreview() {
     GitHubFinderTheme {
-        SearchHistoryList(
-            history = listOf("compose", "kotlin", "swift", "tca", "jetpack"),
-            onSelect = {},
-            onRemove = {},
-            onClearAll = {},
-        )
+        Surface {
+            SearchHistoryList(
+                history = listOf("compose", "kotlin", "swift", "tca", "jetpack"),
+                onSelect = {},
+                onRemove = {},
+                onClearAll = {},
+            )
+        }
     }
 }
 

@@ -1,5 +1,9 @@
 package com.example.githubfinder.feature.search
 
+import com.example.githubfinder.core.testing.MainDispatcherRule
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.FakeSearchRepository
+import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
 import androidx.lifecycle.SavedStateHandle
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.designsystem.R as DesignR

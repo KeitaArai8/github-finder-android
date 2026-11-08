@@ -6,6 +6,9 @@
 
 package com.example.githubfinder.feature.search
 
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.FakeSearchRepository
+import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.test.assertIsDisplayed

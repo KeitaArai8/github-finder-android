@@ -1,5 +1,7 @@
 package com.example.githubfinder.feature.favorite
 
+import com.example.githubfinder.core.testing.MainDispatcherRule
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity

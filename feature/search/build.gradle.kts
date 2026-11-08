@@ -13,6 +13,9 @@ android {
 dependencies {
     implementation(project(":core:data"))
 
+    testImplementation(project(":core:testing"))
+    androidTestImplementation(project(":core:testing"))
+
     // Compose UI Test（Search 固有のため Convention に含めず個別記述）
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

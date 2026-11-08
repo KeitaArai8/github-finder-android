@@ -6,11 +6,8 @@
 
 package com.example.githubfinder.feature.widget
 
-import android.content.Context
-import androidx.glance.appwidget.updateAll
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -24,7 +21,8 @@ import javax.inject.Singleton
 class FavoriteWidgetUpdater @Inject constructor(
     private val favoriteStore: FavoriteStore,
     @ApplicationScope private val scope: CoroutineScope,
-    @ApplicationContext private val context: Context,
+    // 更新処理を注入にしてあるのは、購読・失敗時継続のロジックを Glance 実体（Context 必須）抜きでテストするため
+    @WidgetUpdate private val updateWidgets: @JvmSuppressWildcards suspend () -> Unit,
 ) {
     /**
      * 購読を開始する（Application.onCreate から 1 回呼ぶ）。
@@ -33,7 +31,7 @@ class FavoriteWidgetUpdater @Inject constructor(
     fun start(): Job = scope.launch {
         favoriteStore.favorites.filterNotNull().collect {
             try {
-                FavoriteWidget().updateAll(context)
+                updateWidgets()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

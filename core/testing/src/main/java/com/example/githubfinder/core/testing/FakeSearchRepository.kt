@@ -1,4 +1,4 @@
-package com.example.githubfinder.feature.search
+package com.example.githubfinder.core.testing
 
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.model.SearchResultEntity

@@ -1,4 +1,4 @@
-package com.example.githubfinder.feature.search
+package com.example.githubfinder.core.testing
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,8 +12,6 @@ import org.junit.runner.Description
 /**
  * テスト中だけ `Dispatchers.Main` を [testDispatcher] に差し替える JUnit4 Rule。
  * ViewModel の `viewModelScope`（Main.immediate）をテストから制御するための共通ボイラープレート。
- *
- * ※ モジュールを増やさないため、このクラスは app / feature:search / feature:favorite の `src/test` に同一内容で置いている。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(

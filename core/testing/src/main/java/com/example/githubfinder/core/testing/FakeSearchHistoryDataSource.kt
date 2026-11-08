@@ -1,10 +1,10 @@
 /*
  * Abstract:
- * SearchHistoryDataSource のテスト用 Fake 実装（Compose UI Test 用）。
- * src/test 配下の同名 Fake と同じ内容（src/test と src/androidTest は別 source set のため複製している）。
+ * SearchHistoryDataSource のテスト用 Fake 実装。
+ * MutableStateFlow で in-memory に履歴を保持し、本番実装と同じ重複排除・上限制御を行う。
  */
 
-package com.example.githubfinder.feature.search
+package com.example.githubfinder.core.testing
 
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import kotlinx.coroutines.flow.Flow
@@ -18,9 +18,16 @@ class FakeSearchHistoryDataSource(
     private val _history = MutableStateFlow<List<String>>(emptyList())
     override val history: Flow<List<String>> = _history.asStateFlow()
 
+    var addCallCount = 0
+        private set
+    var lastAddedQuery: String? = null
+        private set
+
     override suspend fun add(rawQuery: String) {
         val query = rawQuery.trim()
         if (query.isEmpty()) return
+        addCallCount++
+        lastAddedQuery = query
         val current = _history.value
         _history.value = (listOf(query) + current.filter { it != query }).take(maxEntries)
     }

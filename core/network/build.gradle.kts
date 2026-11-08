@@ -6,6 +6,11 @@ plugins {
 
 android {
     namespace = "com.example.githubfinder.core.network"
+
+    // デバッグ時だけ HTTP ログを出すため BuildConfig.DEBUG を参照する
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
@@ -13,5 +18,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.timber)
     implementation(libs.kotlinx.serialization.json)
 }

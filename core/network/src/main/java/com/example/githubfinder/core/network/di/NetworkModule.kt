@@ -5,6 +5,7 @@
 
 package com.example.githubfinder.core.network.di
 
+import com.example.githubfinder.core.network.BuildConfig
 import com.example.githubfinder.core.network.GitHubApiService
 import dagger.Module
 import dagger.Provides
@@ -12,14 +13,20 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Call
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    private const val TIMEOUT_SECONDS = 15L
 
     @Provides
     @Singleton
@@ -28,15 +35,33 @@ object NetworkModule {
         coerceInputValues = true
     }
 
+    /**
+     * 通信の実体（OkHttp）。ここでは Call.Factory として公開し、Retrofit 側は [dagger.Lazy] 越しに受ける。
+     * OkHttpClient の構築（コネクションプール・ディスパッチャ等の初期化）が初回リクエスト時まで遅延され、
+     * 起動時にメインスレッドで走らないようにするため（NowInAndroid と同じ構成）。
+     *
+     * ログは BASIC（メソッド・URL・ステータス・所要時間のみ）にとどめ、ヘッダやボディは出さない。
+     */
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
+    fun provideCallFactory(): Call.Factory = OkHttpClient.Builder()
+        .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(
+                    HttpLoggingInterceptor { message -> Timber.tag("OkHttp").d(message) }
+                        .setLevel(HttpLoggingInterceptor.Level.BASIC),
+                )
+            }
+        }
+        .build()
 
     @Provides
     @Singleton
-    fun provideRetrofit(json: Json, okHttpClient: OkHttpClient): Retrofit = Retrofit.Builder()
+    fun provideRetrofit(json: Json, callFactory: dagger.Lazy<Call.Factory>): Retrofit = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
-        .client(okHttpClient)
+        .callFactory { request -> callFactory.get().newCall(request) }
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 

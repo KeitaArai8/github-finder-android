@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -129,8 +130,10 @@ private fun MainScaffold(modifier: Modifier = Modifier) {
 
     // 画面幅に応じて NavigationBar（compact）/ NavigationRail（medium 以上）を自動で切り替える。
     // スイート自身がナビゲーション要素の inset を処理するため、別途 Scaffold の padding は持たない。
+    // IME はスイート全体で避ける。各画面で個別に避けると、キーボードの背後に残るナビゲーション要素の高さ分
+    // （NavigationBar なら 80dp）だけ、キーボードの上に余計な空きができる（SearchScreen で実測）。
     NavigationSuiteScaffold(
-        modifier = modifier,
+        modifier = modifier.imePadding(),
         navigationSuiteItems = {
             TopLevelRoute.entries.forEach { route ->
                 // navigationSuiteItems は Composable ではないため、リソース解決は各スロットの中で行う

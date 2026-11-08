@@ -36,8 +36,8 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.githubfinder.core.data.network.NetworkMonitor
 import com.example.githubfinder.core.designsystem.OfflineBanner
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
-import com.example.githubfinder.feature.favorite.FavoriteScreen
-import com.example.githubfinder.feature.search.SearchScreen
+import com.example.githubfinder.feature.favorite.FavoriteRoute
+import com.example.githubfinder.feature.search.SearchRoute
 import com.example.githubfinder.feature.settings.SettingsScreen
 import com.example.githubfinder.tutorial.TutorialScreen
 import kotlinx.serialization.Serializable
@@ -139,8 +139,8 @@ private fun MainScaffold() {
                 rememberViewModelStoreNavEntryDecorator(),
             ),
             entryProvider = entryProvider {
-                entry<SearchKey> { SearchScreen() }
-                entry<FavoriteKey> { FavoriteScreen() }
+                entry<SearchKey> { SearchRoute() }
+                entry<FavoriteKey> { FavoriteRoute() }
                 entry<SettingsKey> { SettingsScreen() }
             },
             modifier = Modifier.padding(padding),

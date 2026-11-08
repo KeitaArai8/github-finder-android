@@ -35,7 +35,7 @@ class SearchScreenTest {
         val viewModel = makeViewModel()
 
         composeTestRule.setContent {
-            SearchScreen(viewModel = viewModel)
+            SearchRoute(viewModel = viewModel)
         }
 
         composeTestRule
@@ -63,7 +63,7 @@ class SearchScreenTest {
         val viewModel = makeViewModel(searchRepo = searchRepo)
 
         composeTestRule.setContent {
-            SearchScreen(viewModel = viewModel)
+            SearchRoute(viewModel = viewModel)
         }
 
         composeTestRule.onNode(hasSetTextAction()).performTextInput("kotlin")
@@ -96,7 +96,7 @@ class SearchScreenTest {
         val viewModel = makeViewModel(searchRepo = searchRepo)
 
         composeTestRule.setContent {
-            SearchScreen(viewModel = viewModel)
+            SearchRoute(viewModel = viewModel)
         }
 
         // 検索を実行して Loaded 状態まで遷移させる

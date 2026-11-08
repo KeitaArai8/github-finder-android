@@ -62,37 +62,65 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** 検索画面の入口。ViewModel から State を集め、ViewModel を知らない [SearchScreen] へ値とラムダだけを渡す。 */
 @Composable
-fun SearchScreen(
+fun SearchRoute(
+    modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userMessages by viewModel.userMessages.collectAsStateWithLifecycle()
+    SearchScreen(
+        uiState = uiState,
+        userMessages = userMessages,
+        onUserMessageShown = viewModel::userMessageShown,
+        onQueryChange = viewModel::onQueryChanged,
+        onSelectHistory = viewModel::selectHistory,
+        onRemoveHistory = viewModel::removeHistory,
+        onClearHistory = viewModel::clearHistory,
+        onFavoriteTap = viewModel::toggleFavorite,
+        onLoadMore = viewModel::onLoadMore,
+        onRefresh = viewModel::onRefresh,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun SearchScreen(
+    uiState: SearchUiState,
+    userMessages: List<UserMessage>,
+    onUserMessageShown: (Long) -> Unit,
+    onQueryChange: (String) -> Unit,
+    onSelectHistory: (String) -> Unit,
+    onRemoveHistory: (String) -> Unit,
+    onClearHistory: () -> Unit,
+    onFavoriteTap: (RepositoryDisplayItem) -> Unit,
+    onLoadMore: () -> Unit,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snackBarHostState = remember { SnackbarHostState() }
 
-
-    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
-    LaunchedEffect(Unit) {
-        viewModel.userMessages
-            .map { it.firstOrNull() }
-            .distinctUntilChanged()
-            .filterNotNull()
-            .collect { message ->
-                snackBarHostState.showSnackbar(message.text)
-                viewModel.userMessageShown(message.id)
-            }
+    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら onUserMessageShown で消す。
+    // 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れず、順番に表示される。
+    val currentMessage = userMessages.firstOrNull()
+    LaunchedEffect(currentMessage?.id) {
+        if (currentMessage != null) {
+            snackBarHostState.showSnackbar(currentMessage.text)
+            onUserMessageShown(currentMessage.id)
+        }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TextField(
                 value = uiState.searchQuery,
-                onValueChange = { viewModel.onQueryChanged(it) },
+                onValueChange = onQueryChange,
                 placeholder = { Text(stringResource(R.string.search_placeholder)) },
                 leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onQueryChanged("") }) {
+                        IconButton(onClick = { onQueryChange("") }) {
                             Icon(AppIcons.Close, contentDescription = stringResource(DesignR.string.a11y_clear))
                         }
                     }
@@ -121,9 +149,9 @@ fun SearchScreen(
                     } else {
                         SearchHistoryList(
                             history = state.history,
-                            onSelect = viewModel::selectHistory,
-                            onRemove = viewModel::removeHistory,
-                            onClearAll = viewModel::clearHistory,
+                            onSelect = onSelectHistory,
+                            onRemove = onRemoveHistory,
+                            onClearAll = onClearHistory,
                         )
                     }
                 }
@@ -138,9 +166,9 @@ fun SearchScreen(
                         items = state.items,
                         isLoadingMore = state.isLoadingMore,
                         isRefreshing = state.isRefreshing,
-                        onFavoriteTap = viewModel::toggleFavorite,
-                        onLoadMore = viewModel::onLoadMore,
-                        onRefresh = viewModel::onRefresh,
+                        onFavoriteTap = onFavoriteTap,
+                        onLoadMore = onLoadMore,
+                        onRefresh = onRefresh,
                         onRowTap = { item ->
                             launchCustomTab(context, githubUrlFor(item.fullName))
                         },
@@ -157,7 +185,7 @@ fun SearchScreen(
                     )
                 }
                 is SearchUiState.Error -> {
-                    ErrorView(message = state.message, onRetry = viewModel::onRefresh)
+                    ErrorView(message = state.message, onRetry = onRefresh)
                 }
             }
         }

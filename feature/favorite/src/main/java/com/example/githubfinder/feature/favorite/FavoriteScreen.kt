@@ -76,48 +76,98 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** お気に入り画面の入口。ViewModel から State を集め、ViewModel を知らない [FavoriteScreen] へ値とラムダだけを渡す。 */
 @Composable
-fun FavoriteScreen(
+fun FavoriteRoute(
+    modifier: Modifier = Modifier,
     viewModel: FavoriteViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userMessages by viewModel.userMessages.collectAsStateWithLifecycle()
+    FavoriteScreen(
+        uiState = uiState,
+        userMessages = userMessages,
+        isDeletePending = viewModel::isDeletePending,
+        onUserMessageShown = viewModel::userMessageShown,
+        onUndoDelete = viewModel::undoDelete,
+        onRefresh = viewModel::refresh,
+        onRetry = viewModel::retry,
+        onRemoveFavorite = viewModel::removeFavorite,
+        onSetFilterLanguage = viewModel::setFilterLanguage,
+        onSetSortKey = viewModel::setSortKey,
+        onEnterEditMode = viewModel::enterEditMode,
+        onExitEditMode = viewModel::exitEditMode,
+        onToggleSelection = viewModel::toggleSelection,
+        onToggleSelectAll = viewModel::toggleSelectAll,
+        onRequestRemoveSelected = viewModel::requestRemoveSelected,
+        onConfirmRemoveSelected = viewModel::confirmRemoveSelected,
+        onCancelRemoveSelected = viewModel::cancelRemoveSelected,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavoriteScreen(
+    uiState: FavoriteUiState,
+    userMessages: List<UserMessage>,
+    isDeletePending: (Int) -> Boolean,
+    onUserMessageShown: (Long) -> Unit,
+    onUndoDelete: (Int) -> Unit,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    onRemoveFavorite: (FavoriteEntity) -> Unit,
+    onSetFilterLanguage: (String?) -> Unit,
+    onSetSortKey: (FavoriteSortKey) -> Unit,
+    onEnterEditMode: () -> Unit,
+    onExitEditMode: () -> Unit,
+    onToggleSelection: (Int) -> Unit,
+    onToggleSelectAll: () -> Unit,
+    onRequestRemoveSelected: () -> Unit,
+    onConfirmRemoveSelected: () -> Unit,
+    onCancelRemoveSelected: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snackBarHostState = remember { SnackbarHostState() }
     val undoActionLabel = stringResource(R.string.favorite_undo_delete_action)
 
-    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら userMessageShown で消す。
-    // 長寿命の単一 LaunchedEffect なので、表示中に新しい通知が積まれても前の SnackBar は途切れず、順番に表示される。
+    // 通知キューの先頭を 1 件ずつ SnackBar に出し、表示し終えたら onUserMessageShown で消す。
+    // 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れず、順番に表示される。
     // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
-    LaunchedEffect(Unit) {
-        viewModel.userMessages
-            .map { it.firstOrNull() }
-            .distinctUntilChanged()
-            .filterNotNull()
-            .collect { message ->
-                // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
-                if (message.undoID != null && !viewModel.isDeletePending(message.undoID)) {
-                    viewModel.userMessageShown(message.id)
-                    return@collect
-                }
-                if (message.undoID != null) {
-                    // Gmail スタイル: 「元に戻す」付き。duration を明示するのは、アクション付きの既定が Indefinite のため。
-                    val result = snackBarHostState.showSnackbar(
-                        message = message.text,
-                        actionLabel = undoActionLabel,
-                        withDismissAction = false,
-                        duration = SnackbarDuration.Short,
-                    )
-                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(message.undoID)
-                } else {
-                    snackBarHostState.showSnackbar(message.text)
-                }
-                viewModel.userMessageShown(message.id)
-            }
+    val currentMessage = userMessages.firstOrNull()
+    LaunchedEffect(currentMessage?.id) {
+        val message = currentMessage ?: return@LaunchedEffect
+        // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
+        if (message.undoID != null && !isDeletePending(message.undoID)) {
+            onUserMessageShown(message.id)
+            return@LaunchedEffect
+        }
+        if (message.undoID != null) {
+            // Gmail スタイル: 「元に戻す」付き。duration を明示するのは、アクション付きの既定が Indefinite のため。
+            val result = snackBarHostState.showSnackbar(
+                message = message.text,
+                actionLabel = undoActionLabel,
+                withDismissAction = false,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) onUndoDelete(message.undoID)
+        } else {
+            snackBarHostState.showSnackbar(message.text)
+        }
+        onUserMessageShown(message.id)
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
-            FavoriteTopBar(state = uiState, viewModel = viewModel)
+            FavoriteTopBar(
+                state = uiState,
+                onSortSelected = onSetSortKey,
+                onEnterEditMode = onEnterEditMode,
+                onExitEditMode = onExitEditMode,
+                onToggleSelectAll = onToggleSelectAll,
+                onRequestRemoveSelected = onRequestRemoveSelected,
+            )
         },
         snackbarHost = { SnackbarHost(snackBarHostState) },
     ) { padding ->
@@ -142,7 +192,7 @@ fun FavoriteScreen(
                 val displayed = state.displayedFavorites
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.refresh() },
+                    onRefresh = onRefresh,
                     modifier = Modifier.padding(padding),
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -151,7 +201,7 @@ fun FavoriteScreen(
                             LanguageFilterBar(
                                 languages = state.availableLanguages,
                                 selected = state.filterLanguage,
-                                onSelect = { viewModel.setFilterLanguage(it) },
+                                onSelect = onSetFilterLanguage,
                             )
                         }
                         if (displayed.isEmpty()) {
@@ -168,10 +218,10 @@ fun FavoriteScreen(
                                         favorite = favorite,
                                         isEditMode = state.isEditMode,
                                         isSelected = state.selectedIDs.contains(favorite.id),
-                                        onDismiss = { viewModel.removeFavorite(favorite) },
+                                        onDismiss = { onRemoveFavorite(favorite) },
                                         onRowTap = {
                                             if (state.isEditMode) {
-                                                viewModel.toggleSelection(favorite.id)
+                                                onToggleSelection(favorite.id)
                                             } else {
                                                 launchCustomTab(context, githubUrlFor(favorite.fullName))
                                             }
@@ -188,8 +238,8 @@ fun FavoriteScreen(
                 if (state.isDeleteConfirmationShown) {
                     DeleteConfirmationDialog(
                         count = state.selectedIDs.size,
-                        onConfirm = { viewModel.confirmRemoveSelected() },
-                        onDismiss = { viewModel.cancelRemoveSelected() },
+                        onConfirm = onConfirmRemoveSelected,
+                        onDismiss = onCancelRemoveSelected,
                     )
                 }
             }
@@ -204,7 +254,7 @@ fun FavoriteScreen(
             is FavoriteUiState.Error -> {
                 ErrorView(
                     message = state.message,
-                    onRetry = { viewModel.retry() },
+                    onRetry = onRetry,
                     modifier = Modifier.padding(padding),
                 )
             }
@@ -214,14 +264,21 @@ fun FavoriteScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel) {
+private fun FavoriteTopBar(
+    state: FavoriteUiState,
+    onSortSelected: (FavoriteSortKey) -> Unit,
+    onEnterEditMode: () -> Unit,
+    onExitEditMode: () -> Unit,
+    onToggleSelectAll: () -> Unit,
+    onRequestRemoveSelected: () -> Unit,
+) {
     val loaded = state as? FavoriteUiState.Loaded
     when {
         loaded?.isEditMode == true -> {
             TopAppBar(
                 title = { Text(stringResource(R.string.favorite_selected_count, loaded.selectedIDs.size)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.exitEditMode() }) {
+                    IconButton(onClick = onExitEditMode) {
                         Icon(
                             AppIcons.Close,
                             contentDescription = stringResource(R.string.favorite_exit_edit_mode),
@@ -231,10 +288,10 @@ private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel)
                 actions = {
                     SelectAllToggleButton(
                         isAllSelected = loaded.isAllSelected,
-                        onToggle = { viewModel.toggleSelectAll() },
+                        onToggle = onToggleSelectAll,
                     )
                     IconButton(
-                        onClick = { viewModel.requestRemoveSelected() },
+                        onClick = onRequestRemoveSelected,
                         enabled = loaded.selectedIDs.isNotEmpty(),
                     ) {
                         Icon(
@@ -248,7 +305,7 @@ private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel)
                         )
                     }
                     // iOS と同じ「完了」テキストボタン（Close icon と並列で提供し、ユーザに馴染みやすい選択肢を残す）
-                    TextButton(onClick = { viewModel.exitEditMode() }) {
+                    TextButton(onClick = onExitEditMode) {
                         Text(stringResource(R.string.favorite_done_edit))
                     }
                 },
@@ -261,9 +318,9 @@ private fun FavoriteTopBar(state: FavoriteUiState, viewModel: FavoriteViewModel)
                     if (loaded != null) {
                         SortMenuButton(
                             currentSortKey = loaded.sortKey,
-                            onSortSelected = { viewModel.setSortKey(it) },
+                            onSortSelected = onSortSelected,
                         )
-                        TextButton(onClick = { viewModel.enterEditMode() }) {
+                        TextButton(onClick = onEnterEditMode) {
                             Text(stringResource(R.string.favorite_edit))
                         }
                     }

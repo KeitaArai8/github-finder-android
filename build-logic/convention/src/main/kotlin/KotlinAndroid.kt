@@ -6,6 +6,8 @@
 import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.kotlin.dsl.withType
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 /**
  * Android プロジェクトの SDK / Java / Kotlin バージョンを設定する。
@@ -23,6 +25,12 @@ internal fun Project.configureKotlinAndroid(
             sourceCompatibility = JavaVersion.VERSION_17
             targetCompatibility = JavaVersion.VERSION_17
         }
+    }
+    // Now in Android と同様、`-PwarningsAsErrors=true`（CI 等）でのみ Kotlin 警告をエラーにする。
+    tasks.withType<KotlinCompilationTask<*>>().configureEach {
+        compilerOptions.allWarningsAsErrors.set(
+            providers.gradleProperty("warningsAsErrors").map(String::toBoolean).orElse(false),
+        )
     }
     // Kotlin の jvmTarget は AGP 9 の built-in Kotlin が compileOptions.targetCompatibility から自動で決めるため、明示設定しない。
 }

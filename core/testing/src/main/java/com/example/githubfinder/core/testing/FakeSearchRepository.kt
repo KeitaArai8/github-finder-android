@@ -2,12 +2,12 @@ package com.example.githubfinder.core.testing
 
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.model.SearchResultEntity
-import kotlinx.coroutines.CompletableDeferred
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 
 class FakeSearchRepository : SearchRepository {
     var searchResult: Result<SearchResultEntity> = Result.success(
-        SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false)
+        SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false),
     )
     var searchCallCount = 0
     var lastSearchQuery: String? = null

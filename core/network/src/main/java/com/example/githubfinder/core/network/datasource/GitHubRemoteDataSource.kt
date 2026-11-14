@@ -8,11 +8,11 @@ package com.example.githubfinder.core.network.datasource
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.network.GitHubApiService
 import com.example.githubfinder.core.network.dto.SearchResponseDTO
-import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
+import retrofit2.HttpException
 
 @Singleton
 class GitHubRemoteDataSource @Inject constructor(

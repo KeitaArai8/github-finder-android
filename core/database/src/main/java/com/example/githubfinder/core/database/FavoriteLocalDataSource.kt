@@ -7,10 +7,10 @@ package com.example.githubfinder.core.database
 
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class FavoriteLocalDataSource @Inject constructor(
@@ -29,7 +29,7 @@ class FavoriteLocalDataSource @Inject constructor(
                 starCount = repository.starCount,
                 language = repository.language,
                 ownerAvatarURL = repository.ownerAvatarURL,
-            )
+            ),
         )
     }
 

@@ -25,14 +25,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
-import com.example.githubfinder.core.designsystem.UiText
-import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.repository.SearchRepository
+import com.example.githubfinder.core.designsystem.UiText
+import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -55,7 +56,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 /**
  * 検索画面の内部フェーズ。
@@ -248,7 +248,9 @@ class SearchViewModel @Inject constructor(
             val result = searchRepository.search(currentQuery, 1)
             Timber.tag(TAG).i(
                 "Search succeeded: count=%d, totalCount=%d, hasNextPage=%s",
-                result.items.size, result.totalCount, result.hasNextPage,
+                result.items.size,
+                result.totalCount,
+                result.hasNextPage,
             )
             // 結果が 0 件でもユーザの意図的な検索なので履歴に追加する
             searchHistoryDataSource.add(currentQuery)
@@ -310,14 +312,18 @@ class SearchViewModel @Inject constructor(
         history: List<String>,
     ): SearchUiState = when (this) {
         SearchPhase.Idle -> SearchUiState.Idle(searchQuery = query, history = history)
+
         SearchPhase.Loading -> SearchUiState.Loading(searchQuery = query)
+
         is SearchPhase.Loaded -> SearchUiState.Loaded(
             searchQuery = query,
             items = items.map { repo -> RepositoryDisplayItem.from(repo, favoriteIDs.contains(repo.id)) },
             isLoadingMore = isLoadingMore,
             isRefreshing = isRefreshing,
         )
+
         SearchPhase.Empty -> SearchUiState.Empty(searchQuery = query)
+
         is SearchPhase.Error -> SearchUiState.Error(searchQuery = query, message = message)
     }
 
@@ -327,5 +333,4 @@ class SearchViewModel @Inject constructor(
         /** SavedStateHandle 上の検索クエリのキー。 */
         const val KEY_QUERY = "query"
     }
-
 }

@@ -107,7 +107,7 @@ fun RepositoryListItem(
                 Icon(
                     imageVector = if (item.isFavorite) AppIcons.Favorite else AppIcons.FavoriteBorder,
                     contentDescription = stringResource(
-                        if (item.isFavorite) R.string.a11y_favorite_remove else R.string.a11y_favorite_add
+                        if (item.isFavorite) R.string.a11y_favorite_remove else R.string.a11y_favorite_add,
                     ),
                     tint = if (item.isFavorite) MaterialTheme.gitHubFinderColors.favorite else MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -6,8 +6,6 @@
 
 package com.example.githubfinder.tutorial
 
-import com.example.githubfinder.R
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -29,8 +27,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -62,6 +60,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.githubfinder.R
+import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
 import kotlin.math.roundToInt
 
 private val SpotlightPadding = 6.dp
@@ -188,7 +188,9 @@ private fun TooltipCard(
     val tooltipTopPx = if (isUpperHalf) spotlight.bottom + gapPx else null
     val bottomPaddingDp = if (!isUpperHalf) {
         with(density) { (screenSize.height - spotlight.top + gapPx).toDp() }
-    } else null
+    } else {
+        null
+    }
 
     val tooltipModifier = if (tooltipTopPx != null) {
         Modifier
@@ -243,8 +245,11 @@ private fun TooltipCard(
                     ) {
                         Text(
                             text = stringResource(
-                                if (step == CoachMarkStep.entries.last()) R.string.tutorial_finish
-                                else R.string.tutorial_next
+                                if (step == CoachMarkStep.entries.last()) {
+                                    R.string.tutorial_finish
+                                } else {
+                                    R.string.tutorial_next
+                                },
                             ),
                             fontWeight = FontWeight.Bold,
                         )
@@ -292,8 +297,11 @@ private fun StepIndicator(currentStep: CoachMarkStep) {
                     .size(6.dp)
                     .clip(CircleShape)
                     .background(
-                        if (step == currentStep) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        if (step == currentStep) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        },
                     ),
             )
         }
@@ -310,10 +318,12 @@ private fun fallbackRect(
             offset = Offset(16.dp.toPx(), 88.dp.toPx()),
             size = Size(screen.width - 32.dp.toPx(), 48.dp.toPx()),
         )
+
         CoachMarkStep.FavoriteButton -> Rect(
             offset = Offset(screen.width - 72.dp.toPx(), 200.dp.toPx()),
             size = Size(48.dp.toPx(), 48.dp.toPx()),
         )
+
         CoachMarkStep.FavoriteTab -> {
             val tabWidth = screen.width / 3f
             Rect(
@@ -323,4 +333,3 @@ private fun fallbackRect(
         }
     }
 }
-

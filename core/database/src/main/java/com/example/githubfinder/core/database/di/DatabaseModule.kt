@@ -22,8 +22,7 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "github_finder.db").build()
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, "github_finder.db").build()
 
     @Provides
     fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()

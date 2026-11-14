@@ -25,6 +25,5 @@ internal annotation class WidgetUpdate
 object WidgetModule {
     @Provides
     @WidgetUpdate
-    fun provideWidgetUpdate(@ApplicationContext context: Context): @JvmSuppressWildcards suspend () -> Unit =
-        { FavoriteWidget().updateAll(context) }
+    fun provideWidgetUpdate(@ApplicationContext context: Context): @JvmSuppressWildcards suspend () -> Unit = { FavoriteWidget().updateAll(context) }
 }

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,19 +44,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
-import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
+import com.example.githubfinder.core.designsystem.R as DesignR
+import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.RepositoryDisplayItem
-import com.example.githubfinder.core.designsystem.R as DesignR
 
 /** 検索画面の入口。ViewModel から State を集め、ViewModel を知らない [SearchScreen] へ値とラムダだけを渡す。 */
 @Composable
@@ -156,11 +156,13 @@ fun SearchScreen(
                         )
                     }
                 }
+
                 is SearchUiState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
+
                 is SearchUiState.Loaded -> {
                     val context = LocalContext.current
                     RepositoryList(
@@ -178,6 +180,7 @@ fun SearchScreen(
                         },
                     )
                 }
+
                 is SearchUiState.Empty -> {
                     EmptyStateView(
                         icon = AppIcons.Search,
@@ -185,6 +188,7 @@ fun SearchScreen(
                         description = stringResource(R.string.search_empty_no_results_description),
                     )
                 }
+
                 is SearchUiState.Error -> {
                     ErrorView(message = state.message.asString(), onRetry = onRefresh)
                 }
@@ -334,4 +338,3 @@ private fun SearchHistoryListPreview() {
         }
     }
 }
-

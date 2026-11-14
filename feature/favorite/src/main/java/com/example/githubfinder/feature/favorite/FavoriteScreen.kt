@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -39,9 +38,9 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -49,8 +48,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,10 +61,11 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
-import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.R as DesignR
+import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.designsystem.shareRepository
@@ -184,6 +184,7 @@ fun FavoriteScreen(
                     }
                 }
             }
+
             is FavoriteUiState.Loaded -> {
                 val context = LocalContext.current
                 val displayed = state.displayedFavorites
@@ -240,6 +241,7 @@ fun FavoriteScreen(
                     )
                 }
             }
+
             is FavoriteUiState.Empty -> {
                 EmptyStateView(
                     icon = AppIcons.FavoriteBorder,
@@ -303,6 +305,7 @@ private fun FavoriteTopBar(
                 },
             )
         }
+
         else -> {
             TopAppBar(
                 modifier = modifier,
@@ -380,7 +383,9 @@ private fun SortMenuButton(
                     },
                     leadingIcon = if (key == currentSortKey) {
                         { Icon(AppIcons.CheckCircle, contentDescription = null) }
-                    } else null,
+                    } else {
+                        null
+                    },
                 )
             }
         }
@@ -554,7 +559,7 @@ private fun RowContent(
                 Icon(
                     imageVector = if (isSelected) AppIcons.CheckCircle else AppIcons.RadioButtonUnchecked,
                     contentDescription = stringResource(
-                        if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected
+                        if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected,
                     ),
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
@@ -663,4 +668,3 @@ private fun DeleteConfirmationDialogPreview() {
         }
     }
 }
-

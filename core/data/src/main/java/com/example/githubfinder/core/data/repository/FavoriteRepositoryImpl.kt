@@ -8,9 +8,9 @@ package com.example.githubfinder.core.data.repository
 import com.example.githubfinder.core.database.FavoriteLocalDataSource
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 @Singleton
 class FavoriteRepositoryImpl @Inject constructor(

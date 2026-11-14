@@ -9,8 +9,8 @@ package com.example.githubfinder
 import android.app.Application
 import com.example.githubfinder.feature.widget.FavoriteWidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
-import timber.log.Timber
 import javax.inject.Inject
+import timber.log.Timber
 
 @HiltAndroidApp
 class GitHubFinderApplication : Application() {

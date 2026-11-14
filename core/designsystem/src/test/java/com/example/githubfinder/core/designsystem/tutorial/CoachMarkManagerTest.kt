@@ -8,9 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,8 +28,7 @@ private class FakeTutorialLocalDataSource(initialShown: Boolean) : TutorialLocal
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoachMarkManagerTest {
 
-    private fun TestScope.makeManager(dataSource: TutorialLocalDataSource) =
-        CoachMarkManager(dataSource, scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    private fun TestScope.makeManager(dataSource: TutorialLocalDataSource) = CoachMarkManager(dataSource, scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
 
     @Test
     fun `startIfNeededがDataStoreの答えを得るまでisActiveは未確定のnullである`() = runTest {

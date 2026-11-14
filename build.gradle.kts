@@ -22,4 +22,3 @@ spotless {
         ktlint(libs.versions.ktlint.get())
     }
 }
-

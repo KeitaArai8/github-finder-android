@@ -18,6 +18,7 @@ import com.example.githubfinder.core.data.di.ApplicationScope
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -29,7 +30,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 /** Undo 猶予時間（ミリ秒）。Material の SnackbarDuration.Short（約 4 秒）に合わせ、経過後に Room から実削除する。 */
 internal const val UNDO_WINDOW_MS = 4_000L
@@ -139,8 +139,7 @@ class FavoriteViewModel @Inject constructor(
     }
 
     /** [id] が Undo 待ち（pendingDeleteIDs に含まれる）か。実削除済みの通知を View が表示しないための判定に使う。 */
-    fun isDeletePending(id: Int): Boolean =
-        (_uiState.value as? FavoriteUiState.Loaded)?.pendingDeleteIDs?.contains(id) == true
+    fun isDeletePending(id: Int): Boolean = (_uiState.value as? FavoriteUiState.Loaded)?.pendingDeleteIDs?.contains(id) == true
 
     /** View が通知を表示し終えたら呼ぶ。該当 ID の通知をキューから取り除く。 */
     fun userMessageShown(id: Long) {
@@ -297,11 +296,10 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    private fun FavoriteUiState.Loaded.hasSameDisplayInputs(other: FavoriteUiState.Loaded): Boolean =
-        favorites == other.favorites &&
-            sortKey == other.sortKey &&
-            filterLanguage == other.filterLanguage &&
-            pendingDeleteIDs == other.pendingDeleteIDs
+    private fun FavoriteUiState.Loaded.hasSameDisplayInputs(other: FavoriteUiState.Loaded): Boolean = favorites == other.favorites &&
+        sortKey == other.sortKey &&
+        filterLanguage == other.filterLanguage &&
+        pendingDeleteIDs == other.pendingDeleteIDs
 
     /** 入力（favorites / sortKey / filterLanguage / pendingDeleteIDs）から displayedFavorites / availableLanguages を計算して載せる。 */
     private fun FavoriteUiState.Loaded.withDerivedFields(): FavoriteUiState.Loaded {
@@ -325,5 +323,4 @@ class FavoriteViewModel @Inject constructor(
     private companion object {
         const val TAG = "Favorite"
     }
-
 }

@@ -13,14 +13,14 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class ConnectivityManagerNetworkMonitor @Inject constructor(
@@ -73,9 +73,8 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
         .distinctUntilChanged()
         .onEach { online -> Timber.tag(TAG).i("Network state changed: online=%s", online) }
 
-    private fun NetworkCapabilities.isReachable(): Boolean =
-        hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    private fun NetworkCapabilities.isReachable(): Boolean = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+        hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
     private companion object {
         const val TAG = "Network"

@@ -6,6 +6,7 @@
 
 package com.example.githubfinder
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -14,12 +15,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBars
-import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +27,6 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.annotation.StringRes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -39,6 +38,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.OfflineBanner
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.feature.favorite.FavoriteRoute
@@ -105,7 +105,9 @@ fun MainNavigation(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
             )
+
             true -> TutorialScreen(coachMarkManager = coachMarkManager)
+
             false -> MainScaffold(modifier = contentModifier.weight(1f))
         }
     }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import com.example.githubfinder.core.designsystem.AppIcons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.launchCustomTab
 
@@ -111,13 +111,11 @@ private fun SettingsRow(
 }
 
 @Suppress("DEPRECATION")
-private fun getAppVersion(context: Context): String {
-    return try {
-        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        "${info.versionName} (${info.versionCode})"
-    } catch (e: PackageManager.NameNotFoundException) {
-        "1.0"
-    }
+private fun getAppVersion(context: Context): String = try {
+    val info = context.packageManager.getPackageInfo(context.packageName, 0)
+    "${info.versionName} (${info.versionCode})"
+} catch (e: PackageManager.NameNotFoundException) {
+    "1.0"
 }
 
 @PreviewLightDark

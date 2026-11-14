@@ -71,18 +71,17 @@ class FavoriteWidget : GlanceAppWidget() {
         }
     }
 
-    private suspend fun loadFavorites(context: Context): List<FavoriteEntity> =
-        try {
-            val entryPoint = EntryPointAccessors.fromApplication(
-                context,
-                WidgetEntryPoint::class.java,
-            )
-            entryPoint.favoriteRepository().favorites.first().take(MAX_ITEMS)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            emptyList()
-        }
+    private suspend fun loadFavorites(context: Context): List<FavoriteEntity> = try {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context,
+            WidgetEntryPoint::class.java,
+        )
+        entryPoint.favoriteRepository().favorites.first().take(MAX_ITEMS)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        emptyList()
+    }
 
     companion object {
         private const val MAX_ITEMS = 5
@@ -108,8 +107,11 @@ private fun FavoriteWidgetContent(
         .cornerRadius(16.dp)
         .padding(12.dp)
         .let { modifier ->
-            if (launchIntent != null) modifier.clickable(actionStartActivity(launchIntent))
-            else modifier
+            if (launchIntent != null) {
+                modifier.clickable(actionStartActivity(launchIntent))
+            } else {
+                modifier
+            }
         }
 
     Box(modifier = rootModifier) {

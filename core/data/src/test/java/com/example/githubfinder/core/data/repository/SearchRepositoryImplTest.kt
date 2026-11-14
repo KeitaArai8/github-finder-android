@@ -7,6 +7,8 @@ import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
 import com.example.githubfinder.core.network.dto.OwnerDTO
 import com.example.githubfinder.core.network.dto.RepositoryDTO
 import com.example.githubfinder.core.network.dto.SearchResponseDTO
+import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,8 +20,6 @@ import org.junit.Assert.fail
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
-import java.io.IOException
-import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchRepositoryImplTest {
@@ -166,11 +166,10 @@ class SearchRepositoryImplTest {
         }
     }
 
-    private fun makeRepository(fakeApi: FakeGitHubApiService): SearchRepositoryImpl =
-        SearchRepositoryImpl(
-            remoteDataSource = GitHubRemoteDataSource(fakeApi),
-            cacheDataSource = SearchCacheDataSource(),
-        )
+    private fun makeRepository(fakeApi: FakeGitHubApiService): SearchRepositoryImpl = SearchRepositoryImpl(
+        remoteDataSource = GitHubRemoteDataSource(fakeApi),
+        cacheDataSource = SearchCacheDataSource(),
+    )
 
     private fun makeResponse(totalCount: Int): SearchResponseDTO = SearchResponseDTO(
         totalCount = totalCount,
@@ -190,5 +189,4 @@ class SearchRepositoryImplTest {
         val body = "".toResponseBody("application/json".toMediaType())
         return HttpException(Response.error<Any>(code, body))
     }
-
 }

@@ -1,10 +1,7 @@
 package com.example.githubfinder.feature.search
 
-import com.example.githubfinder.core.testing.MainDispatcherRule
-import com.example.githubfinder.core.testing.FakeFavoriteRepository
-import com.example.githubfinder.core.testing.FakeSearchRepository
-import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.UiText
@@ -12,7 +9,10 @@ import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
-import androidx.lifecycle.viewModelScope
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
+import com.example.githubfinder.core.testing.FakeSearchRepository
+import com.example.githubfinder.core.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -77,7 +77,7 @@ class SearchViewModelTest {
     fun `SavedStateHandleに保存済みのクエリで起動すると入力欄に復元され、debounce後に再検索される`() = runTest {
         // Arrange: プロセス死後の復元を想定し、query="kotlin" を持つ SavedStateHandle と、1 件返す検索結果
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(RepositoryEntity(1, "JetBrains/kotlin", null, 10, "Kotlin", null)), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(RepositoryEntity(1, "JetBrains/kotlin", null, 10, "Kotlin", null)), hasNextPage = false),
         )
 
         // Act: そのハンドルで ViewModel を作る
@@ -133,7 +133,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -153,7 +153,7 @@ class SearchViewModelTest {
     fun `検索結果が空の場合Empty状態になる`() = runTest {
         // Arrange: 0 件（hasNextPage なし）を返す検索結果
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false)
+            SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -208,7 +208,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -234,7 +234,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -263,7 +263,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         fakeFavoriteRepository.stored = listOf(
             FavoriteEntity(
@@ -274,7 +274,7 @@ class SearchViewModelTest {
                 language = null,
                 ownerAvatarURL = null,
                 savedAt = 0L,
-            )
+            ),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -304,7 +304,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(page1Repo), hasNextPage = true)
+            SearchResultEntity(totalCount = 60, items = listOf(page1Repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -320,7 +320,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(page2Repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 60, items = listOf(page2Repo), hasNextPage = false),
         )
         viewModel.onLoadMore()
         advanceUntilIdle()
@@ -345,7 +345,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -372,7 +372,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -404,7 +404,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         fakeFavoriteRepository.shouldThrowOnAdd = true
         val viewModel = createViewModel()
@@ -433,7 +433,7 @@ class SearchViewModelTest {
         // Arrange: 次ページありの 1 ページ目を表示
         val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -468,7 +468,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo1), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo1), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -484,7 +484,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo2), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo2), hasNextPage = false),
         )
         viewModel.onRefresh()
         advanceUntilIdle()
@@ -507,7 +507,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -527,7 +527,7 @@ class SearchViewModelTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -560,7 +560,7 @@ class SearchViewModelTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -579,7 +579,7 @@ class SearchViewModelTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -598,7 +598,7 @@ class SearchViewModelTest {
         // Arrange: "kotlin" で検索済み（Loaded）の ViewModel
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("kotlin")
@@ -620,7 +620,7 @@ class SearchViewModelTest {
         // Arrange: "a" の 1 ページ目（a/page1・次ページあり）を表示中
         val pageOne = RepositoryEntity(1, "a/page1", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(pageOne), hasNextPage = true)
+            SearchResultEntity(totalCount = 60, items = listOf(pageOne), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("a")
@@ -634,13 +634,13 @@ class SearchViewModelTest {
         fakeSearchRepository.searchGate = null
         val newResult = RepositoryEntity(2, "b/page1", null, 5, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(newResult), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(newResult), hasNextPage = false),
         )
         viewModel.onQueryChanged("b")
         advanceUntilIdle()
         // その後で "a" の 2 ページ目（a/page2）の通信が完了する
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(RepositoryEntity(3, "a/page2", null, 1, null, null)), hasNextPage = false)
+            SearchResultEntity(totalCount = 60, items = listOf(RepositoryEntity(3, "a/page2", null, 1, null, null)), hasNextPage = false),
         )
         gate.complete(Unit)
         advanceUntilIdle()
@@ -674,7 +674,7 @@ class SearchViewModelTest {
         fakeSearchHistoryDataSource.setHistoryForTest(listOf("kotlin", "swift"))
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("compose")
@@ -707,7 +707,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -738,7 +738,7 @@ class SearchViewModelTest {
         // Arrange: 次ページありの 1 ページ目を表示し、2 ページ目の取得を中断させておく
         val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true)
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -761,7 +761,7 @@ class SearchViewModelTest {
         // Arrange: "kotlin" の検索を通信中のまま止めておく（結果は 1 件）
         val repo = RepositoryEntity(1, "owner/kotlin", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val gate = CompletableDeferred<Unit>()
         fakeSearchRepository.searchGate = gate
@@ -787,7 +787,7 @@ class SearchViewModelTest {
         // Arrange: "kotlin" の検索を通信中のまま止めておく
         val repo = RepositoryEntity(2, "owner/compose", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val gate = CompletableDeferred<Unit>()
         fakeSearchRepository.searchGate = gate
@@ -819,5 +819,4 @@ class SearchViewModelTest {
         assertEquals("compose", loaded.searchQuery)
         assertEquals(2, fakeSearchRepository.searchCallCount)
     }
-
 }

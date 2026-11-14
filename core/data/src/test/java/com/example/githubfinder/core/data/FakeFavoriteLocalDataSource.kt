@@ -1,8 +1,8 @@
 package com.example.githubfinder.core.data
 
-import com.example.githubfinder.core.database.FavoriteLocalDataSource
 import com.example.githubfinder.core.database.FavoriteDao
 import com.example.githubfinder.core.database.FavoriteDbEntity
+import com.example.githubfinder.core.database.FavoriteLocalDataSource
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import kotlinx.coroutines.flow.Flow
@@ -35,8 +35,7 @@ class FakeFavoriteDao : FavoriteDao {
     }
 }
 
-fun makeFavoriteLocalDataSource(dao: FavoriteDao = FakeFavoriteDao()): FavoriteLocalDataSource =
-    FavoriteLocalDataSource(dao)
+fun makeFavoriteLocalDataSource(dao: FavoriteDao = FakeFavoriteDao()): FavoriteLocalDataSource = FavoriteLocalDataSource(dao)
 
 fun makeRepositoryEntity(id: Int): RepositoryEntity = RepositoryEntity(
     id = id,

@@ -8,14 +8,14 @@ package com.example.githubfinder.feature.widget
 
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class FavoriteWidgetUpdater @Inject constructor(

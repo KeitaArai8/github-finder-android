@@ -81,8 +81,7 @@ abstract class TutorialModule {
         @Provides
         @Singleton
         @TutorialDataStore
-        fun provideTutorialDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
-            context.tutorialDataStore
+        fun provideTutorialDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.tutorialDataStore
 
         @Provides
         @Singleton

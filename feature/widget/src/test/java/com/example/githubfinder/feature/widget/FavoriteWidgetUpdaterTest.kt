@@ -24,8 +24,7 @@ class FavoriteWidgetUpdaterTest {
         scopes.forEach { it.cancel() }
     }
 
-    private fun TestScope.newScope(): CoroutineScope =
-        CoroutineScope(UnconfinedTestDispatcher(testScheduler)).also { scopes += it }
+    private fun TestScope.newScope(): CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).also { scopes += it }
 
     private val addedFavorite = FavoriteEntity(
         id = 1,

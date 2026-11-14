@@ -42,6 +42,5 @@ class FavoriteRepositoryImplTest {
         assertEquals(2, all[0].id)
     }
 
-    private fun makeRepository(): FavoriteRepositoryImpl =
-        FavoriteRepositoryImpl(makeFavoriteLocalDataSource(FakeFavoriteDao()))
+    private fun makeRepository(): FavoriteRepositoryImpl = FavoriteRepositoryImpl(makeFavoriteLocalDataSource(FakeFavoriteDao()))
 }

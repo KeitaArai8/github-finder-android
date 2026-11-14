@@ -104,18 +104,16 @@ class FavoriteLocalDataSourceTest {
         assertTrue(all.isEmpty())
     }
 
-    private fun makeDataSource(): FavoriteLocalDataSource =
-        FavoriteLocalDataSource(FakeFavoriteDao())
+    private fun makeDataSource(): FavoriteLocalDataSource = FavoriteLocalDataSource(FakeFavoriteDao())
 
-    private fun makeRepositoryEntity(id: Int, fullName: String = "owner/repo$id"): RepositoryEntity =
-        RepositoryEntity(
-            id = id,
-            fullName = fullName,
-            description = null,
-            starCount = 0,
-            language = null,
-            ownerAvatarURL = null,
-        )
+    private fun makeRepositoryEntity(id: Int, fullName: String = "owner/repo$id"): RepositoryEntity = RepositoryEntity(
+        id = id,
+        fullName = fullName,
+        description = null,
+        starCount = 0,
+        language = null,
+        ownerAvatarURL = null,
+    )
 
     private fun makeDbEntity(id: Int): FavoriteDbEntity = FavoriteDbEntity(
         repositoryID = id,
@@ -125,5 +123,4 @@ class FavoriteLocalDataSourceTest {
         language = null,
         ownerAvatarURL = null,
     )
-
 }

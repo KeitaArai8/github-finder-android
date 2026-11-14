@@ -6,11 +6,6 @@
 
 package com.example.githubfinder.feature.search
 
-import com.example.githubfinder.core.testing.FakeFavoriteRepository
-import com.example.githubfinder.core.testing.FakeSearchRepository
-import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,11 +14,16 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.lifecycle.SavedStateHandle
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
+import com.example.githubfinder.core.testing.FakeSearchRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,7 +44,7 @@ class SearchScreenTest {
 
         composeTestRule
             .onNode(
-                androidx.compose.ui.test.hasText("キーワードを入力して", substring = true)
+                androidx.compose.ui.test.hasText("キーワードを入力して", substring = true),
             )
             .assertIsDisplayed()
     }
@@ -61,7 +61,7 @@ class SearchScreenTest {
         )
         val searchRepo = FakeSearchRepository().apply {
             searchResult = Result.success(
-                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
             )
         }
         val viewModel = makeViewModel(searchRepo = searchRepo)
@@ -94,7 +94,7 @@ class SearchScreenTest {
         )
         val searchRepo = FakeSearchRepository().apply {
             searchResult = Result.success(
-                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false)
+                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
             )
         }
         val viewModel = makeViewModel(searchRepo = searchRepo)
@@ -133,5 +133,4 @@ class SearchScreenTest {
         searchHistoryDataSource = searchHistory,
         savedStateHandle = SavedStateHandle(),
     )
-
 }

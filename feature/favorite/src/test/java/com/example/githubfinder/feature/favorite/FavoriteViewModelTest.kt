@@ -1,13 +1,13 @@
 package com.example.githubfinder.feature.favorite
 
-import com.example.githubfinder.core.testing.MainDispatcherRule
-import com.example.githubfinder.core.testing.FakeFavoriteRepository
-import com.example.githubfinder.core.data.FavoriteStore
-import com.example.githubfinder.core.designsystem.UiText
-import com.example.githubfinder.core.model.FavoriteEntity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.designsystem.UiText
+import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,8 +47,7 @@ class FavoriteViewModelTest {
         favoriteStore = FavoriteStore(fakeFavoriteRepository, storeScope)
     }
 
-    private fun createViewModel(applicationScope: CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))) =
-        FavoriteViewModel(favoriteStore, applicationScope)
+    private fun createViewModel(applicationScope: CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))) = FavoriteViewModel(favoriteStore, applicationScope)
 
     @After
     fun tearDown() {
@@ -105,7 +104,7 @@ class FavoriteViewModelTest {
                 language = null,
                 ownerAvatarURL = null,
                 savedAt = 0L,
-            )
+            ),
         )
         val viewModel = createViewModel()
 
@@ -802,7 +801,7 @@ class FavoriteViewModelTest {
                 language = null,
                 ownerAvatarURL = null,
                 savedAt = 0L,
-            )
+            ),
         )
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -877,7 +876,7 @@ class FavoriteViewModelTest {
                 starCount = 3,
                 language = "Kotlin",
                 ownerAvatarURL = null,
-            )
+            ),
         )
         advanceUntilIdle()
 
@@ -932,5 +931,4 @@ class FavoriteViewModelTest {
         assertFalse(state.isRefreshing)
         assertEquals(listOf(1), state.displayedFavorites.map { it.id })
     }
-
 }

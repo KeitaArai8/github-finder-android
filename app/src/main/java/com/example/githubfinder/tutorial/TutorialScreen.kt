@@ -24,9 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import com.example.githubfinder.R
-import com.example.githubfinder.core.designsystem.AppIcons
-import com.example.githubfinder.core.designsystem.gitHubFinderColors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +39,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.githubfinder.R
+import com.example.githubfinder.core.designsystem.AppIcons
+import com.example.githubfinder.core.designsystem.gitHubFinderColors
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
 import com.example.githubfinder.core.designsystem.tutorial.coachMarkAnchor
@@ -249,4 +249,3 @@ private fun MockTabItem(
         )
     }
 }
-

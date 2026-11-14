@@ -47,7 +47,7 @@ class TutorialLocalDataSourceImpl @Inject constructor(
     }
 
     companion object {
-        // 旧 SharedPreferences ("tutorial") と同じキー名。移行時にそのまま引き継ぐ。
+        // キー名は SharedPreferences ("tutorial") の "hasCompletedTutorial" と一致させる必要がある。変えると移行で値が引き継がれない。
         internal val KEY_SHOWN = booleanPreferencesKey("hasCompletedTutorial")
     }
 }
@@ -64,7 +64,7 @@ annotation class TutorialScope
 
 private const val LEGACY_PREFS_NAME = "tutorial"
 
-/** 旧 SharedPreferences からの移行を伴う DataStore。既にチュートリアルを見たユーザーに再表示しないため。 */
+/** SharedPreferences ("tutorial") からの移行を外してはならない。外すと既にチュートリアルを見たユーザーに再表示される。 */
 private val Context.tutorialDataStore by preferencesDataStore(
     name = "tutorial",
     produceMigrations = { context -> listOf(SharedPreferencesMigration(context, LEGACY_PREFS_NAME)) },

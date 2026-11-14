@@ -69,7 +69,7 @@ class FavoriteViewModel @Inject constructor(
 
     /**
      * プル・トゥ・リフレッシュ。Room が SSOT で常に最新のため再取得は不要で、
-     * 現在値を再公開してスピナーを閉じるだけ（UI 挙動は従来どおり）。
+     * 現在値を再公開してスピナーを閉じるだけ。
      */
     fun refresh() {
         viewModelScope.launch {

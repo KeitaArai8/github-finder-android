@@ -2,6 +2,7 @@ package com.example.githubfinder.feature.search
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.cash.turbine.test
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.UiText
@@ -818,5 +819,57 @@ class SearchViewModelTest {
         assertTrue("Expected Loaded, got $loaded", loaded is SearchUiState.Loaded)
         assertEquals("compose", loaded.searchQuery)
         assertEquals(2, fakeSearchRepository.searchCallCount)
+    }
+
+    @Test
+    fun `連続入力はdebounce後に最後のクエリで1回だけ検索しIdleからLoadingそしてLoadedの順に遷移する`() = runTest {
+        // Arrange: 1 件返す検索結果を持つ ViewModel
+        val repo = RepositoryEntity(1, "owner/kotlin", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+        )
+        // 通信中の Loading を観測できるよう、結果の返却をゲートで止めておく
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+        val viewModel = createViewModel()
+
+        viewModel.uiState.test {
+            // Assert: 最初は未入力の Idle
+            assertEquals("", (awaitItem() as SearchUiState.Idle).searchQuery)
+
+            // Act: debounce（500ms）未満の間隔で "k" → "ko" → "kot" と打つ
+            viewModel.onQueryChanged("k")
+            advanceTimeBy(100)
+            viewModel.onQueryChanged("ko")
+            advanceTimeBy(100)
+            viewModel.onQueryChanged("kot")
+            advanceTimeBy(300)
+            runCurrent()
+
+            // Assert: debounce 中は検索されず、入力欄だけが Idle のまま追従する（途中の "k" "ko" で Loading にならない）
+            assertEquals(0, fakeSearchRepository.searchCallCount)
+            val idle = expectMostRecentItem()
+            assertTrue("Expected Idle, got $idle", idle is SearchUiState.Idle)
+            assertEquals("kot", idle.searchQuery)
+
+            // Act: debounce が経過する
+            advanceTimeBy(201)
+            runCurrent()
+
+            // Assert: 最後のクエリ "kot" で 1 回だけ検索され、Loading（通信中）→ Loaded（完了後）の順に届く
+            assertEquals(1, fakeSearchRepository.searchCallCount)
+            assertEquals("kot", fakeSearchRepository.lastSearchQuery)
+            val loading = awaitItem()
+            assertTrue("Expected Loading, got $loading", loading is SearchUiState.Loading)
+
+            // Act: 通信が完了する
+            gate.complete(Unit)
+            runCurrent()
+
+            val loaded = awaitItem()
+            assertTrue("Expected Loaded, got $loaded", loaded is SearchUiState.Loaded)
+            assertEquals("kot", loaded.searchQuery)
+            expectNoEvents()
+        }
     }
 }

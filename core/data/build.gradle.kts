@@ -16,5 +16,6 @@ dependencies {
     implementation(libs.datastore.preferences)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
     testImplementation(libs.retrofit)
 }

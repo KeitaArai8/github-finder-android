@@ -1,5 +1,6 @@
 package com.example.githubfinder.core.data
 
+import app.cash.turbine.test
 import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
@@ -68,5 +69,39 @@ class FavoriteStoreTest {
         // Assert: 例外は伝播せず、favorites は空リスト（null ではない）になる
         assertEquals(emptyList<FavoriteEntity>(), store.favorites.value)
         assertEquals(emptySet<Int>(), store.favoriteIDs.value)
+    }
+
+    @Test
+    fun `favoritesとfavoriteIDsは変更のたびに順番どおり流れ同じ内容の再emissionは流れない`() = runTest {
+        // Arrange: 手動で emit できる Flow を持つ Repository と、最初の emission 前のストア
+        val source = MutableSharedFlow<List<FavoriteEntity>>()
+        val store = FavoriteStore(StubRepository(source), newScope())
+
+        store.favorites.test {
+            // Assert: 読み込み中は null
+            assertNull(awaitItem())
+
+            // Act: 1 件 → 同じ 1 件（内容が同一）→ 2 件 の順に Room が emit する
+            source.emit(listOf(favorite(1)))
+            source.emit(listOf(favorite(1)))
+            source.emit(listOf(favorite(1), favorite(2)))
+
+            // Assert: 内容が同一の再 emission は distinctUntilChanged で落ち、変化した 2 件だけが順に流れる
+            assertEquals(listOf(1), awaitItem()?.map { it.id })
+            assertEquals(listOf(1, 2), awaitItem()?.map { it.id })
+            expectNoEvents()
+        }
+
+        store.favoriteIDs.test {
+            // Assert: 購読開始時点の ID 集合は最新の {1, 2}
+            assertEquals(setOf(1, 2), awaitItem())
+
+            // Act: 1 件に減る
+            source.emit(listOf(favorite(2)))
+
+            // Assert: ID 集合も追従する
+            assertEquals(setOf(2), awaitItem())
+            expectNoEvents()
+        }
     }
 }

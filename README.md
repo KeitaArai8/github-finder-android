@@ -147,7 +147,7 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ## モジュール構成（NiA準拠）
 
-[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、11 モジュール + `build-logic`（Convention Plugin）の構成です。
+[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、12 モジュール + `build-logic`（Convention Plugin）の構成です。
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
@@ -156,7 +156,8 @@ val uiState: StateFlow<SearchUiState> = combine(
 :core:data              ← Repository interface/impl + CacheDataSource + FavoriteStore + SearchHistoryDataSource
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
-:core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + Tutorial関連
+:core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + コーチマーク（CoachMarkManager / Anchor）
+:core:tutorial          ← チュートリアル表示済みフラグの永続化（DataStore + 旧 SharedPreferences からの移行）。Compose 非依存
 :feature:search         ← SearchViewModel + SearchScreen + SearchUiState + UserMessage
 :feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + UserMessage
 :feature:settings       ← SettingsScreen
@@ -197,6 +198,7 @@ dependencies { implementation(project(":core:data")) }
 ├── :core:network
 ├── :core:database
 ├── :core:designsystem
+├── :core:tutorial
 ├── :feature:search
 ├── :feature:favorite
 ├── :feature:settings
@@ -227,7 +229,10 @@ dependencies { implementation(project(":core:data")) }
 └── :core:data
 
 :core:designsystem
-└── (Hilt / Compose / Browser / AndroidX)
+└── :core:tutorial（CoachMarkManager が TutorialLocalDataSource を使う）
+
+:core:tutorial
+└── (Hilt / DataStore。Compose には依存しない)
 ```
 
 ### :core:data の役割
@@ -247,20 +252,22 @@ dependencies { implementation(project(":core:data")) }
 └── DI Module                      ← interface ↔ impl のバインド
 ```
 
-### :core:designsystem の拡張された役割
+### :core:designsystem と :core:tutorial
 
-`:core:designsystem` は UI 共通ライブラリに加え、**横断的関心事のインフラ**も提供します:
+`:core:designsystem` は UI 共通ライブラリに加え、コーチマークの描画とステップ管理を持ちます。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
 
 ```
 :core:designsystem
 ├── Theme / EmptyStateView / ErrorView     ← UI コンポーネント
 ├── BrowserLauncher                        ← Custom Tabs 起動ユーティリティ
 ├── GitHubUrl (githubUrlFor)               ← URL 組み立てヘルパー
-└── tutorial/                              ← CoachMarkManager, CoachMarkStep,
-                                             CoachMarkAnchor, TutorialLocalDataSource
+└── tutorial/                              ← CoachMarkManager, CoachMarkStep, CoachMarkAnchor
+
+:core:tutorial
+└── TutorialLocalDataSource (i/f + Impl) + TutorialModule（DataStore と SharedPreferences からの移行、@TutorialScope）
 ```
 
-チュートリアル関連の `CoachMarkManager` はアプリ全体で共有されるため `:core:designsystem` 配下に配置し、`:feature:*` からも Hilt 経由で参照できるようにしています。
+`CoachMarkManager` は Compose の座標型（`Rect`）を持つため `:core:designsystem` に残し、Compose 非依存の永続化だけを `:core:tutorial` に切り出しています。
 
 ### DataSource の分離
 
@@ -461,15 +468,17 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 
 | モジュール | テストファイル | 件数 |
 |---|---|---|
-| `:feature:search` | SearchViewModelTest | 29 |
+| `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 30 |
 | `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 37 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
-| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest | 20 |
+| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証） | 21 |
+| `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeDao） | 6 |
-| `:core:designsystem` | UiTextTest, CoachMarkManagerTest, TutorialLocalDataSourceTest | 11 |
+| `:core:designsystem` | UiTextTest, CoachMarkManagerTest | 8 |
+| `:core:tutorial` | TutorialLocalDataSourceTest（旧 SharedPreferences からの移行を含む） | 5 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 
-合計 107 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
+合計 118 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 

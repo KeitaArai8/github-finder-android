@@ -4,7 +4,7 @@
  * 実装は TutorialLocalDataSourceImpl（Preferences DataStore）、テスト用には Fake を差し替えて使う。
  */
 
-package com.example.githubfinder.core.designsystem.tutorial
+package com.example.githubfinder.core.tutorial
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -57,7 +57,7 @@ class TutorialLocalDataSourceImpl @Inject constructor(
 @Retention(AnnotationRetention.RUNTIME)
 annotation class TutorialDataStore
 
-/** [CoachMarkManager] が表示済みフラグを書き込むための、アプリ寿命の CoroutineScope を指す Qualifier。 */
+/** チュートリアルの表示済みフラグを書き込むための、アプリ寿命の CoroutineScope を指す Qualifier。 */
 @Qualifier
 @Retention(AnnotationRetention.RUNTIME)
 annotation class TutorialScope

@@ -1,5 +1,6 @@
 package com.example.githubfinder.core.designsystem.tutorial
 
+import com.example.githubfinder.core.tutorial.TutorialLocalDataSource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

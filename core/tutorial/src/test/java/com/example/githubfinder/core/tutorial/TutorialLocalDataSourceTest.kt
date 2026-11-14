@@ -1,4 +1,4 @@
-package com.example.githubfinder.core.designsystem.tutorial
+package com.example.githubfinder.core.tutorial
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import java.io.File

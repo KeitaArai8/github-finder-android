@@ -1,12 +1,14 @@
 /*
  * Abstract:
  * コーチマーク型チュートリアルのステップ管理と表示制御。
- * :core:designsystem 配下に置くことで feature 層からも参照可能にしている。
+ * Compose の座標型（Rect）を持つため :core:designsystem に置く。永続化は :core:tutorial の TutorialLocalDataSource に任せる。
  */
 
 package com.example.githubfinder.core.designsystem.tutorial
 
 import androidx.compose.ui.geometry.Rect
+import com.example.githubfinder.core.tutorial.TutorialLocalDataSource
+import com.example.githubfinder.core.tutorial.TutorialScope
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope

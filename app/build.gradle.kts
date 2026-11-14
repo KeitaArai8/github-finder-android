@@ -34,6 +34,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:tutorial"))
     implementation(project(":feature:search"))
     implementation(project(":feature:favorite"))
     implementation(project(":feature:settings"))

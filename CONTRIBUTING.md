@@ -79,16 +79,17 @@ Closes #42
 
 ```
 :app → :feature:{search, favorite, settings, widget}
-     → :core:{data, network, database, designsystem, model}
+     → :core:{data, network, database, designsystem, tutorial, model}
 :feature:* → :core:data, :core:designsystem, :core:model
 :core:data → :core:{network, database, model}
 :core:{network, database, designsystem} → :core:model
+:core:designsystem → :core:tutorial
 :core:testing → :core:{data, model}   （テスト専用。各モジュールは testImplementation でのみ参照）
 ```
 
 - `:feature:*` 間は**相互参照しない**
 - `:core:model` は **純粋な Entity** のみ（Room / Retrofit 依存を持ち込まない）
-- チュートリアル関連の状態（`CoachMarkManager` 等）は `:core:designsystem/tutorial/` に配置
+- チュートリアルの表示済みフラグの永続化は `:core:tutorial`（Compose 非依存）、コーチマークの描画とステップ管理（`CoachMarkManager` 等）は `:core:designsystem/tutorial/` に配置
 
 ## テスト
 

@@ -3,7 +3,6 @@ package com.example.githubfinder.core.data.datasource
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -32,8 +31,8 @@ class SearchCacheDataSourceTest {
         val actual = cache.get("swift", 1)
 
         // Assert: 保存した値（totalCount=10, itemCount=5）が返る
-        assertNotNull(actual)
-        assertEquals(10, actual!!.totalCount)
+        checkNotNull(actual)
+        assertEquals(10, actual.totalCount)
         assertEquals(5, actual.items.size)
     }
 

@@ -475,10 +475,10 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeDao） | 6 |
 | `:core:designsystem` | UiTextTest, CoachMarkManagerTest | 8 |
-| `:core:tutorial` | TutorialLocalDataSourceTest（旧 SharedPreferences からの移行を含む） | 5 |
+| `:core:tutorial` | TutorialLocalDataSourceTest | 3 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 
-合計 118 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
+合計 117 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 

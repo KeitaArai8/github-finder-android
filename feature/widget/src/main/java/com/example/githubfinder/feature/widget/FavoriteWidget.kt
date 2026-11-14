@@ -36,6 +36,7 @@ import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import timber.log.Timber
 
 class FavoriteWidget : GlanceAppWidget() {
 
@@ -79,7 +80,9 @@ class FavoriteWidget : GlanceAppWidget() {
         entryPoint.favoriteRepository().favorites.first().take(MAX_ITEMS)
     } catch (e: CancellationException) {
         throw e
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        // 読み込み失敗でもウィジェットは空表示で描画を続ける（描画自体を失敗させない）。原因はログに残す。
+        Timber.tag("FavoriteWidget").w(e, "Failed to load favorites for the widget")
         emptyList()
     }
 

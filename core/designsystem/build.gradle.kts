@@ -18,7 +18,7 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(libs.coil.compose)
-    implementation(project(":core:tutorial"))
+    api(project(":core:tutorial"))
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     api(libs.compose.ui.graphics)

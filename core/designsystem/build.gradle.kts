@@ -27,6 +27,6 @@ dependencies {
     api(libs.browser)
     debugApi(libs.compose.ui.tooling)
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
 }

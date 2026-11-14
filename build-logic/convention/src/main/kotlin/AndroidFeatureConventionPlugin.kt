@@ -37,7 +37,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("timber").get())
 
                 // テスト共通
-                add("testImplementation", "junit:junit:4.13.2")
+                add("testImplementation", libs.findLibrary("junit").get())
                 add("testImplementation", libs.findLibrary("turbine").get())
                 add("testImplementation", libs.findLibrary("coroutines-test").get())
             }

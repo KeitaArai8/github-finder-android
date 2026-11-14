@@ -14,7 +14,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.timber)
     implementation(libs.datastore.preferences)
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.retrofit)
 }

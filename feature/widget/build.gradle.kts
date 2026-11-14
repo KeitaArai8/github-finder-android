@@ -16,6 +16,6 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(project(":core:testing"))
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
 }

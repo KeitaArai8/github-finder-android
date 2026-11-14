@@ -17,6 +17,6 @@ dependencies {
     implementation(project(":core:model"))
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
 }

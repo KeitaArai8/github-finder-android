@@ -18,5 +18,5 @@ dependencies {
 
     // MainDispatcherRule のシグネチャ（TestDispatcher / TestWatcher）が公開 API に現れるため api で公開する
     api(libs.coroutines.test)
-    api("junit:junit:4.13.2")
+    api(libs.junit)
 }

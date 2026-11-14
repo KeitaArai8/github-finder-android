@@ -79,9 +79,12 @@ Closes #42
 新規ファイル追加時は以下の依存方向を守ってください:
 
 ```
-:app → :feature:* → :core:data → :core:{model, network, database}
-                 → :core:designsystem
-:feature:widget → :core:model, :core:data
+:app → :feature:{search, favorite, settings, widget}
+     → :core:{data, network, database, designsystem, model}
+:feature:* → :core:data, :core:designsystem, :core:model
+:core:data → :core:{network, database, model}
+:core:{network, database, designsystem} → :core:model
+:core:testing → :core:{data, model}   （テスト専用。各モジュールは testImplementation でのみ参照）
 ```
 
 - `:feature:*` 間は**相互参照しない**
@@ -92,7 +95,7 @@ Closes #42
 
 - ViewModel を変更する場合は **対応するテストを必ず追加・更新**
 - Data 層（Repository / DataSource）変更時も同様
-- **Fake 注入** パターンで Hilt を bypass（テスト用 Fake クラスは各モジュールの `src/test/` 配下）
+- **Fake 注入** パターンで Hilt を bypass。複数モジュールで使う Fake（`FakeFavoriteRepository` 等）は `:core:testing` に置き、そのモジュールだけで使う Fake は各モジュールの `src/test/` 配下に置く
 - AAA パターン（`// Arrange:` / `// Act:` / `// Assert:`）のコメントを各テストに明記
 
 ### テスト実行

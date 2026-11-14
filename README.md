@@ -4,18 +4,18 @@ GitHubのリポジトリをキーワードで検索し、お気に入りに保�
 
 ## 技術スタック
 
-| 項目 | 選定 |
-|------|------|
-| UI | Jetpack Compose |
-| 状態管理 | ViewModel + StateFlow (UDF 単一状態) |
-| DI | Hilt |
-| 永続化 | Room |
-| ネットワーク | Retrofit + kotlinx.serialization |
-| ナビゲーション | Navigation 3（NavDisplay + NavKey） |
-| Widget | Glance + Material3 for Glance |
-| テスト | JUnit4 + Turbine + Compose UI Tests |
-| SDK | minSdk 26 (Android 8.0) / targetSdk 36 (Android 16) / compileSdk 37 |
-| デザイン | Material 3 |
+| 項目 | 選定 | 採用理由 |
+|------|------|---------|
+| UI | Jetpack Compose | Android 公式の宣言的 UI。Now in Android 採用 |
+| 状態管理 | ViewModel + StateFlow (UDF 単一状態) | 公式アーキテクチャガイドの推奨構成。Now in Android 採用 |
+| DI | Hilt | 公式推奨の DI。Now in Android 採用 |
+| 永続化 | Room | Jetpack 公式。Now in Android 採用 |
+| ネットワーク | Retrofit + kotlinx.serialization | Android のデファクト OSS。Now in Android 採用 |
+| ナビゲーション | Navigation 3（NavDisplay + NavKey） | Jetpack 公式の Compose 向け新ナビゲーション |
+| Widget | Glance + Material3 for Glance | Jetpack 公式の Compose 風 Widget API |
+| テスト | JUnit4 + Turbine + Compose UI Tests | JUnit4 / Compose UI Tests は公式、Turbine は Flow テストのデファクト（Now in Android 採用） |
+| SDK | minSdk 26 (Android 8.0) / targetSdk 36 (Android 16) / compileSdk 37 | 公式ガイドの最新 API 追従方針 |
+| デザイン | Material 3 | Android 公式デザインシステム |
 
 ## アーキテクチャ
 

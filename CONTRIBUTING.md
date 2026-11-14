@@ -66,8 +66,7 @@ Closes #42
 
 - **Kotlin 公式コーディング規約** に準拠
 - `./gradlew lint` で新規 warning を発生させない
-- 1関数は **25 行以内**を目安に
-- 引数 3 つ以上は**1 引数ごとに改行**
+- 整形は Spotless + ktlint（`.editorconfig`）が決める。コミット前に `./gradlew spotlessApply` を実行し、CI は `./gradlew spotlessCheck` で検査する
 - `guard`的な早期 return を優先
 - **Composable 内でビジネスロジックを書かない**（Stateless Composable 原則）
 - 各 Screen の状態は **単一 `sealed interface UiState`** に集約

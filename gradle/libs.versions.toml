@@ -21,6 +21,8 @@ activity-compose = "1.13.0"
 glance = "1.2.0"
 timber = "5.0.1"
 datastore = "1.3.0"
+spotless = "8.11.0"
+ktlint = "1.8.0"
 # build-logic から Gradle Plugin の API を compileOnly で取り込むためのバージョン参照
 android-gradle-plugin = "9.4.1"
 ksp-gradle-plugin = "2.3.12"
@@ -78,6 +80,7 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 # Convention Plugin（build-logic/convention 内で実装）
 githubfinder-android-application = { id = "githubfinder.android.application" }

@@ -36,12 +36,15 @@ class SearchScreenTest {
 
     @Test
     fun 初期表示でEmptyStateのdescriptionが見える() {
+        // Arrange: Fake のみの ViewModel で SearchRoute を表示（未入力の初期状態）
         val viewModel = makeViewModel()
-
         composeTestRule.setContent {
             SearchRoute(viewModel = viewModel)
         }
 
+        // Act: 操作なし（初期表示のみ）
+
+        // Assert: 「キーワードを入力して」を含む EmptyState の説明文が見える
         composeTestRule
             .onNode(
                 androidx.compose.ui.test.hasText("キーワードを入力して", substring = true),
@@ -51,6 +54,7 @@ class SearchScreenTest {
 
     @Test
     fun クエリ入力後にリポジトリ行が表示される() {
+        // Arrange: 1 件ヒットする Fake 検索結果で SearchRoute を表示
         val repo = RepositoryEntity(
             id = 1,
             fullName = "kotlin/kotlinx.coroutines",
@@ -70,20 +74,22 @@ class SearchScreenTest {
             SearchRoute(viewModel = viewModel)
         }
 
+        // Act: 検索欄に "kotlin" を入力し、debounce 500ms + search 完了を待機
         composeTestRule.onNode(hasSetTextAction()).performTextInput("kotlin")
-
-        // debounce 500ms + search 完了を待機
         composeTestRule.waitUntil(timeoutMillis = 3000) {
             composeTestRule
                 .onAllNodesWithText("kotlin/kotlinx.coroutines")
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+
+        // Assert: ヒットしたリポジトリ名の行が表示される
         composeTestRule.onNodeWithText("kotlin/kotlinx.coroutines").assertIsDisplayed()
     }
 
     @Test
     fun クリアボタンでIdle状態に戻る() {
+        // Arrange: 1 件ヒットする Fake 検索結果で SearchRoute を表示し、検索済み（Loaded）状態にする
         val repo = RepositoryEntity(
             id = 1,
             fullName = "kotlin/kotlinx.coroutines",
@@ -103,7 +109,6 @@ class SearchScreenTest {
             SearchRoute(viewModel = viewModel)
         }
 
-        // 検索を実行して Loaded 状態まで遷移させる
         composeTestRule.onNode(hasSetTextAction()).performTextInput("kotlin")
         composeTestRule.waitUntil(timeoutMillis = 3000) {
             composeTestRule
@@ -112,9 +117,10 @@ class SearchScreenTest {
                 .isNotEmpty()
         }
 
-        // クリアボタンタップで Idle に戻る
+        // Act: クリアボタンをタップ
         composeTestRule.onNodeWithContentDescription("クリア").performClick()
 
+        // Assert: Idle 状態の EmptyState 説明文が再び表示される
         composeTestRule.waitUntil(timeoutMillis = 3000) {
             composeTestRule
                 .onAllNodesWithText("キーワードを入力して", substring = true)

@@ -1,8 +1,8 @@
 package com.example.githubfinder.feature.widget
 
 import com.example.githubfinder.core.data.FavoriteStore
-import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
+import com.example.githubfinder.core.testing.testFavorite
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -26,15 +26,7 @@ class FavoriteWidgetUpdaterTest {
 
     private fun TestScope.newScope(): CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).also { scopes += it }
 
-    private val addedFavorite = FavoriteEntity(
-        id = 1,
-        fullName = "owner/repo",
-        description = null,
-        starCount = 1,
-        language = null,
-        ownerAvatarURL = null,
-        savedAt = 0L,
-    )
+    private val addedFavorite = testFavorite(id = 1, starCount = 1)
 
     @Test
     fun `お気に入りが変わるたびにウィジェットが更新される`() = runTest {

@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.testing.testFavorite
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -36,8 +37,6 @@ class FavoriteStoreTest {
         scopes.forEach { it.cancel() }
     }
 
-    private fun favorite(id: Int) = FavoriteEntity(id, "owner/repo$id", null, 1, null, null, 0L)
-
     @Test
     fun `Roomの最初のemissionが届くまでfavoritesはnullでfavoriteIDsは空集合`() = runTest {
         // Arrange: まだ何も emit していない Flow を持つ Repository
@@ -50,7 +49,7 @@ class FavoriteStoreTest {
         assertEquals(emptySet<Int>(), store.favoriteIDs.value)
 
         // Act: 最初の emission として id=3 のお気に入りが届く
-        source.emit(listOf(favorite(3)))
+        source.emit(listOf(testFavorite(3)))
 
         // Assert: null が解消され、ID 集合にも反映される
         assertEquals(listOf(3), store.favorites.value?.map { it.id })
@@ -72,7 +71,7 @@ class FavoriteStoreTest {
     }
 
     @Test
-    fun `favoritesとfavoriteIDsは変更のたびに順番どおり流れ同じ内容の再emissionは流れない`() = runTest {
+    fun `favoritesは変更のたびに順番どおり流れ同じ内容の再emissionは流れない`() = runTest {
         // Arrange: 手動で emit できる Flow を持つ Repository と、最初の emission 前のストア
         val source = MutableSharedFlow<List<FavoriteEntity>>()
         val store = FavoriteStore(StubRepository(source), newScope())
@@ -82,22 +81,30 @@ class FavoriteStoreTest {
             assertNull(awaitItem())
 
             // Act: 1 件 → 同じ 1 件（内容が同一）→ 2 件 の順に Room が emit する
-            source.emit(listOf(favorite(1)))
-            source.emit(listOf(favorite(1)))
-            source.emit(listOf(favorite(1), favorite(2)))
+            source.emit(listOf(testFavorite(1)))
+            source.emit(listOf(testFavorite(1)))
+            source.emit(listOf(testFavorite(1), testFavorite(2)))
 
             // Assert: 内容が同一の再 emission は distinctUntilChanged で落ち、変化した 2 件だけが順に流れる
             assertEquals(listOf(1), awaitItem()?.map { it.id })
             assertEquals(listOf(1, 2), awaitItem()?.map { it.id })
             expectNoEvents()
         }
+    }
+
+    @Test
+    fun `favoriteIDsは購読前の最新値から始まり変更に追従する`() = runTest {
+        // Arrange: Eagerly 購読のため、テスト側の購読前に emit した値もストアが保持している
+        val source = MutableSharedFlow<List<FavoriteEntity>>()
+        val store = FavoriteStore(StubRepository(source), newScope())
+        source.emit(listOf(testFavorite(1), testFavorite(2)))
 
         store.favoriteIDs.test {
             // Assert: 購読開始時点の ID 集合は最新の {1, 2}
             assertEquals(setOf(1, 2), awaitItem())
 
             // Act: 1 件に減る
-            source.emit(listOf(favorite(2)))
+            source.emit(listOf(testFavorite(2)))
 
             // Assert: ID 集合も追従する
             assertEquals(setOf(2), awaitItem())

@@ -14,6 +14,7 @@ import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
 import com.example.githubfinder.core.testing.FakeSearchRepository
 import com.example.githubfinder.core.testing.MainDispatcherRule
+import com.example.githubfinder.core.testing.testFavorite
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -267,7 +268,7 @@ class SearchViewModelTest {
             SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         fakeFavoriteRepository.stored = listOf(
-            FavoriteEntity(
+            testFavorite(
                 id = 42,
                 fullName = "owner/repo",
                 description = null,

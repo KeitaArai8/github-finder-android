@@ -35,13 +35,13 @@ jobs:
         run: ./gradlew spotlessCheck --stacktrace
 
       - name: Unit Tests
-        run: ./gradlew test --stacktrace
+        run: ./gradlew test -PwarningsAsErrors=true --stacktrace
 
       - name: Lint
-        run: ./gradlew lint --stacktrace
+        run: ./gradlew lint -PwarningsAsErrors=true --stacktrace
 
       - name: Assemble Debug
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug -PwarningsAsErrors=true --stacktrace
 
       - name: Upload Test Reports
         if: always()

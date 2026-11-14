@@ -258,11 +258,11 @@ class FavoriteViewModelTest {
         assertEquals(42, messages[0].undoID)
         assertEquals(
             UiText.Resource(R.string.favorite_deleted_with_name, listOf("owner/repo")),
-            messages[0].text,
+            messages[0].message.text,
         )
 
         // Act: View が表示し終えたことを通知
-        viewModel.userMessageShown(messages[0].id)
+        viewModel.userMessageShown(messages[0].message.id)
 
         // Assert: キューが空になる
         assertTrue(viewModel.userMessages.value.isEmpty())
@@ -409,7 +409,7 @@ class FavoriteViewModelTest {
                 UiText.Resource(R.string.favorite_deleted_with_name, listOf("owner/repo")),
                 UiText.Resource(R.string.favorite_error_delete),
             ),
-            viewModel.userMessages.value.map { it.text },
+            viewModel.userMessages.value.map { it.message.text },
         )
     }
 
@@ -621,7 +621,7 @@ class FavoriteViewModelTest {
         // 一括削除成功の確認通知が積まれている
         assertEquals(
             listOf(UiText.Resource(R.string.favorite_bulk_deleted, listOf(2))),
-            viewModel.userMessages.value.map { it.text },
+            viewModel.userMessages.value.map { it.message.text },
         )
     }
 

@@ -54,6 +54,7 @@ import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.RepositoryListItem
+import com.example.githubfinder.core.designsystem.UserMessage
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
 import com.example.githubfinder.core.designsystem.shareRepository

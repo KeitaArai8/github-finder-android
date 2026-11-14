@@ -3,7 +3,7 @@
  * お気に入り一覧の状態管理を担当するViewModel。UDF単一状態原則に従い、
  * FavoriteUiState 1つに全状態（フェーズ・リフレッシュ・編集モード・選択）を集約する。
  *
- * 一度きりの通知（SnackBar 表示等）は userMessages（StateFlow<List<UserMessage>>）に積み、
+ * 一度きりの通知（SnackBar 表示等）は userMessages（StateFlow<List<FavoriteUserMessage>>）に積み、
  * View が表示し終えたら userMessageShown(id) で消す（公式ガイドの UI イベント → State 化パターン）。
  * 削除の Undo 猶予タイマーと実削除の commit も ViewModel が持つ（View の寿命に依存させない）。
  * ViewModel が破棄される時は、猶予中の削除を onCleared でアプリ寿命スコープから即 commit する。
@@ -16,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
 import com.example.githubfinder.core.designsystem.UiText
+import com.example.githubfinder.core.designsystem.UserMessage
 import com.example.githubfinder.core.model.FavoriteEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -49,8 +50,8 @@ class FavoriteViewModel @Inject constructor(
      * uiState とは別の StateFlow にしている: 通知はどのフェーズでも発生し得る（一括削除成功と Empty 遷移が同時など）ため。
      * View が表示し終えたら [userMessageShown] で取り除く。
      */
-    private val _userMessages = MutableStateFlow<List<UserMessage>>(emptyList())
-    val userMessages: StateFlow<List<UserMessage>> = _userMessages.asStateFlow()
+    private val _userMessages = MutableStateFlow<List<FavoriteUserMessage>>(emptyList())
+    val userMessages: StateFlow<List<FavoriteUserMessage>> = _userMessages.asStateFlow()
 
     private var nextMessageID = 0L
 
@@ -82,7 +83,7 @@ class FavoriteViewModel @Inject constructor(
      * スワイプ削除のエントリーポイント（Gmail スタイル楽観的更新）。
      *
      * 1. pendingDeleteIDs に追加 → UI から即座に行が消える（displayedFavorites から除外）
-     * 2. undoID 付きの UserMessage を積む → SnackBar に「元に戻す」を表示
+     * 2. undoID 付きの FavoriteUserMessage を積む → SnackBar に「元に戻す」を表示
      * 3. [UNDO_WINDOW_MS] の猶予タイマーを ViewModel のスコープで開始し、経過したら [commitDelete]。
      *    猶予中に ViewModel が破棄される場合（タブ切替で back stack から外れる等）は [onCleared] が残りを即 commit する
      * 4. View で「元に戻す」が押されたら [undoDelete] がタイマーをキャンセルして行を復元
@@ -143,11 +144,11 @@ class FavoriteViewModel @Inject constructor(
 
     /** View が通知を表示し終えたら呼ぶ。該当 ID の通知をキューから取り除く。 */
     fun userMessageShown(id: Long) {
-        _userMessages.update { messages -> messages.filterNot { it.id == id } }
+        _userMessages.update { messages -> messages.filterNot { it.message.id == id } }
     }
 
     private fun enqueueMessage(text: UiText, undoID: Int? = null) {
-        _userMessages.update { it + UserMessage(id = nextMessageID++, text = text, undoID = undoID) }
+        _userMessages.update { it + FavoriteUserMessage(UserMessage(id = nextMessageID++, text = text), undoID) }
     }
 
     fun setSortKey(key: FavoriteSortKey) {

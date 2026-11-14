@@ -105,7 +105,7 @@ fun FavoriteRoute(
 @Composable
 fun FavoriteScreen(
     uiState: FavoriteUiState,
-    userMessages: List<UserMessage>,
+    userMessages: List<FavoriteUserMessage>,
     isDeletePending: (Int) -> Boolean,
     onUserMessageShown: (Long) -> Unit,
     onUndoDelete: (Int) -> Unit,
@@ -130,13 +130,13 @@ fun FavoriteScreen(
     // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
     val currentMessage = userMessages.firstOrNull()
     // LaunchedEffect 内は Composable でないため、文字列化は外で済ませてから渡す
-    val messageText = currentMessage?.text?.asString()
-    LaunchedEffect(currentMessage?.id) {
+    val messageText = currentMessage?.message?.text?.asString()
+    LaunchedEffect(currentMessage?.message?.id) {
         val message = currentMessage ?: return@LaunchedEffect
         if (messageText == null) return@LaunchedEffect
         // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
         if (message.undoID != null && !isDeletePending(message.undoID)) {
-            onUserMessageShown(message.id)
+            onUserMessageShown(message.message.id)
             return@LaunchedEffect
         }
         if (message.undoID != null) {
@@ -151,7 +151,7 @@ fun FavoriteScreen(
         } else {
             snackBarHostState.showSnackbar(messageText)
         }
-        onUserMessageShown(message.id)
+        onUserMessageShown(message.message.id)
     }
 
     Scaffold(

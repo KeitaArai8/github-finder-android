@@ -5,7 +5,7 @@
  * Loaded 内には sortKey / filterLanguage を保持し、表示用の displayedFavorites / availableLanguages は
  * ViewModel が入力の変化時に計算して Loaded に載せる（アクセスのたびに再ソートしない）。
  *
- * 一度きりの通知（SnackBar 表示）は uiState とは別の userMessages（UserMessage のキュー）として
+ * 一度きりの通知（SnackBar 表示）は uiState とは別の userMessages（FavoriteUserMessage のキュー）として
  * ViewModel が保持し、View が表示し終えたら userMessageShown(id) で消す。
  */
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 以下のフルバックアップ対象から Room DB を除外する設定。
+  お気に入りリポジトリ情報はユーザーの行動ログに相当するため、
+  ADB経由で吸い出されたり別アカウントのクラウドに復元されることを防ぐ。
+-->
+<full-backup-content>
+    <exclude domain="database" path="github_finder.db" />
+    <exclude domain="database" path="github_finder.db-shm" />
+    <exclude domain="database" path="github_finder.db-wal" />
+</full-backup-content>

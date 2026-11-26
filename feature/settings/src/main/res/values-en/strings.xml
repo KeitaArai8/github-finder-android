@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_tab_title">Settings</string>
+    <string name="settings_section_legal">Legal</string>
+    <string name="settings_section_app">App Info</string>
+    <string name="settings_privacy_policy">Privacy Policy</string>
+    <string name="settings_terms_of_service">Terms of Service</string>
+    <string name="settings_version">Version</string>
+</resources>

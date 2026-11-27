@@ -1,7 +1,7 @@
 /*
  * Abstract:
  * お気に入り一覧画面の集約UI状態。UDF単一状態原則に従い、
- * フェーズ・リフレッシュ状態を1つのsealed interfaceに統合する。
+ * フェーズと画面の操作状態を1つのsealed interfaceに統合する。
  * Loaded 内には sortKey / filterLanguage を保持し、表示用の displayedFavorites / availableLanguages は
  * ViewModel が FavoriteStore.favorites と画面の操作状態から uiState を導出するときに計算して載せる。
  *
@@ -26,7 +26,6 @@ sealed interface FavoriteUiState {
 
     data class Loaded(
         val favorites: List<Favorite>,
-        val isRefreshing: Boolean = false,
         val isEditMode: Boolean = false,
         val selectedIDs: Set<Int> = emptySet(),
         val isDeleteConfirmationShown: Boolean = false,

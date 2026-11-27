@@ -32,11 +32,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.OfflineBanner
@@ -50,7 +47,7 @@ import com.example.githubfinder.feature.tutorial.CoachMarkManager
 import com.example.githubfinder.feature.tutorial.TutorialScreen
 import kotlinx.serialization.Serializable
 
-/** 各タブの back stack キー。`rememberNavBackStack` がプロセス死後の復元でシリアライズする。 */
+/** 各タブのキー。`rememberNavBackStack` がプロセス死後の復元でシリアライズする。 */
 @Serializable
 data object SearchKey : NavKey
 
@@ -118,20 +115,10 @@ fun MainNavigation(
 
 @Composable
 private fun MainScaffold(modifier: Modifier = Modifier) {
-    val backStack = rememberNavBackStack(SearchKey)
-
-    // NiA の goToTopLevel と同じ規則: 検索（start）は stack をリセットし、他タブは末尾へ移動する。
-    // 検索は常に root なので、タブ切替をまたいで検索結果が保持される。
-    fun select(key: NavKey) {
-        if (backStack.lastOrNull() == key) return
-        if (key == SearchKey) {
-            // 開始タブ: Search だけを残して他を取り除く（Search は常に root）
-            backStack.removeAll { it != SearchKey }
-        } else {
-            backStack.remove(key)
-            backStack.add(key)
-        }
-    }
+    val navigationState = rememberNavigationState(
+        startKey = SearchKey,
+        topLevelKeys = TopLevelRoute.entries.map { it.key }.toSet(),
+    )
 
     // 画面幅に応じて NavigationBar（compact）/ NavigationRail（medium 以上）を自動で切り替える。
     // スイート自身がナビゲーション要素の inset を処理するため、別途 Scaffold の padding は持たない。
@@ -145,24 +132,42 @@ private fun MainScaffold(modifier: Modifier = Modifier) {
                 item(
                     icon = { Icon(route.icon, contentDescription = stringResource(route.labelRes)) },
                     label = { Text(stringResource(route.labelRes)) },
-                    selected = backStack.lastOrNull() == route.key,
-                    onClick = { select(route.key) },
+                    selected = navigationState.currentTopLevelKey == route.key,
+                    onClick = { navigationState.selectTopLevel(route.key) },
                 )
             }
         },
     ) {
-        // システム Back は stack の履歴を辿る（Search → Favorite → Settings なら Favorite → Search → 終了）。
+        // システム Back はタブの履歴を辿る（Search → Favorite → Settings なら Favorite → Search → 終了）。
+        // entry が開始タブ 1 つだけのときは NavDisplay が Back を処理せず、アプリが終了する。
         NavDisplay(
-            backStack = backStack,
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
+            entries = navigationState.toEntries(
+                entryProvider {
+                    entry<SearchKey> { SearchRoute() }
+                    entry<FavoriteKey> { FavoriteRoute() }
+                    entry<SettingsKey> { SettingsScreen() }
+                },
             ),
-            entryProvider = entryProvider {
-                entry<SearchKey> { SearchRoute() }
-                entry<FavoriteKey> { FavoriteRoute() }
-                entry<SettingsKey> { SettingsScreen() }
-            },
+            onBack = { navigationState.goBack() },
         )
     }
+}
+
+/**
+ * タブを選ぶ。NiA の goToTopLevel と同じ規則: 開始タブは履歴を開始タブだけに戻し、他のタブは履歴の末尾へ移す。
+ * 表示中のタブを選び直しても何もしない。どちらの場合もタブごとの stack には触れないので、タブの状態は残る。
+ */
+private fun NavigationState.selectTopLevel(key: NavKey) {
+    if (key == currentTopLevelKey) return
+    if (key == startKey) {
+        topLevelStack.clear()
+    } else {
+        topLevelStack.remove(key)
+    }
+    topLevelStack.add(key)
+}
+
+/** システム Back: タブの履歴を 1 つ戻す。開始タブだけのときは何もしない（終了はシステムに任せる）。 */
+private fun NavigationState.goBack() {
+    if (topLevelStack.size > 1) topLevelStack.removeLastOrNull()
 }

@@ -618,6 +618,93 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `一覧を表示中のonRefreshは通信中も一覧を出したままisRefreshingだけをtrueにする`() = runTest {
+        // Arrange: "kotlin" で検索済み（Loaded）にしてから、次の検索が通信中のまま止まるようにする
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+
+        // Act: プル・トゥ・リフレッシュし、通信中の状態まで進める
+        viewModel.onRefresh()
+        runCurrent()
+
+        // Assert: Loading には切り替わらず、同じ一覧を出したまま isRefreshing = true
+        val refreshing = viewModel.uiState.value as SearchUiState.Loaded
+        assertEquals(listOf("owner/repo"), refreshing.items.map { it.fullName })
+        assertEquals(true, refreshing.isRefreshing)
+
+        // Act: 通信を完了させる
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Assert: isRefreshing が false に戻る
+        assertEquals(false, (viewModel.uiState.value as SearchUiState.Loaded).isRefreshing)
+    }
+
+    @Test
+    fun `一覧を表示中のonRefreshが失敗しても一覧は残りuserMessagesへ通知が積まれる`() = runTest {
+        // Arrange: "kotlin" で検索済み（Loaded）にしてから、次の検索をネットワークエラーにする
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
+        )
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+        fakeSearchRepository.searchResult = Result.failure(AppError.Network)
+
+        // Act: プル・トゥ・リフレッシュ
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // Assert: Error には切り替わらず一覧が残り、isRefreshing は false、error_network の通知が 1 件積まれる
+        val state = viewModel.uiState.value as SearchUiState.Loaded
+        assertEquals(listOf("owner/repo"), state.items.map { it.fullName })
+        assertEquals(false, state.isRefreshing)
+        assertEquals(
+            listOf<UiText>(UiText.Resource(UiR.string.error_network)),
+            viewModel.userMessages.value.map { it.text },
+        )
+    }
+
+    @Test
+    fun `Error表示中のonRefreshはLoadingを経て再検索する`() = runTest {
+        // Arrange: 検索を失敗させて Error を表示し、再試行は成功するが通信中のまま止まるようにする
+        fakeSearchRepository.searchResult = Result.failure(AppError.Network)
+        val viewModel = createViewModel()
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is SearchUiState.Error)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
+        )
+        val gate = CompletableDeferred<Unit>()
+        fakeSearchRepository.searchGate = gate
+
+        // Act: ErrorView の再試行（onRefresh）を押し、通信中の状態まで進める
+        viewModel.onRefresh()
+        runCurrent()
+
+        // Assert: 出したままにする一覧が無いので Loading を表示する
+        assertTrue(viewModel.uiState.value is SearchUiState.Loading)
+
+        // Act: 通信を完了させる
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Assert: Loaded になり、通知は積まれない
+        assertTrue(viewModel.uiState.value is SearchUiState.Loaded)
+        assertTrue(viewModel.userMessages.value.isEmpty())
+    }
+
+    @Test
     fun `通常の検索はrefreshなしでonRefreshだけがrefreshありでリポジトリを呼ぶ`() = runTest {
         // Arrange: 1 ページ目に次ページがある検索結果を返す Fake
         val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)

@@ -4,13 +4,10 @@
  * Compose BOM と主要 Compose 依存ライブラリを統一注入する。
  */
 
-import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
-internal fun Project.configureAndroidCompose(
-    @Suppress("UNUSED_PARAMETER") commonExtension: CommonExtension,
-) {
+internal fun Project.configureAndroidCompose() {
     val bom = libs.findLibrary("compose-bom").get()
     val ui = libs.findLibrary("compose-ui").get()
     val uiGraphics = libs.findLibrary("compose-ui-graphics").get()

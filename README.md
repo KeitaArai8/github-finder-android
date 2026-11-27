@@ -76,7 +76,7 @@ sealed interface SearchUiState {
 }
 ```
 
-`Loaded` の中に `isEditMode`・`selectedIDs` などサブ状態を持たせることで、**Loaded 状態内の状態変化**もデータクラス1つで構造化しています。
+`Loaded` の中に `isLoadingMore`・`isRefreshing` などのサブ状態を持たせることで、**Loaded 状態内の状態変化**もデータクラス1つで構造化しています（お気に入り画面の `FavoriteUiState.Loaded` は、同じ形で `isEditMode`・`selectedIDs` などを持ちます）。
 
 ### 一度きりの通知も State として持つ（userMessages + userMessageShown）
 
@@ -101,16 +101,15 @@ class SearchViewModel : ViewModel() {
     }
 }
 
-// Composable 側: 長寿命の単一 LaunchedEffect で先頭を 1 件ずつ表示 → 表示後に消す
-LaunchedEffect(Unit) {
-    viewModel.userMessages
-        .map { it.firstOrNull() }
-        .distinctUntilChanged()
-        .filterNotNull()
-        .collect { message ->
-            snackBarHostState.showSnackbar(message.text)  // Material 3 公式 API のため命名そのまま
-            viewModel.userMessageShown(message.id)
-        }
+// Composable 側（SearchScreen）: キューの先頭を 1 件ずつ表示 → 表示後に消す。
+// 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れない
+val currentMessage = userMessages.firstOrNull()
+val messageText = currentMessage?.text?.asString()  // 文字列化は Composable の中で済ませる
+LaunchedEffect(currentMessage?.id) {
+    if (currentMessage != null && messageText != null) {
+        snackBarHostState.showSnackbar(messageText)  // Material 3 公式 API のため命名そのまま
+        onUserMessageShown(currentMessage.id)
+    }
 }
 ```
 
@@ -118,7 +117,7 @@ LaunchedEffect(Unit) {
 
 **注意点（回転時の挙動）**: 表示が完了していない通知は、画面回転後に再表示されます（`userMessageShown` が呼ばれるまで State に残るため。配信が保証される代わりに、回転で再表示されない性質は持ちません）。
 
-**Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します（Room への書き込みは `@ApplicationScope` で実行し、書き込み中に ViewModel が破棄されても中断されません）。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。また、猶予中に ViewModel が破棄された場合（タブ切替で back stack から外れるなど）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
+**Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します（Room への書き込みは `@ApplicationScope` で実行し、書き込み中に ViewModel が破棄されても中断されません）。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。タブを切り替えても ViewModel は破棄されないので（タブごとに back stack を持つため）、猶予タイマーはそのまま進んで実削除を確定します。猶予中に ViewModel が破棄された場合（Activity の終了など）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
 
 ### combine + stateIn によるリアクティブ State 合成（SearchViewModel）
 
@@ -223,7 +222,7 @@ dependencies {
 :feature:search / :feature:favorite / :feature:tutorial
 └── :core:data
 
-:feature:widget          （library + hilt の Convention のみ。:core:designsystem / :core:ui には依存しない）
+:feature:widget          （library + hilt の Convention と、Glance の @Composable 用の Compose Compiler plugin。:core:designsystem / :core:ui には依存しない）
 ├── :core:model
 └── :core:data
 
@@ -426,7 +425,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 ```
 @Module NetworkModule
 ├── Json (kotlinx.serialization)
-├── OkHttpClient
+├── Call.Factory（実体は OkHttpClient。Retrofit は dagger.Lazy 越しに受け、構築を初回リクエストまで遅らせる）
 ├── Retrofit
 └── GitHubApiService
 
@@ -474,7 +473,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | **シェア** | `Intent.ACTION_SEND` の Chooser で GitHub URL をシェア（検索/お気に入り両画面の行に Share IconButton） |
 | **一括選択削除** | 編集モードで複数選択 → AlertDialog 確認 → 一括削除 |
 | メモリキャッシュ | 検索結果をアプリ起動中キャッシュ（上限 50 エントリ） |
-| プルリフレッシュ | 検索・お気に入り両画面（`PullToRefreshBox`）。検索はキャッシュを読まずに再取得する |
+| プルリフレッシュ | 検索画面（`PullToRefreshBox`）。一覧を表示したままキャッシュを読まずに再取得し、失敗したら一覧を残して SnackBar で伝える。お気に入り画面は Room の変更が自動で届くため持たない |
 | **オフライン検知** | `ConnectivityManager` を `Flow<Boolean>` で公開、切断時に画面上部にバナー表示 |
 | **アダプティブナビゲーション** | `NavigationSuiteScaffold` で画面幅に応じて切り替え（compact は `NavigationBar`、medium 以上は `NavigationRail`）。キーボード表示時はナビゲーション要素ごとキーボードの上に載る |
 | **予測型「戻る」** | `enableOnBackInvokedCallback`（targetSdk 36 では既定で有効）。Navigation 3 の `NavDisplay` が戻るジェスチャーのプレビューアニメーションを提供 |
@@ -519,12 +518,12 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 
 ## テスト
 
-### Unit Tests（JUnit4 + Turbine + StandardTestDispatcher）
+### Unit Tests（JUnit4 + Turbine + kotlinx-coroutines-test）
 
 | モジュール | テストファイル | 件数 |
 |---|---|---|
-| `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 31 |
-| `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 42 |
+| `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 34 |
+| `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 41 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
 | `:feature:tutorial` | CoachMarkManagerTest | 5 |
 | `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, SearchHistoryRepositoryImplTest, TutorialRepositoryImplTest, NetworkStatusRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, GitHubRepoTest | 35 |
@@ -534,7 +533,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | `:core:datastore` | SearchHistoryLocalDataSourceTest（保存形式の固定を含む）, TutorialLocalDataSourceTest | 12 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 
-合計 145 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryRepository` / `FakeFavoriteDao` / `FakeGitHubApiService`）・`MainDispatcherRule`・`TestData.kt` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
+合計 147 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryRepository` / `FakeFavoriteDao` / `FakeGitHubApiService`）・`MainDispatcherRule`・`TestData.kt` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 
@@ -544,7 +543,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 
 - `FakeGitHubApiService`（GitHubApiService interface の Fake）で `HttpException` / `IOException` を発生させ、エラーマッピングを検証
 - `FakeFavoriteDao`（in-memory のリスト）で Room 実装を bypass したハーメティックなテスト
-- `StandardTestDispatcher` + `advanceUntilIdle()` で Coroutine の完了を決定論的に待機
+- SearchViewModelTest / FavoriteViewModelTest は `MainDispatcherRule(StandardTestDispatcher())` + `advanceUntilIdle()` で、debounce や Undo 猶予などの時間経過を決定論的に進める（`MainDispatcherRule` の既定は `UnconfinedTestDispatcher` で、MainViewModelTest は既定のまま使う）
 - `// Arrange:` / `// Act:` / `// Assert:` の AAA コメント必須
 
 ## セットアップ

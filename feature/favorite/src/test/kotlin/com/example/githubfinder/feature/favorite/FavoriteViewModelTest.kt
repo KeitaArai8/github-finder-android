@@ -348,7 +348,7 @@ class FavoriteViewModelTest {
         runCurrent()
         assertEquals(0, fakeFavoriteRepository.removeCallCount)
 
-        // Act: タブ切替相当で ViewModel を破棄し、アプリ寿命スコープの処理まで進める（猶予時間は進めない）
+        // Act: ViewModel を破棄し、アプリ寿命スコープの処理まで進める（猶予時間は進めない）
         viewModelStore.clear()
         advanceUntilIdle()
 
@@ -962,23 +962,6 @@ class FavoriteViewModelTest {
         val state = viewModel.uiState.value as FavoriteUiState.Loaded
         assertTrue(state.pendingDeleteIDs.isEmpty())
         assertEquals(listOf(2), state.favorites.map { it.id })
-    }
-
-    @Test
-    fun `refreshはisRefreshingを閉じて一覧を維持する`() = runTest {
-        // Arrange: 1件を表示中
-        fakeFavoriteRepository.stored = listOf(testFavorite(fullName = "owner/repo1", starCount = 10))
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act: プル・トゥ・リフレッシュ
-        viewModel.refresh()
-        advanceUntilIdle()
-
-        // Assert: スピナーは閉じ、一覧は同じ 1 件のまま
-        val state = viewModel.uiState.value as FavoriteUiState.Loaded
-        assertFalse(state.isRefreshing)
-        assertEquals(listOf(1), state.displayedFavorites.map { it.id })
     }
 
     @Test

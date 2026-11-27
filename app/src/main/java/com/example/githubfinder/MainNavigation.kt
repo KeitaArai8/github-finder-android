@@ -40,14 +40,14 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.OfflineBanner
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.feature.favorite.FavoriteRoute
 import com.example.githubfinder.feature.favorite.R as favoriteR
 import com.example.githubfinder.feature.search.R as searchR
 import com.example.githubfinder.feature.search.SearchRoute
 import com.example.githubfinder.feature.settings.R as settingsR
 import com.example.githubfinder.feature.settings.SettingsScreen
-import com.example.githubfinder.tutorial.TutorialScreen
+import com.example.githubfinder.feature.tutorial.CoachMarkManager
+import com.example.githubfinder.feature.tutorial.TutorialScreen
 import kotlinx.serialization.Serializable
 
 /** 各タブの back stack キー。`rememberNavBackStack` がプロセス死後の復元でシリアライズする。 */

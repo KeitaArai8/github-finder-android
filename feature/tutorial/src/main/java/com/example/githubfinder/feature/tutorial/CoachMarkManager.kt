@@ -1,10 +1,10 @@
 /*
  * Abstract:
  * コーチマーク型チュートリアルのステップ管理と表示制御。
- * Compose の座標型（Rect）を持つため :core:designsystem に置く。永続化は :core:data の TutorialRepository に任せる。
+ * 表示済みフラグの永続化は :core:data の TutorialRepository に任せる。
  */
 
-package com.example.githubfinder.core.designsystem.tutorial
+package com.example.githubfinder.feature.tutorial
 
 import androidx.compose.ui.geometry.Rect
 import com.example.githubfinder.core.common.network.di.ApplicationScope
@@ -19,23 +19,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * チュートリアルの表示ステップ。表示文言は各 UI 層で stringResource 経由で解決する
- * （localization 対応のため、enum には文字列を持たせない）。
- */
-enum class CoachMarkStep {
-    SearchBar,
-    FavoriteButton,
-    FavoriteTab,
-}
-
 @Singleton
 class CoachMarkManager @Inject constructor(
     private val tutorialRepository: TutorialRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val _currentStep = MutableStateFlow<CoachMarkStep?>(null)
-    val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
+    internal val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
 
     /**
      * チュートリアルを表示中か。[startIfNeeded] が 永続化済みフラグの答えを得るまでは null（未確定）。
@@ -45,9 +35,9 @@ class CoachMarkManager @Inject constructor(
     val isActive: StateFlow<Boolean?> = _isActive.asStateFlow()
 
     private val _targetRects = MutableStateFlow<Map<CoachMarkStep, Rect>>(emptyMap())
-    val targetRects: StateFlow<Map<CoachMarkStep, Rect>> = _targetRects.asStateFlow()
+    internal val targetRects: StateFlow<Map<CoachMarkStep, Rect>> = _targetRects.asStateFlow()
 
-    fun updateTargetRect(step: CoachMarkStep, rect: Rect) {
+    internal fun updateTargetRect(step: CoachMarkStep, rect: Rect) {
         _targetRects.update { current -> current + (step to rect) }
     }
 
@@ -61,7 +51,7 @@ class CoachMarkManager @Inject constructor(
         _currentStep.value = CoachMarkStep.SearchBar
     }
 
-    fun next() {
+    internal fun next() {
         val current = _currentStep.value ?: return
         val steps = CoachMarkStep.entries
         val currentIndex = steps.indexOf(current)
@@ -78,13 +68,13 @@ class CoachMarkManager @Inject constructor(
      * 特定の操作（検索成功、お気に入り追加、タブ切替など）が完了したタイミングで
      * 次のステップへ進める。現在ステップが一致しないときは何もしない（冪等）。
      */
-    fun advance(after: CoachMarkStep) {
+    internal fun advance(after: CoachMarkStep) {
         if (_isActive.value != true) return
         if (_currentStep.value != after) return
         next()
     }
 
-    fun skip() {
+    internal fun skip() {
         complete()
     }
 

@@ -150,23 +150,24 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ## モジュール構成（NiA準拠）
 
-[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、14 モジュール + `build-logic`（Convention Plugin）の構成です。
+[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、15 モジュール + `build-logic`（Convention Plugin）の構成です。
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
-:app                    ← エントリポイント + Navigation 3 + Hilt + TutorialScreen
+:app                    ← エントリポイント + Navigation 3 + Hilt（MainActivity で CoachMarkManager を注入）
 :core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）。Android 依存を持たない純粋な Kotlin/JVM モジュール
 :core:common            ← @Dispatcher / GitHubFinderDispatchers と @ApplicationScope（アプリ寿命の CoroutineScope）の Provider。Android ライブラリ（Timber で未捕捉例外をログに残すため）
 :core:data              ← Repository interface/impl（実装は internal。検索履歴・チュートリアル表示済みフラグ・ネットワーク接続状態も Repository で公開）+ CacheDataSource + NetworkMonitor（internal）+ FavoriteStore + DTO→Entity マッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
-:core:designsystem      ← Material 3 Theme + アイコン + 状態表示コンポーネント（EmptyStateView / ErrorView / OfflineBanner）+ コーチマーク（CoachMarkManager / Anchor）。:core:model には依存しない
+:core:designsystem      ← Material 3 Theme + アイコン + 汎用の状態表示コンポーネント（EmptyStateView / ErrorView / OfflineBanner）。他のプロジェクトモジュールにも Hilt にも依存しない
 :core:ui                ← モデルを描画するコンポーネント（RepositoryListItem）+ UI 補助（UiText / UserMessage / BrowserLauncher / ShareRepository / GitHubUrl）
 :core:datastore         ← DataStore Preferences のデータソース（SearchHistoryLocalDataSource / TutorialLocalDataSource）+ DataStore を提供する DataStoreModule（旧 SharedPreferences からの移行を含む）。利用側は :core:data のみ
 :feature:search         ← SearchViewModel + SearchScreen + SearchUiState
 :feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + FavoriteUserMessage
 :feature:settings       ← SettingsScreen
 :feature:widget         ← Glance Widget (FavoriteWidget)
+:feature:tutorial       ← TutorialScreen + CoachMarkOverlay + CoachMarkManager（@Singleton の State holder）+ チュートリアルの文言
 :core:testing           ← テスト専用（MainDispatcherRule + 共有 Fake + TestData。本番コードからは依存しない）
 ```
 
@@ -199,7 +200,7 @@ dependencies {
 | `githubfinder.android.library` | Library 共通設定 | `:core:common`, `:core:data` 等（`:core:model` は Android を使わない Kotlin/JVM モジュールのため適用しない） |
 | `githubfinder.android.library.compose` | Library + Compose（BOM 自動注入） | `:core:designsystem`, `:core:ui` 等 |
 | `githubfinder.android.hilt` | Hilt + KSP + hilt-android 注入 | `:core:common`, `:core:data` 等 |
-| `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` / `:core:ui` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
+| `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` / `:core:ui` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings`, `:feature:tutorial` |
 
 ### モジュール依存関係
 
@@ -211,14 +212,15 @@ dependencies {
 ├── :feature:favorite
 ├── :feature:settings
 ├── :feature:widget
+├── :feature:tutorial
 └── (test) :core:testing
 
-:feature:search / :feature:favorite / :feature:settings
+:feature:search / :feature:favorite / :feature:settings / :feature:tutorial
 ├── :core:model          ← feature 用 Convention Plugin が全 feature に付与
 ├── :core:designsystem   ← 同上
 └── :core:ui             ← 同上
 
-:feature:search / :feature:favorite
+:feature:search / :feature:favorite / :feature:tutorial
 └── :core:data
 
 :feature:widget          （library + hilt の Convention のみ。:core:designsystem / :core:ui には依存しない）
@@ -249,7 +251,7 @@ dependencies {
 └── :core:model          （api。RepositoryDisplayItem / AppError を描画・変換するため）
 
 :core:designsystem
-└── :core:data   （implementation。CoachMarkManager が TutorialRepository を使う）
+└── (Compose / Material 3 のみ。他のプロジェクトモジュールには依存しない。Hilt も使わない)
 
 :core:datastore
 └── (Hilt / DataStore / Coroutines / Timber。他の :core モジュールには依存しない)
@@ -276,12 +278,16 @@ dependencies {
 
 ### :core:designsystem と :core:datastore
 
-`:core:designsystem` はテーマ・アイコン・状態表示コンポーネントに加え、コーチマークの描画とステップ管理を持ちます。`:core:model` には依存せず、`CoachMarkManager` のために `:core:data` に依存し、Compose / Material 3 を `api` で公開します。モデルを描画するコンポーネントと UI 補助は `:core:ui` に置きます（`:core:designsystem` と `:core:model` を `api` で公開）。表示済みフラグの永続化は Compose に依存しないため `:core:datastore` のデータソースが持ち、`CoachMarkManager` は `:core:data` の `TutorialRepository` 経由で読み書きします:
+`:core:designsystem` はテーマ・アイコン・汎用の状態表示コンポーネントだけを持ちます。他のプロジェクトモジュールにも Hilt にも依存せず、Compose / Material 3 を `api` で公開します。モデルを描画するコンポーネントと UI 補助は `:core:ui` に置きます（`:core:designsystem` と `:core:model` を `api` で公開）。チュートリアルの画面・コーチマーク・ステップ管理は `:feature:tutorial` に置きます。表示済みフラグの永続化は Compose に依存しないため `:core:datastore` のデータソースが持ち、`CoachMarkManager` は `:core:data` の `TutorialRepository` 経由で読み書きします:
 
 ```
 :core:designsystem
-├── Theme / AppIcons / EmptyStateView / ErrorView / OfflineBanner ← テーマ・アイコン・状態表示コンポーネント
-└── tutorial/                              ← CoachMarkManager, CoachMarkStep, CoachMarkAnchor
+└── Theme / AppIcons / EmptyStateView / ErrorView / OfflineBanner ← テーマ・アイコン・汎用の状態表示コンポーネント
+
+:feature:tutorial
+├── TutorialScreen / CoachMarkOverlay      ← チュートリアル画面（public は TutorialScreen のみ）と、スポットライト・吹き出しの描画
+├── CoachMarkManager (public) / CoachMarkStep / coachMarkAnchor ← ステップ管理（@Singleton）と座標の報告（CoachMarkManager 以外は internal）
+└── res/values*/strings.xml                ← tutorial_* の文言とモック画面のタブ名
 
 :core:ui
 ├── RepositoryListItem                     ← RepositoryDisplayItem を描画する 1 行
@@ -295,7 +301,7 @@ dependencies {
 └── di/DataStoreModule + Qualifier                          ← 用途別の DataStore（"search_history" / "tutorial"。tutorial は SharedPreferences からの移行つき）
 ```
 
-`CoachMarkManager` は Compose の座標型（`Rect`）を持つため `:core:designsystem` に置き、Compose 非依存の永続化だけを `:core:datastore` が持ちます。書き込みは `@ApplicationScope` の CoroutineScope で行います。
+`CoachMarkManager` は Compose の座標型（`Rect`）を持つため `:feature:tutorial` に置き、Compose 非依存の永続化だけを `:core:datastore` が持ちます。書き込みは `@ApplicationScope` の CoroutineScope で行います。
 
 ### DataSource の分離
 
@@ -492,7 +498,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 
 ### チュートリアル（スポットライト型）
 
-専用の `TutorialScreen` がモック UI を組み、実際のアプリ UI と同じレイアウトに `Modifier.coachMarkAnchor` を付与してスポットライトを当てます。本機能実装には一切影響しません。
+`:feature:tutorial` の `TutorialScreen` がモック UI を組み（タブ名などの文言もこのモジュール自身の文字列リソース）、実際のアプリ UI と同じレイアウトに `Modifier.coachMarkAnchor` を付与してスポットライトを当てます。本機能実装には一切影響しません。
 
 | ステップ | 操作 |
 |---------|------|
@@ -520,11 +526,11 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 31 |
 | `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 42 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
+| `:feature:tutorial` | CoachMarkManagerTest | 5 |
 | `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, SearchHistoryRepositoryImplTest, TutorialRepositoryImplTest, NetworkStatusRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 35 |
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeFavoriteDao） | 6 |
 | `:core:ui` | UiTextTest | 3 |
-| `:core:designsystem` | CoachMarkManagerTest | 5 |
 | `:core:datastore` | SearchHistoryLocalDataSourceTest（保存形式の固定を含む）, TutorialLocalDataSourceTest | 12 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 

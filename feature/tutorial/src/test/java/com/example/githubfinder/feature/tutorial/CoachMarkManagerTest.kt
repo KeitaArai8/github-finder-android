@@ -1,4 +1,4 @@
-package com.example.githubfinder.core.designsystem.tutorial
+package com.example.githubfinder.feature.tutorial
 
 import com.example.githubfinder.core.data.repository.TutorialRepository
 import kotlinx.coroutines.CompletableDeferred

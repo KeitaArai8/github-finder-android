@@ -10,7 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
+import com.example.githubfinder.feature.tutorial.CoachMarkManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

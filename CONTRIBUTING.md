@@ -78,14 +78,14 @@ Closes #42
 新規ファイル追加時は以下の依存方向を守ってください:
 
 ```
-:app → :feature:{search, favorite, settings, widget}, :core:{data, designsystem}
-:feature:{search, favorite, settings} → :core:{model, designsystem, ui}   （feature 用 Convention Plugin が全 feature に付与）
-:feature:{search, favorite} → :core:data
+:app → :feature:{search, favorite, settings, widget, tutorial}, :core:{data, designsystem}
+:feature:{search, favorite, settings, tutorial} → :core:{model, designsystem, ui}   （feature 用 Convention Plugin が全 feature に付与）
+:feature:{search, favorite, tutorial} → :core:data
 :feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem / :core:ui には依存しない）
 :core:data → :core:{common, model, network, database, datastore}   （:core:common は api で公開）
 :core:{network, database} → :core:model
 :core:ui → :core:{model, designsystem}   （どちらも api で公開）
-:core:designsystem → :core:data   （CoachMarkManager が TutorialRepository を使うため）
+:core:designsystem → （プロジェクトモジュールへの依存なし。Hilt も使わない）
 :core:testing → :core:{model, data, database, network}   （テスト専用。各モジュールは testImplementation でのみ参照）
 ```
 
@@ -94,7 +94,8 @@ Closes #42
 - `:core:model` は **純粋な Entity** のみ。Android 依存を持たない Kotlin/JVM モジュール（`android.*` / `androidx.*` を import しない。Room / Retrofit 依存も持ち込まない）
 - `:core:common` は `@Dispatcher` と `@ApplicationScope`（アプリ寿命の CoroutineScope）の置き場。他の `:core` モジュールには依存しない
 - `:core:datastore` は DataStore のデータソース（検索履歴・チュートリアル表示済みフラグ）を置く。参照してよいのは `:core:data` の Repository だけで、ViewModel などの State holder は `SearchHistoryRepository` / `TutorialRepository` / `NetworkStatusRepository` を使う（データソースを直接注入しない）
-- コーチマークの描画とステップ管理（`CoachMarkManager` 等）は `:core:designsystem/tutorial/` に配置し、表示済みフラグは `TutorialRepository` 経由で読み書きする
+- チュートリアルの画面・コーチマークの描画・ステップ管理（`TutorialScreen` / `CoachMarkManager` 等）と、その文言（モック画面のタブ名を含む）は `:feature:tutorial` に置く。表示済みフラグは `TutorialRepository` 経由で読み書きする
+- `:core:designsystem` は他のプロジェクトモジュールに依存しない。アプリ固有のロジックや永続化を持つ型は置かない
 
 ## テスト
 

@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":feature:favorite"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:widget"))
+    implementation(project(":feature:tutorial"))
 
     implementation(libs.activity.compose)
     implementation(libs.compose.material3.adaptive.navigation.suite)

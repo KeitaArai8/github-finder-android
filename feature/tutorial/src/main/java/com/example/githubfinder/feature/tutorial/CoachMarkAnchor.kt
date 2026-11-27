@@ -4,7 +4,7 @@
  * CoachMarkManager に報告するためのModifier拡張。
  */
 
-package com.example.githubfinder.core.designsystem.tutorial
+package com.example.githubfinder.feature.tutorial
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -12,7 +12,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 
-fun Modifier.coachMarkAnchor(
+internal fun Modifier.coachMarkAnchor(
     step: CoachMarkStep,
     manager: CoachMarkManager,
 ): Modifier = this.onGloballyPositioned { coordinates ->

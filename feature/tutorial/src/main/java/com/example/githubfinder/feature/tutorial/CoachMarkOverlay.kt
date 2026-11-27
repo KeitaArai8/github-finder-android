@@ -4,7 +4,7 @@
  * 暗転背景に対象UIの位置だけ穴を空け、パルスリングで強調しつつ吹き出しで説明する。
  */
 
-package com.example.githubfinder.tutorial
+package com.example.githubfinder.feature.tutorial
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -60,8 +60,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.githubfinder.R
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
 import kotlin.math.roundToInt
 
 private val SpotlightPadding = 6.dp
@@ -69,7 +67,7 @@ private val SpotlightCornerRadius = 14.dp
 private val TooltipGap = 24.dp
 
 @Composable
-fun CoachMarkOverlay(
+internal fun CoachMarkOverlay(
     step: CoachMarkStep,
     targetRects: Map<CoachMarkStep, Rect>,
     onNext: () -> Unit,

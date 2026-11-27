@@ -6,7 +6,7 @@
  * モック操作（TextField/ハート/タブのタップ）から発火させる。
  */
 
-package com.example.githubfinder.tutorial
+package com.example.githubfinder.feature.tutorial
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,15 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.githubfinder.R
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.gitHubFinderColors
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
-import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
-import com.example.githubfinder.core.designsystem.tutorial.coachMarkAnchor
-import com.example.githubfinder.feature.favorite.R as favoriteR
-import com.example.githubfinder.feature.search.R as searchR
-import com.example.githubfinder.feature.settings.R as settingsR
 
 @Composable
 fun TutorialScreen(coachMarkManager: CoachMarkManager) {
@@ -94,7 +87,7 @@ fun TutorialScreen(coachMarkManager: CoachMarkManager) {
 @Composable
 private fun MockHeader() {
     Text(
-        text = stringResource(searchR.string.search_tab_title),
+        text = stringResource(R.string.tutorial_mock_tab_search),
         style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
@@ -175,7 +168,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
         ) {
             Icon(
                 AppIcons.FavoriteBorder,
-                contentDescription = stringResource(favoriteR.string.favorite_tab_title),
+                contentDescription = stringResource(R.string.tutorial_mock_tab_favorite),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -198,20 +191,20 @@ private fun MockTabBar(onFavoriteTabTap: () -> Unit, coachMarkManager: CoachMark
         ) {
             MockTabItem(
                 icon = AppIcons.Search,
-                label = stringResource(searchR.string.search_tab_title),
+                label = stringResource(R.string.tutorial_mock_tab_search),
                 isSelected = true,
                 onClick = {},
             )
             MockTabItem(
                 icon = AppIcons.Favorite,
-                label = stringResource(favoriteR.string.favorite_tab_title),
+                label = stringResource(R.string.tutorial_mock_tab_favorite),
                 isSelected = false,
                 onClick = onFavoriteTabTap,
                 modifier = Modifier.coachMarkAnchor(CoachMarkStep.FavoriteTab, coachMarkManager),
             )
             MockTabItem(
                 icon = AppIcons.Settings,
-                label = stringResource(settingsR.string.settings_tab_title),
+                label = stringResource(R.string.tutorial_mock_tab_settings),
                 isSelected = false,
                 onClick = {},
             )

@@ -23,22 +23,19 @@ android {
             // AGP 9.4 の `optimization { }` DSL は @Incubating のため、安定版の isMinifyEnabled / isShrinkResources を使う
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
 
 dependencies {
-    implementation(project(":core:model"))
     implementation(project(":core:data"))
-    implementation(project(":core:network"))
-    implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
-    implementation(project(":core:tutorial"))
     implementation(project(":feature:search"))
     implementation(project(":feature:favorite"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:widget"))
+    implementation(project(":feature:tutorial"))
 
     implementation(libs.activity.compose)
     implementation(libs.compose.material3.adaptive.navigation.suite)

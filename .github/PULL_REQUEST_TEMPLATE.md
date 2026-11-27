@@ -34,7 +34,7 @@ PR 作成ありがとうございます。以下のテンプレートを埋め�
 <!-- UI 変更がある場合は Before / After を -->
 
 ## チェックリスト
-- [ ] CI (Build & Test & Lint) が緑
+- [ ] CI (Spotless, Test, Lint & Assemble) が緑
 - [ ] [CONTRIBUTING.md](../CONTRIBUTING.md) に従った命名・コミット
 - [ ] 既存テストが全て通る
 - [ ] `./gradlew lint` で新規 warning が出ていない

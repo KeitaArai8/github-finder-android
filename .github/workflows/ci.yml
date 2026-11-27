@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build & Test
+    name: Spotless, Test, Lint & Assemble
     runs-on: ubuntu-latest
 
     steps:

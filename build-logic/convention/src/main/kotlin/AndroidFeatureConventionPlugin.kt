@@ -2,7 +2,7 @@
  * `feature` 配下 モジュール用の集約 Convention Plugin。
  * - androidLibrary + androidLibraryCompose + androidHilt を一括適用
  * - lifecycle / hilt-lifecycle-viewmodel-compose / coil 等の Feature 共通依存を追加
- * - core:model / core:designsystem を自動依存
+ * - core:model / core:designsystem / core:ui を自動依存
  *
  * 使用例: `feature` 配下 の build.gradle.kts で
  *   plugins { alias(libs.plugins.githubfinder.android.feature) }
@@ -28,6 +28,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 // すべての Feature が依存する基本セット
                 add("implementation", project(":core:model"))
                 add("implementation", project(":core:designsystem"))
+                add("implementation", project(":core:ui"))
 
                 // Feature 共通: ViewModel + Lifecycle + Hilt ViewModel + Coil
                 add("implementation", libs.findLibrary("hilt-lifecycle-viewmodel-compose").get())

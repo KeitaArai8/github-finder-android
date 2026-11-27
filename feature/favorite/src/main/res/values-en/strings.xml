@@ -38,4 +38,9 @@
     <string name="favorite_sort_star_count_desc">Most stars</string>
     <string name="favorite_sort_full_name_asc">Name (A→Z)</string>
     <string name="favorite_filter_all">All</string>
+
+    <!-- Common actions and accessibility -->
+    <string name="favorite_cancel">Cancel</string>
+    <string name="favorite_a11y_selected">Selected</string>
+    <string name="favorite_a11y_unselected">Not selected</string>
 </resources>

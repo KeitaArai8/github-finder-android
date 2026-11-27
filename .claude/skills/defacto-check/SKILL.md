@@ -1,6 +1,6 @@
 ---
 name: defacto-check
-description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 Releases) を巡回し、前回スナップショットからの差分を検出する。検出した変更は GitHub Issue として自動起票し、本 repo の実装メンテナンスを促す。手動実行型 (Phase 1)。`/defacto-check`、`/defacto-check --dry-run`、`/defacto-check --source=apple-swiftui` などで使用する。
+description: 公式 defacto reference (Android 公式ガイド / Now in Android / 各種 Releases) を巡回し、前回スナップショットからの差分を検出する。検出した変更は GitHub Issue として自動起票し、本 repo の実装メンテナンスを促す。手動実行型 (Phase 1)。`/defacto-check`、`/defacto-check --dry-run`、`/defacto-check --source=android-architecture` などで使用する。
 ---
 
 # /defacto-check — 公式 defacto 自動追従ハーネス (Phase 1)
@@ -12,7 +12,7 @@ description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 R
 | 引数 | 意味 | デフォルト |
 |---|---|---|
 | `--dry-run` | Issue を起票せず Markdown レポートを stdout に出力 | false |
-| `--source=<id>` | 特定 source (例: `apple-swiftui`) のみチェック | 全 source |
+| `--source=<id>` | 特定 source (例: `android-architecture`) のみチェック | 全 source |
 | `--force` | state を無視して全 source を新規扱いで検査 (state の prime 用) | false |
 | `--no-noise-filter` | sources.yaml の `noise_filter.keywords` を無視して全変化を報告 | false |
 
@@ -23,9 +23,8 @@ description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 R
 | role | 対象 | 扱い |
 |---|---|---|
 | `design` | 公式アーキテクチャガイド・公式サンプル (Now in Android) | 設計移行 (Nav2→Nav3、UI イベント処理方針など) の根拠になりうる |
-| `version` | Google/Apple 所有ライブラリ・ツールチェーンのリリースノート | バージョン bump、compileSdk/targetSdk 要件、deprecation を駆動する |
+| `version` | Google 所有ライブラリ・ツールチェーンのリリースノート | バージョン bump、compileSdk/targetSdk 要件、deprecation を駆動する |
 | `third-party` | Google 以外の OSS (Coil, Retrofit, OkHttp, Turbine) | 本 repo は Now in Android の採用に追従するため、各ライブラリ自身のリリースではなく NiA の version catalog 経由で監視する |
-| `official` | iOS 用。Apple が唯一の公式ソースなので全 source がこれ | 層の区別なし |
 
 ## 前提条件
 
@@ -118,10 +117,9 @@ description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 R
 
 検出した変更が **本 repo の実装に該当するか** を可能な範囲で確認する:
 
-1. iOS の場合: `grep -r "<関連 API 名>" Sources/ App/ Packages/` 等で該当 API の使用箇所を探す
-2. Android の場合: `grep -r "<関連 API 名>" app/ feature/ core/` 等で同様に探す
-3. 該当箇所があれば Issue 本文に「現実装での該当箇所」セクションを追加 (ファイルパス + 行番号)
-4. 該当箇所が無ければ「現実装には該当無し (情報のみ)」と記載し、severity を `info` に降格
+1. `grep -r "<関連 API 名>" app/ feature/ core/ build-logic/ gradle/` 等で該当 API の使用箇所を探す
+2. 該当箇所があれば Issue 本文に「現実装での該当箇所」セクションを追加 (ファイルパス + 行番号)
+3. 該当箇所が無ければ「現実装には該当無し (情報のみ)」と記載し、severity を `info` に降格
 
 ### Step 7: Issue 起票 (or dry-run 出力)
 
@@ -134,7 +132,7 @@ description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 R
 ```
 
 例:
-- `[defacto-watch] apple-swiftui: View.onChange の引数仕様が更新`
+- `[defacto-watch] android-ui-events: UI イベントの推奨パターンが更新`
 - `[defacto-watch] nia: NiA が ksp から ksp2 に移行`
 - `[defacto-watch] kotlin-releases: Kotlin 2.X リリース (breaking change あり)`
 
@@ -160,7 +158,7 @@ description: 公式 defacto reference (Apple docs / Google docs / NiA / 各種 R
 
 <grep で見つかった箇所、または「該当無し」>
 
-- `path/to/file.swift:42` - <該当箇所の説明>
+- `path/to/File.kt:42` - <該当箇所の説明>
 
 ## 推奨アクション
 

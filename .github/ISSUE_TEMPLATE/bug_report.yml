@@ -55,7 +55,7 @@ body:
     id: gradle
     attributes:
       label: Gradle / AGP バージョン
-      placeholder: "Gradle 8.10 / AGP 8.7.3"
+      placeholder: "Gradle 9.9.2 / AGP 9.5.3"
 
   - type: textarea
     id: logs

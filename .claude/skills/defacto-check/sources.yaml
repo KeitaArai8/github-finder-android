@@ -1,5 +1,5 @@
 # Android defacto reference sources for github-finder-android.
-# 出典の一覧は doc/de-facto-standard-design (2026).md。
+# 追従規則（3 層）と基準線は doc/de-facto-standard-design (2026).md。
 #
 # type:
 #   web_doc          - Web ドキュメント。WebFetch で内容差分検出
@@ -8,7 +8,7 @@
 #
 # role (3 層ルール):
 #   design      - 公式アーキテクチャガイドと公式サンプル (Now in Android)。設計移行 (Nav2→Nav3 等) の根拠になりうる
-#   version     - Google/Apple 所有ライブラリ・ツールチェーンのリリースノート。バージョン bump / compileSdk・targetSdk / deprecation を駆動
+#   version     - Google 所有ライブラリ・ツールチェーンのリリースノート。バージョン bump / compileSdk・targetSdk / deprecation を駆動
 #   third-party - Google 以外の OSS (Coil, Retrofit, OkHttp, Turbine)。本 repo は NiA の採用に追従するため、
 #                 各ライブラリのリリースではなく NiA の version catalog 経由で監視する
 #

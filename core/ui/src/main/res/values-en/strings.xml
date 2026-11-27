@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Accessibility -->
+    <string name="a11y_favorite_add">Add to favorites</string>
+    <string name="a11y_favorite_remove">Remove from favorites</string>
+
+    <!-- Errors -->
+    <string name="error_network">Unable to connect to the network</string>
+    <string name="error_server">A server error occurred (%1$d)</string>
+    <string name="error_rate_limit">API rate limit reached. Please wait and try again</string>
+    <string name="error_unknown">An unknown error occurred</string>
+
+    <!-- Share -->
+    <string name="share_repository_chooser_title">Share repository</string>
+    <string name="a11y_share_repository">Share %1$s</string>
+</resources>

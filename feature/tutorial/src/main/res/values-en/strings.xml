@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tutorial_skip">Skip</string>
+    <string name="tutorial_next">Next</string>
+    <string name="tutorial_finish">Get Started</string>
+    <string name="tutorial_step_search_title">Try searching</string>
+    <string name="tutorial_step_search_description">Enter a keyword to\nsearch GitHub repositories</string>
+    <string name="tutorial_step_favorite_title">Add to favorites</string>
+    <string name="tutorial_step_favorite_description">Tap the heart button to\nadd to favorites</string>
+    <string name="tutorial_step_tab_title">Favorites</string>
+    <string name="tutorial_step_tab_description">Check saved repositories\nfrom the favorites tab</string>
+    <string name="tutorial_mock_search_placeholder">Search repositories</string>
+
+    <!-- モック画面のタブ名 -->
+    <string name="tutorial_mock_tab_search">Search</string>
+    <string name="tutorial_mock_tab_favorite">Favorites</string>
+    <string name="tutorial_mock_tab_settings">Settings</string>
+</resources>

@@ -1,19 +1,19 @@
 /*
  * Abstract:
- * SearchHistoryDataSource のテスト用 Fake 実装。
+ * SearchHistoryRepository のテスト用 Fake 実装。
  * MutableStateFlow で in-memory に履歴を保持し、本番実装と同じ重複排除・上限制御を行う。
  */
 
 package com.example.githubfinder.core.testing
 
-import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
+import com.example.githubfinder.core.data.repository.SearchHistoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class FakeSearchHistoryDataSource(
+class FakeSearchHistoryRepository(
     private val maxEntries: Int = 10,
-) : SearchHistoryDataSource {
+) : SearchHistoryRepository {
 
     private val _history = MutableStateFlow<List<String>>(emptyList())
     override val history: Flow<List<String>> = _history.asStateFlow()

@@ -9,7 +9,7 @@ import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
-import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
+import com.example.githubfinder.core.testing.FakeSearchHistoryRepository
 import com.example.githubfinder.core.testing.FakeSearchRepository
 import com.example.githubfinder.core.testing.MainDispatcherRule
 import com.example.githubfinder.core.testing.testFavorite
@@ -46,7 +46,7 @@ class SearchViewModelTest {
     private lateinit var fakeFavoriteRepository: FakeFavoriteRepository
     private lateinit var favoriteStore: FavoriteStore
     private lateinit var applicationScope: CoroutineScope
-    private lateinit var fakeSearchHistoryDataSource: FakeSearchHistoryDataSource
+    private lateinit var fakeSearchHistoryRepository: FakeSearchHistoryRepository
 
     @Before
     fun setup() {
@@ -54,7 +54,7 @@ class SearchViewModelTest {
         fakeFavoriteRepository = FakeFavoriteRepository()
         applicationScope = CoroutineScope(UnconfinedTestDispatcher(testDispatcher.scheduler))
         favoriteStore = FavoriteStore(fakeFavoriteRepository, applicationScope)
-        fakeSearchHistoryDataSource = FakeSearchHistoryDataSource()
+        fakeSearchHistoryRepository = FakeSearchHistoryRepository()
     }
 
     @After
@@ -69,7 +69,7 @@ class SearchViewModelTest {
     private fun TestScope.createViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()) = SearchViewModel(
         searchRepository = fakeSearchRepository,
         favoriteStore = favoriteStore,
-        searchHistoryDataSource = fakeSearchHistoryDataSource,
+        searchHistoryRepository = fakeSearchHistoryRepository,
         savedStateHandle = savedStateHandle,
     ).also { viewModel ->
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
@@ -538,14 +538,14 @@ class SearchViewModelTest {
         advanceUntilIdle()
 
         // Assert: 履歴に "kotlin" が追加されている
-        assertEquals(1, fakeSearchHistoryDataSource.addCallCount)
-        assertEquals("kotlin", fakeSearchHistoryDataSource.lastAddedQuery)
+        assertEquals(1, fakeSearchHistoryRepository.addCallCount)
+        assertEquals("kotlin", fakeSearchHistoryRepository.lastAddedQuery)
     }
 
     @Test
     fun `Idle状態でhistoryが反映される`() = runTest {
         // Arrange: 履歴をシード
-        fakeSearchHistoryDataSource.setHistoryForTest(listOf("swift", "compose"))
+        fakeSearchHistoryRepository.setHistoryForTest(listOf("swift", "compose"))
         val viewModel = createViewModel()
 
         // Act: ViewModel 起動後に履歴 Flow が反映される
@@ -591,8 +591,8 @@ class SearchViewModelTest {
 
         // Assert: 即時検索のあとで debounce 経由の検索が重複して走らず、リクエストも履歴追加も 1 回
         assertEquals(1, fakeSearchRepository.searchCallCount)
-        assertEquals(1, fakeSearchHistoryDataSource.addCallCount)
-        assertEquals("kotlin", fakeSearchHistoryDataSource.lastAddedQuery)
+        assertEquals(1, fakeSearchHistoryRepository.addCallCount)
+        assertEquals("kotlin", fakeSearchHistoryRepository.lastAddedQuery)
     }
 
     @Test
@@ -690,7 +690,7 @@ class SearchViewModelTest {
     @Test
     fun `clearHistoryで履歴が全消去される`() = runTest {
         // Arrange: 履歴 [a, b, c] をシードした ViewModel
-        fakeSearchHistoryDataSource.setHistoryForTest(listOf("a", "b", "c"))
+        fakeSearchHistoryRepository.setHistoryForTest(listOf("a", "b", "c"))
         val viewModel = createViewModel()
         advanceUntilIdle()
 
@@ -707,7 +707,7 @@ class SearchViewModelTest {
     @Test
     fun `Loaded状態からクエリ消去でIdleに戻る際 履歴が反映される（combine 経由）`() = runTest {
         // Arrange: 初期履歴をシード + 検索成功で Loaded 状態にする
-        fakeSearchHistoryDataSource.setHistoryForTest(listOf("kotlin", "swift"))
+        fakeSearchHistoryRepository.setHistoryForTest(listOf("kotlin", "swift"))
         val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
             SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),

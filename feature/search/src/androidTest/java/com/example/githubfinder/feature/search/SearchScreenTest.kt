@@ -22,7 +22,7 @@ import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
-import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
+import com.example.githubfinder.core.testing.FakeSearchHistoryRepository
 import com.example.githubfinder.core.testing.FakeSearchRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -143,11 +143,11 @@ class SearchScreenTest {
     private fun makeViewModel(
         searchRepo: FakeSearchRepository = FakeSearchRepository(),
         favoriteRepo: FakeFavoriteRepository = FakeFavoriteRepository(),
-        searchHistory: FakeSearchHistoryDataSource = FakeSearchHistoryDataSource(),
+        searchHistory: FakeSearchHistoryRepository = FakeSearchHistoryRepository(),
     ): SearchViewModel = SearchViewModel(
         searchRepository = searchRepo,
         favoriteStore = FavoriteStore(favoriteRepo, CoroutineScope(Dispatchers.Default)),
-        searchHistoryDataSource = searchHistory,
+        searchHistoryRepository = searchHistory,
         savedStateHandle = SavedStateHandle(),
     )
 }

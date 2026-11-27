@@ -1,7 +1,7 @@
 /*
  * Abstract:
  * オフライン時にアプリ最上部に表示するバナー Composable。
- * NetworkMonitor.isOnline が false のとき MainNavigation から呼び出される。
+ * NetworkStatusRepository.isOnline が false のとき MainNavigation から呼び出される。
  */
 
 package com.example.githubfinder.core.designsystem

@@ -131,7 +131,7 @@ val uiState: StateFlow<SearchUiState> = combine(
     _phase,
     query,  // SavedStateHandle 由来の StateFlow<String>
     favoriteStore.favoriteIDs,
-    searchHistoryDataSource.history,
+    searchHistoryRepository.history,
 ) { phase, query, favoriteIDs, history ->
     phase.toUiState(query, favoriteIDs, history)  // 純粋な変換関数
 }.stateIn(
@@ -157,12 +157,12 @@ val uiState: StateFlow<SearchUiState> = combine(
 :app                    ← エントリポイント + Navigation 3 + Hilt + TutorialScreen
 :core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）。Android 依存を持たない純粋な Kotlin/JVM モジュール
 :core:common            ← @Dispatcher / GitHubFinderDispatchers と @ApplicationScope（アプリ寿命の CoroutineScope）の Provider。Android ライブラリ（Timber で未捕捉例外をログに残すため）
-:core:data              ← Repository interface/impl（実装は internal）+ CacheDataSource + FavoriteStore + SearchHistoryDataSource + NetworkMonitor + DTO→Entity マッピング
+:core:data              ← Repository interface/impl（実装は internal。検索履歴・チュートリアル表示済みフラグ・ネットワーク接続状態も Repository で公開）+ CacheDataSource + NetworkMonitor（internal）+ FavoriteStore + DTO→Entity マッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
 :core:designsystem      ← Material 3 Theme + アイコン + 状態表示コンポーネント（EmptyStateView / ErrorView / OfflineBanner）+ コーチマーク（CoachMarkManager / Anchor）。:core:model には依存しない
 :core:ui                ← モデルを描画するコンポーネント（RepositoryListItem）+ UI 補助（UiText / UserMessage / BrowserLauncher / ShareRepository / GitHubUrl）
-:core:tutorial          ← チュートリアル表示済みフラグの永続化（DataStore + 旧 SharedPreferences からの移行）。Compose 非依存
+:core:datastore         ← DataStore Preferences のデータソース（SearchHistoryLocalDataSource / TutorialLocalDataSource）+ DataStore を提供する DataStoreModule（旧 SharedPreferences からの移行を含む）。利用側は :core:data のみ
 :feature:search         ← SearchViewModel + SearchScreen + SearchUiState
 :feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + FavoriteUserMessage
 :feature:settings       ← SettingsScreen
@@ -229,7 +229,8 @@ dependencies {
 ├── :core:common         （api。@ApplicationScope / @Dispatcher を依存先にも公開する）
 ├── :core:model
 ├── :core:network
-└── :core:database
+├── :core:database
+└── :core:datastore
 
 :core:common
 └── (Hilt / Coroutines / Timber。他の :core モジュールには依存しない)
@@ -248,10 +249,10 @@ dependencies {
 └── :core:model          （api。RepositoryDisplayItem / AppError を描画・変換するため）
 
 :core:designsystem
-└── :core:tutorial   （api。CoachMarkManager が TutorialLocalDataSource を使う）
+└── :core:data   （implementation。CoachMarkManager が TutorialRepository を使う）
 
-:core:tutorial
-└── (Hilt / DataStore。Compose には依存しない)
+:core:datastore
+└── (Hilt / DataStore / Coroutines / Timber。他の :core モジュールには依存しない)
 ```
 
 ### :core:data の役割
@@ -265,16 +266,17 @@ dependencies {
 ├── model/                         ← DTO → Entity のマッピング（RepositoryDTO.asExternalModel）
 ├── repository/FavoriteStore       ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
 ├── datasource/SearchCacheDataSource ← Repository の内部実装詳細（internal）
-├── datasource/SearchHistoryDataSource (i/f) ← 検索履歴の永続化契約
-├── datasource/SearchHistoryDataSourceImpl   ← DataStore Preferences 実装（internal。テスト時は Fake 差し替え）
-├── util/NetworkMonitor (i/f)      ← isOnline: Flow<Boolean> の契約
+├── repository/SearchHistoryRepository ← 検索履歴の契約（実装は :core:datastore の SearchHistoryLocalDataSource に委譲）
+├── repository/TutorialRepository  ← チュートリアル表示済みフラグの契約（実装は :core:datastore の TutorialLocalDataSource に委譲）
+├── repository/NetworkStatusRepository ← isOnline: Flow<Boolean> の契約（実装は NetworkMonitor に委譲）
+├── util/NetworkMonitor (i/f, internal) ← ネットワーク接続状態のデータソースの契約
 ├── util/ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（internal。デフォルトネットワークの状態を 1 つ持つ）
 └── di/                            ← interface ↔ impl のバインド（@Binds のみ。Dispatcher と @ApplicationScope は :core:common）
 ```
 
-### :core:designsystem と :core:tutorial
+### :core:designsystem と :core:datastore
 
-`:core:designsystem` はテーマ・アイコン・状態表示コンポーネントに加え、コーチマークの描画とステップ管理を持ちます。`:core:model` には依存せず、`:core:tutorial` に依存し、Compose / Material 3 を `api` で公開します。モデルを描画するコンポーネントと UI 補助は `:core:ui` に置きます（`:core:designsystem` と `:core:model` を `api` で公開）。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
+`:core:designsystem` はテーマ・アイコン・状態表示コンポーネントに加え、コーチマークの描画とステップ管理を持ちます。`:core:model` には依存せず、`CoachMarkManager` のために `:core:data` に依存し、Compose / Material 3 を `api` で公開します。モデルを描画するコンポーネントと UI 補助は `:core:ui` に置きます（`:core:designsystem` と `:core:model` を `api` で公開）。表示済みフラグの永続化は Compose に依存しないため `:core:datastore` のデータソースが持ち、`CoachMarkManager` は `:core:data` の `TutorialRepository` 経由で読み書きします:
 
 ```
 :core:designsystem
@@ -288,11 +290,12 @@ dependencies {
 ├── ShareRepository                        ← シェアシートで GitHub URL を共有
 └── GitHubUrl (githubUrlFor)               ← URL 組み立てヘルパー
 
-:core:tutorial
-└── TutorialLocalDataSource (i/f + Impl) + TutorialModule（DataStore と SharedPreferences からの移行、@TutorialScope）
+:core:datastore
+├── SearchHistoryLocalDataSource / TutorialLocalDataSource ← DataStore Preferences のデータソース（public。:core:data の Repository だけが使う）
+└── di/DataStoreModule + Qualifier                          ← 用途別の DataStore（"search_history" / "tutorial"。tutorial は SharedPreferences からの移行つき）
 ```
 
-`CoachMarkManager` は Compose の座標型（`Rect`）を持つため `:core:designsystem` に残し、Compose 非依存の永続化だけを `:core:tutorial` に切り出しています。
+`CoachMarkManager` は Compose の座標型（`Rect`）を持つため `:core:designsystem` に置き、Compose 非依存の永続化だけを `:core:datastore` が持ちます。書き込みは `@ApplicationScope` の CoroutineScope で行います。
 
 ### DataSource の分離
 
@@ -303,14 +306,19 @@ Android公式に従い、各DataSourceは**単一のデータソースのみ**�
 | `GitHubRemoteDataSource` | `:core:network` | GitHub API 通信のみ | Retrofit |
 | `FavoriteLocalDataSource` | `:core:database` | お気に入り CRUD のみ | Room（`FavoriteDao`） |
 | `SearchCacheDataSource` | `:core:data` | 検索結果のメモリキャッシュ（最大 50 エントリ・Mutex で排他） | メモリ（LinkedHashMap） |
+| `SearchHistoryLocalDataSource` | `:core:datastore` | 検索履歴の保持（最大 10 件・重複排除・新しい順） | DataStore Preferences（`search_history`） |
+| `TutorialLocalDataSource` | `:core:datastore` | チュートリアル表示済みフラグの保持 | DataStore Preferences（`tutorial`） |
+| `NetworkMonitor` | `:core:data`（internal） | ネットワーク接続状態の供給 | `ConnectivityManager` |
 
+ViewModel や `CoachMarkManager` はこれらを直接使わず、`:core:data` の Repository（`SearchHistoryRepository` / `TutorialRepository` / `NetworkStatusRepository`）を使います。
 ### SSOT（単一信頼源）
 
 | データ | SSOT | 理由 |
 |--------|------|------|
 | お気に入り | Room DB (ローカル) | アプリ終了後も保持。唯一の真実。Widget からも同じ DB を読む |
 | 検索結果 | API + メモリキャッシュ | API が正。キャッシュはアプリ起動中のみ・上限あり。プルリフレッシュはキャッシュを読まず再取得して置き換える |
-| チュートリアル表示済み | DataStore Preferences | ローカルフラグ（旧 SharedPreferences 値は初回に移行） |
+| 検索履歴 | DataStore Preferences | 直近 10 件のローカル履歴。`SearchHistoryRepository` が公開 |
+| チュートリアル表示済み | DataStore Preferences | ローカルフラグ（旧 SharedPreferences 値は初回に移行）。`TutorialRepository` が公開 |
 
 ### お気に入り設計（Passive View + SSOT）
 
@@ -327,17 +335,17 @@ SearchViewModel（公開）
 └── uiState: StateFlow<SearchUiState>      ← Screen はこれを表示するだけ
 ```
 
-### オフライン検知（NetworkMonitor）
+### オフライン検知（NetworkStatusRepository）
 
-`:core:data` の `util/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。`registerDefaultNetworkCallback` で「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」という単一の状態だけを持ちます（ネットワークの集合は自前で管理しません）。Wi-Fi が切れてモバイルへ切り替わるときのデフォルトネットワークの選択は OS が行い、新しいデフォルトネットワークの通知で状態が更新されます。切り替え時に届く旧ネットワークの `onLost` は、現在のネットワークと一致するときだけオフラインとして扱います。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
+`:core:data` の `repository/NetworkStatusRepository.kt` が `isOnline: Flow<Boolean>` を公開し、実装の `NetworkStatusRepositoryImpl` はデータソースの `NetworkMonitor`（`:core:data` 内の internal interface）に委譲します。`NetworkMonitor` の実装 `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。`registerDefaultNetworkCallback` で「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」という単一の状態だけを持ちます（ネットワークの集合は自前で管理しません）。Wi-Fi が切れてモバイルへ切り替わるときのデフォルトネットワークの選択は OS が行い、新しいデフォルトネットワークの通知で状態が更新されます。切り替え時に届く旧ネットワークの `onLost` は、現在のネットワークと一致するときだけオフラインとして扱います。`MainViewModel` が `NetworkStatusRepository` の値を `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
 
 ```kotlin
-interface NetworkMonitor {
+interface NetworkStatusRepository {
     val isOnline: Flow<Boolean>
 }
 
-class MainViewModel @Inject constructor(networkMonitor: NetworkMonitor) : ViewModel() {
-    val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
+class MainViewModel @Inject constructor(networkStatusRepository: NetworkStatusRepository) : ViewModel() {
+    val isOnline: StateFlow<Boolean> = networkStatusRepository.isOnline
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }
 ```
@@ -423,7 +431,9 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 @Module DataModule (abstract, @Binds)
 ├── SearchRepository ← SearchRepositoryImpl
 ├── FavoriteRepository ← FavoriteRepositoryImpl
-├── SearchHistoryDataSource ← SearchHistoryDataSourceImpl
+├── SearchHistoryRepository ← SearchHistoryRepositoryImpl
+├── TutorialRepository ← TutorialRepositoryImpl
+├── NetworkStatusRepository ← NetworkStatusRepositoryImpl
 ├── NetworkMonitor ← ConnectivityManagerNetworkMonitor
 
 @Module DispatchersModule（:core:common）
@@ -432,12 +442,13 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 @Module CoroutineScopesModule（:core:common）
 └── @ApplicationScope CoroutineScope（SupervisorJob + Default + 未捕捉例外を Timber に記録）
 
-@Module TutorialModule (abstract, @Binds)
-└── TutorialLocalDataSource ← TutorialLocalDataSourceImpl
+@Module DataStoreModule（:core:datastore）
+├── @SearchHistoryDataStore DataStore<Preferences>（search_history）
+└── @TutorialDataStore DataStore<Preferences>（tutorial。SharedPreferences からの移行つき）
 ```
 
 自動注入:
-- `GitHubRemoteDataSource` / `FavoriteLocalDataSource` / `SearchCacheDataSource` / `FavoriteStore` — `@Inject constructor`
+- `GitHubRemoteDataSource` / `FavoriteLocalDataSource` / `SearchHistoryLocalDataSource` / `TutorialLocalDataSource` / `SearchCacheDataSource` / `FavoriteStore` — `@Inject constructor`
 - 各 ViewModel — `@HiltViewModel` + `@Inject constructor`
 - `CoachMarkManager` — `@Singleton` + `@Inject constructor`
 
@@ -448,7 +459,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | 機能 | 説明 |
 |------|------|
 | キーワード検索 | デバウンス付き（500ms）、GitHub API |
-| **検索履歴** | 直近10件を `DataStore Preferences` に永続化、Idle 時に履歴一覧 / 行タップで即時再検索 / 個別削除 / 全消去 |
+| **検索履歴** | 直近10件を `DataStore Preferences` に永続化（`SearchHistoryRepository` が公開）、Idle 時に履歴一覧 / 行タップで即時再検索 / 個別削除 / 全消去 |
 | 無限スクロール | 末尾3件手前でプリフェッチ |
 | お気に入り登録/解除 | ハートボタン、Room 永続化 |
 | お気に入り一覧 | スワイプ削除 / 行タップで GitHub ページを Custom Tabs で開く |
@@ -509,15 +520,15 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 31 |
 | `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 42 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
-| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 28 |
+| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, SearchHistoryRepositoryImplTest, TutorialRepositoryImplTest, NetworkStatusRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 35 |
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeFavoriteDao） | 6 |
 | `:core:ui` | UiTextTest | 3 |
 | `:core:designsystem` | CoachMarkManagerTest | 5 |
-| `:core:tutorial` | TutorialLocalDataSourceTest | 3 |
+| `:core:datastore` | SearchHistoryLocalDataSourceTest（保存形式の固定を含む）, TutorialLocalDataSourceTest | 12 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 
-合計 129 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource` / `FakeFavoriteDao` / `FakeGitHubApiService`）・`MainDispatcherRule`・`TestData.kt` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
+合計 145 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryRepository` / `FakeFavoriteDao` / `FakeGitHubApiService`）・`MainDispatcherRule`・`TestData.kt` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 

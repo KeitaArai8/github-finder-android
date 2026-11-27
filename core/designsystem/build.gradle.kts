@@ -17,7 +17,8 @@ android {
 }
 
 dependencies {
-    api(project(":core:tutorial"))
+    // CoachMarkManager が TutorialRepository を使う
+    implementation(project(":core:data"))
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     api(libs.compose.ui.graphics)

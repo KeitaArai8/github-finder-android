@@ -1,14 +1,14 @@
 /*
  * Abstract:
  * コーチマーク型チュートリアルのステップ管理と表示制御。
- * Compose の座標型（Rect）を持つため :core:designsystem に置く。永続化は :core:tutorial の TutorialLocalDataSource に任せる。
+ * Compose の座標型（Rect）を持つため :core:designsystem に置く。永続化は :core:data の TutorialRepository に任せる。
  */
 
 package com.example.githubfinder.core.designsystem.tutorial
 
 import androidx.compose.ui.geometry.Rect
-import com.example.githubfinder.core.tutorial.TutorialLocalDataSource
-import com.example.githubfinder.core.tutorial.TutorialScope
+import com.example.githubfinder.core.common.network.di.ApplicationScope
+import com.example.githubfinder.core.data.repository.TutorialRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -31,14 +31,14 @@ enum class CoachMarkStep {
 
 @Singleton
 class CoachMarkManager @Inject constructor(
-    private val tutorialDataSource: TutorialLocalDataSource,
-    @TutorialScope private val scope: CoroutineScope,
+    private val tutorialRepository: TutorialRepository,
+    @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val _currentStep = MutableStateFlow<CoachMarkStep?>(null)
     val currentStep: StateFlow<CoachMarkStep?> = _currentStep.asStateFlow()
 
     /**
-     * チュートリアルを表示中か。[startIfNeeded] が DataStore の答えを得るまでは null（未確定）。
+     * チュートリアルを表示中か。[startIfNeeded] が 永続化済みフラグの答えを得るまでは null（未確定）。
      * 未確定の間に本画面を描画すると、初回起動でチュートリアルの前に一瞬ちらつくため、呼び出し側は null のとき何も描画しない。
      */
     private val _isActive = MutableStateFlow<Boolean?>(null)
@@ -51,9 +51,9 @@ class CoachMarkManager @Inject constructor(
         _targetRects.update { current -> current + (step to rect) }
     }
 
-    /** 表示済みフラグを DataStore から読み、未表示ならチュートリアルを開始する。 */
+    /** 表示済みフラグを永続化から読み、未表示ならチュートリアルを開始する。 */
     suspend fun startIfNeeded() {
-        if (tutorialDataSource.isShown.first()) {
+        if (tutorialRepository.isShown.first()) {
             _isActive.value = false
             return
         }
@@ -92,6 +92,6 @@ class CoachMarkManager @Inject constructor(
         _currentStep.value = null
         _isActive.value = false
         // UI 操作（next / skip）は同期のまま、永続化だけ非同期で行う
-        scope.launch { tutorialDataSource.setShown() }
+        scope.launch { tutorialRepository.setShown() }
     }
 }

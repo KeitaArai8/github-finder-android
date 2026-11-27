@@ -24,8 +24,8 @@ package com.example.githubfinder.feature.search
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.repository.FavoriteStore
+import com.example.githubfinder.core.data.repository.SearchHistoryRepository
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.RepositoryDisplayItem
@@ -91,7 +91,7 @@ private data class SearchRequest(
 class SearchViewModel @Inject constructor(
     private val searchRepository: SearchRepository,
     private val favoriteStore: FavoriteStore,
-    private val searchHistoryDataSource: SearchHistoryDataSource,
+    private val searchHistoryRepository: SearchHistoryRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -106,7 +106,7 @@ class SearchViewModel @Inject constructor(
         _phase,
         query,
         favoriteStore.favoriteIDs,
-        searchHistoryDataSource.history,
+        searchHistoryRepository.history,
     ) { phase, query, favoriteIDs, history ->
         phase.toUiState(query, favoriteIDs, history)
     }.stateIn(
@@ -153,11 +153,11 @@ class SearchViewModel @Inject constructor(
     }
 
     fun removeHistory(query: String) {
-        viewModelScope.launch { searchHistoryDataSource.remove(query) }
+        viewModelScope.launch { searchHistoryRepository.remove(query) }
     }
 
     fun clearHistory() {
-        viewModelScope.launch { searchHistoryDataSource.clear() }
+        viewModelScope.launch { searchHistoryRepository.clear() }
     }
 
     /**
@@ -255,7 +255,7 @@ class SearchViewModel @Inject constructor(
                 result.hasNextPage,
             )
             // 結果が 0 件でもユーザの意図的な検索なので履歴に追加する
-            searchHistoryDataSource.add(currentQuery)
+            searchHistoryRepository.add(currentQuery)
             _phase.value = if (result.items.isEmpty()) {
                 SearchPhase.Empty
             } else {

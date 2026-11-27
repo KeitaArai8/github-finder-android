@@ -1,4 +1,4 @@
-package com.example.githubfinder.core.tutorial
+package com.example.githubfinder.core.datastore
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import java.io.File
@@ -24,12 +24,12 @@ class TutorialLocalDataSourceTest {
     private fun TestScope.makeDataSource(
         file: File,
         scope: CoroutineScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)),
-    ): TutorialLocalDataSourceImpl {
+    ): TutorialLocalDataSource {
         val dataStore = PreferenceDataStoreFactory.create(
             scope = scope,
             produceFile = { file },
         )
-        return TutorialLocalDataSourceImpl(dataStore)
+        return TutorialLocalDataSource(dataStore)
     }
 
     @Test

@@ -1,19 +1,16 @@
 /*
  * Abstract:
- * 検索履歴の永続化を抽象化する DataSource インターフェース。
- * - 直近 MAX_ENTRIES 件（10）を新しい順に保持
+ * 検索履歴のデータアクセス契約。
+ * - 直近 10 件を新しい順に保持
  * - 同一クエリ追加時は重複排除して先頭に再挿入
  * - 空白のみ・空文字は無視
- *
- * 本番実装は DataStore Preferences を使う `SearchHistoryDataSourceImpl`。
- * ユニットテストでは Fake を渡せるよう interface 化している。
  */
 
-package com.example.githubfinder.core.data.datasource
+package com.example.githubfinder.core.data.repository
 
 import kotlinx.coroutines.flow.Flow
 
-interface SearchHistoryDataSource {
+interface SearchHistoryRepository {
     /** 履歴の最新スナップショット Stream（新しい順）。 */
     val history: Flow<List<String>>
 

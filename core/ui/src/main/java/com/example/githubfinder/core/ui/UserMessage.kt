@@ -4,7 +4,7 @@
  * View が表示し終えたら userMessageShown(id) で取り除かれる。
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 /**
  * @property id 通知ごとの一意 ID。同じ文言が連続しても View が別の通知として扱えるようにするためだけに使う。

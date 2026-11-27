@@ -3,7 +3,7 @@
  * リポジトリの GitHub URL を Android 標準のシェアシートで共有するヘルパー。
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import android.content.Context
 import android.content.Intent

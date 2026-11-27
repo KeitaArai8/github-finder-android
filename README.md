@@ -150,7 +150,7 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ## モジュール構成（NiA準拠）
 
-[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、12 モジュール + `build-logic`（Convention Plugin）の構成です。
+[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、13 モジュール + `build-logic`（Convention Plugin）の構成です。
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
@@ -159,7 +159,8 @@ val uiState: StateFlow<SearchUiState> = combine(
 :core:data              ← Repository interface/impl（実装は internal）+ CacheDataSource + FavoriteStore + SearchHistoryDataSource + NetworkMonitor + DTO→Entity マッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
-:core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + UiText / UserMessage + コーチマーク（CoachMarkManager / Anchor）
+:core:designsystem      ← Material 3 Theme + アイコン + 状態表示コンポーネント（EmptyStateView / ErrorView / OfflineBanner）+ コーチマーク（CoachMarkManager / Anchor）。:core:model には依存しない
+:core:ui                ← モデルを描画するコンポーネント（RepositoryListItem）+ UI 補助（UiText / UserMessage / BrowserLauncher / ShareRepository / GitHubUrl）
 :core:tutorial          ← チュートリアル表示済みフラグの永続化（DataStore + 旧 SharedPreferences からの移行）。Compose 非依存
 :feature:search         ← SearchViewModel + SearchScreen + SearchUiState
 :feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + FavoriteUserMessage
@@ -195,9 +196,9 @@ dependencies {
 | `githubfinder.android.application` | App ターゲット共通設定（compileSdk/minSdk/Java/Kotlin/buildConfig） | `:app` |
 | `githubfinder.android.application.compose` | App + Compose | `:app` |
 | `githubfinder.android.library` | Library 共通設定 | `:core:model` 等 |
-| `githubfinder.android.library.compose` | Library + Compose（BOM 自動注入） | `:core:designsystem` 等 |
+| `githubfinder.android.library.compose` | Library + Compose（BOM 自動注入） | `:core:designsystem`, `:core:ui` 等 |
 | `githubfinder.android.hilt` | Hilt + KSP + hilt-android 注入 | `:core:data` 等 |
-| `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
+| `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` / `:core:ui` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
 
 ### モジュール依存関係
 
@@ -213,12 +214,13 @@ dependencies {
 
 :feature:search / :feature:favorite / :feature:settings
 ├── :core:model          ← feature 用 Convention Plugin が全 feature に付与
-└── :core:designsystem   ← 同上
+├── :core:designsystem   ← 同上
+└── :core:ui             ← 同上
 
 :feature:search / :feature:favorite
 └── :core:data
 
-:feature:widget          （library + hilt の Convention のみ。:core:designsystem には依存しない）
+:feature:widget          （library + hilt の Convention のみ。:core:designsystem / :core:ui には依存しない）
 ├── :core:model
 └── :core:data
 
@@ -236,8 +238,11 @@ dependencies {
 ├── :core:database   ← 共有 FakeFavoriteDao が FavoriteDao を実装するため
 └── :core:network    ← 共有 FakeGitHubApiService が GitHubApiService を実装するため
 
+:core:ui
+├── :core:designsystem   （api。テーマ・アイコンを使う）
+└── :core:model          （api。RepositoryDisplayItem / AppError を描画・変換するため）
+
 :core:designsystem
-├── :core:model      （RepositoryDisplayItem / AppError を使う UI のため）
 └── :core:tutorial   （api。CoachMarkManager が TutorialLocalDataSource を使う）
 
 :core:tutorial
@@ -264,15 +269,19 @@ dependencies {
 
 ### :core:designsystem と :core:tutorial
 
-`:core:designsystem` は UI 共通ライブラリに加え、コーチマークの描画とステップ管理を持ちます。`:core:model`（表示モデルを受け取る UI のため）と `:core:tutorial` に依存し、Compose / Material 3 / `androidx.browser` を `api` で公開します。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
+`:core:designsystem` はテーマ・アイコン・状態表示コンポーネントに加え、コーチマークの描画とステップ管理を持ちます。`:core:model` には依存せず、`:core:tutorial` に依存し、Compose / Material 3 を `api` で公開します。モデルを描画するコンポーネントと UI 補助は `:core:ui` に置きます（`:core:designsystem` と `:core:model` を `api` で公開）。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
 
 ```
 :core:designsystem
-├── Theme / EmptyStateView / ErrorView / OfflineBanner / RepositoryListItem ← UI コンポーネント
-├── UiText / UserMessage                   ← 文言（文字列リソース + 引数）と通知。AppError → UiText 変換（toUiText）
-├── BrowserLauncher                        ← Custom Tabs 起動ユーティリティ
-├── GitHubUrl (githubUrlFor)               ← URL 組み立てヘルパー
+├── Theme / AppIcons / EmptyStateView / ErrorView / OfflineBanner ← テーマ・アイコン・状態表示コンポーネント
 └── tutorial/                              ← CoachMarkManager, CoachMarkStep, CoachMarkAnchor
+
+:core:ui
+├── RepositoryListItem                     ← RepositoryDisplayItem を描画する 1 行
+├── UiText / UserMessage                   ← 文言（文字列リソース + 引数）と通知。例外 → UiText 変換（Throwable.toUiText）
+├── BrowserLauncher                        ← Custom Tabs 起動ユーティリティ
+├── ShareRepository                        ← シェアシートで GitHub URL を共有
+└── GitHubUrl (githubUrlFor)               ← URL 組み立てヘルパー
 
 :core:tutorial
 └── TutorialLocalDataSource (i/f + Impl) + TutorialModule（DataStore と SharedPreferences からの移行、@TutorialScope）
@@ -493,7 +502,8 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 28 |
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeFavoriteDao） | 6 |
-| `:core:designsystem` | UiTextTest, CoachMarkManagerTest | 8 |
+| `:core:ui` | UiTextTest | 3 |
+| `:core:designsystem` | CoachMarkManagerTest | 5 |
 | `:core:tutorial` | TutorialLocalDataSourceTest | 3 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 

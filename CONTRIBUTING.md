@@ -79,16 +79,18 @@ Closes #42
 
 ```
 :app → :feature:{search, favorite, settings, widget}, :core:{data, designsystem}
-:feature:{search, favorite, settings} → :core:{model, designsystem}   （feature 用 Convention Plugin が全 feature に付与）
+:feature:{search, favorite, settings} → :core:{model, designsystem, ui}   （feature 用 Convention Plugin が全 feature に付与）
 :feature:{search, favorite} → :core:data
-:feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem には依存しない）
+:feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem / :core:ui には依存しない）
 :core:data → :core:{model, network, database}
 :core:{network, database} → :core:model
-:core:designsystem → :core:{model, tutorial}
+:core:ui → :core:{model, designsystem}   （どちらも api で公開）
+:core:designsystem → :core:tutorial
 :core:testing → :core:{model, data, database, network}   （テスト専用。各モジュールは testImplementation でのみ参照）
 ```
 
 - `:feature:*` 間は**相互参照しない**
+- `:core:designsystem` は `:core:model` に依存しない。モデル型を描画するコンポーネントと UI 補助（`UiText` / `BrowserLauncher` 等）は `:core:ui` に置く
 - `:core:model` は **純粋な Entity** のみ（Room / Retrofit 依存を持ち込まない）
 - チュートリアルの表示済みフラグの永続化は `:core:tutorial`（Compose 非依存）、コーチマークの描画とステップ管理（`CoachMarkManager` 等）は `:core:designsystem/tutorial/` に配置
 

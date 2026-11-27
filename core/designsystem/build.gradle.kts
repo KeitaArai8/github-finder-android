@@ -1,5 +1,6 @@
 /*
- * Design System モジュール。
+ * Design System モジュール。テーマ・アイコン・状態表示コンポーネントとコーチマークを置く。
+ * データ層のモデルには依存しない（モデルを描画するコンポーネントは :core:ui）。
  * Compose の主要ライブラリは Convention Plugin で implementation 注入されるが、
  * 本モジュールは「他モジュールから transitive で使われるシンボル」を提供するため
  * api スコープで公開する必要があり、ここで明示的に上書きする。
@@ -16,15 +17,12 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
-    implementation(libs.coil.compose)
     api(project(":core:tutorial"))
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     api(libs.compose.ui.graphics)
     api(libs.compose.ui.tooling.preview)
     api(libs.compose.material3)
-    api(libs.browser)
     debugApi(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)

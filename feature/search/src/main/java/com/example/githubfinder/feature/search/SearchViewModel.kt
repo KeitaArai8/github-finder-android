@@ -27,12 +27,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.data.repository.SearchRepository
-import com.example.githubfinder.core.designsystem.UiText
-import com.example.githubfinder.core.designsystem.UserMessage
-import com.example.githubfinder.core.designsystem.toUiText
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.ui.UiText
+import com.example.githubfinder.core.ui.UserMessage
+import com.example.githubfinder.core.ui.toUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException

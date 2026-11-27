@@ -19,9 +19,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.di.ApplicationScope
 import com.example.githubfinder.core.data.repository.FavoriteStore
-import com.example.githubfinder.core.designsystem.UiText
-import com.example.githubfinder.core.designsystem.UserMessage
 import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.ui.UiText
+import com.example.githubfinder.core.ui.UserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException

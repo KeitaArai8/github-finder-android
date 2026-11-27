@@ -6,7 +6,7 @@
 
 package com.example.githubfinder.feature.favorite
 
-import com.example.githubfinder.core.designsystem.UserMessage
+import com.example.githubfinder.core.ui.UserMessage
 
 /**
  * @property message 表示する通知本体。

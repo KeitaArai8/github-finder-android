@@ -30,7 +30,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.launchCustomTab
+import com.example.githubfinder.core.ui.launchCustomTab
 
 private const val PRIVACY_POLICY_URL = "https://www.apple.com/legal/privacy/"
 private const val TERMS_URL = "https://www.apple.com/legal/internet-services/itunes/"

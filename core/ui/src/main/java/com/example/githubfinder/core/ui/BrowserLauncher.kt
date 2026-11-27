@@ -7,7 +7,7 @@
  * 万一 file://・javascript:・intent:// など悪意あるURLが渡されても開かない。
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import android.content.Context
 import android.net.Uri

@@ -4,7 +4,7 @@
  * Uri.encodeでpercent-encodeし、`/`のみ許可することでowner/repo形式を維持する。
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import android.net.Uri
 

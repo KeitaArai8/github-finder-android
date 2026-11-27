@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import com.example.githubfinder.core.data.repository.FavoriteStore
-import com.example.githubfinder.core.designsystem.R as DesignR
-import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
@@ -15,6 +13,8 @@ import com.example.githubfinder.core.testing.FakeSearchHistoryDataSource
 import com.example.githubfinder.core.testing.FakeSearchRepository
 import com.example.githubfinder.core.testing.MainDispatcherRule
 import com.example.githubfinder.core.testing.testFavorite
+import com.example.githubfinder.core.ui.R as UiR
+import com.example.githubfinder.core.ui.UiText
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -180,7 +180,7 @@ class SearchViewModelTest {
         // Assert: Error 状態で、文言は日本語ではなく error_network のリソース ID を指す
         val state = viewModel.uiState.value
         assertTrue(state is SearchUiState.Error)
-        assertEquals(UiText.Resource(DesignR.string.error_network), (state as SearchUiState.Error).message)
+        assertEquals(UiText.Resource(UiR.string.error_network), (state as SearchUiState.Error).message)
     }
 
     @Test
@@ -195,7 +195,7 @@ class SearchViewModelTest {
 
         // Assert: error_server のリソース ID + 引数 [503]（文字列化は UI 層）
         val state = viewModel.uiState.value as SearchUiState.Error
-        assertEquals(UiText.Resource(DesignR.string.error_server, listOf(503)), state.message)
+        assertEquals(UiText.Resource(UiR.string.error_server, listOf(503)), state.message)
     }
 
     @Test

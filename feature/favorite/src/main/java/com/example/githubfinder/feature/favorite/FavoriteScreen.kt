@@ -64,12 +64,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.RepositoryListItem
-import com.example.githubfinder.core.designsystem.githubUrlFor
-import com.example.githubfinder.core.designsystem.launchCustomTab
-import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryDisplayItem
+import com.example.githubfinder.core.ui.RepositoryListItem
+import com.example.githubfinder.core.ui.githubUrlFor
+import com.example.githubfinder.core.ui.launchCustomTab
+import com.example.githubfinder.core.ui.shareRepository
 
 /** お気に入り画面の入口。ViewModel から State を集め、ViewModel を知らない [FavoriteScreen] へ値とラムダだけを渡す。 */
 @Composable

@@ -157,7 +157,7 @@ fun ItemScreen(viewModel: ItemViewModel) {
     -Pandroid.injected.signing.key.alias=androiddebugkey \
     -Pandroid.injected.signing.key.password=android
   ```
-- **採用済みの項目**：`NavigationSuiteScaffold`（画面幅に応じて NavigationBar / NavigationRail を自動切替。IME はスイート全体で避ける）、R8 とリソース縮小（release で有効）、予測型「戻る」（`enableOnBackInvokedCallback`、targetSdk 36 の既定に合わせて明示）、`core:testing`（`MainDispatcherRule` と共有 Fake をテスト専用モジュールに集約）、`core:tutorial`（Compose 非依存のチュートリアル永続化を `core:designsystem` から分離。`CoachMarkManager` は Compose の `Rect` を持つため designsystem に残す。designsystem に永続化を同居させる逸脱は解消した）
+- **採用済みの項目**：`NavigationSuiteScaffold`（画面幅に応じて NavigationBar / NavigationRail を自動切替。IME はスイート全体で避ける）、R8 とリソース縮小（release で有効）、予測型「戻る」（`enableOnBackInvokedCallback`、targetSdk 36 の既定に合わせて明示）、`core:testing`（`MainDispatcherRule` と共有 Fake をテスト専用モジュールに集約）、`core:tutorial`（Compose 非依存のチュートリアル永続化を `core:designsystem` から分離。`CoachMarkManager` は Compose の `Rect` を持つため designsystem に残す。designsystem に永続化を同居させる逸脱は解消した）、`core:ui`（モデルを描画するコンポーネントと UI 補助を置き、`core:designsystem` は `core:model` に依存しない）
 - **`room-ktx`**：Room 2.7 で空のアーティファクトになったため削除した
 
 ### 意図した逸脱

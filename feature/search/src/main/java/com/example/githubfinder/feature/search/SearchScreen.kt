@@ -52,12 +52,12 @@ import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.RepositoryListItem
-import com.example.githubfinder.core.designsystem.UserMessage
-import com.example.githubfinder.core.designsystem.githubUrlFor
-import com.example.githubfinder.core.designsystem.launchCustomTab
-import com.example.githubfinder.core.designsystem.shareRepository
 import com.example.githubfinder.core.model.RepositoryDisplayItem
+import com.example.githubfinder.core.ui.RepositoryListItem
+import com.example.githubfinder.core.ui.UserMessage
+import com.example.githubfinder.core.ui.githubUrlFor
+import com.example.githubfinder.core.ui.launchCustomTab
+import com.example.githubfinder.core.ui.shareRepository
 
 /** 検索画面の入口。ViewModel から State を集め、ViewModel を知らない [SearchScreen] へ値とラムダだけを渡す。 */
 @Composable

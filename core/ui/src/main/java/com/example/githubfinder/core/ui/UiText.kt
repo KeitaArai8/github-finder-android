@@ -5,7 +5,7 @@
  * 実際の文字列化は UI 層（Composable / Context）で行う。リソース ID と引数の比較でテストできる。
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -30,7 +30,7 @@ sealed interface UiText {
 }
 
 /** [AppError] → 表示文言。ドメイン層（core:model）は文言を持たず、UI 層がこの変換で決める。 */
-fun AppError.toUiText(): UiText = when (this) {
+private fun AppError.toUiText(): UiText = when (this) {
     AppError.Network -> UiText.Resource(R.string.error_network)
     is AppError.Server -> UiText.Resource(R.string.error_server, listOf(statusCode))
     AppError.RateLimit -> UiText.Resource(R.string.error_rate_limit)

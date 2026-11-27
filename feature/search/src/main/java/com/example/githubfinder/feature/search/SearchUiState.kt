@@ -9,8 +9,8 @@
 
 package com.example.githubfinder.feature.search
 
-import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.RepositoryDisplayItem
+import com.example.githubfinder.core.ui.UiText
 
 sealed interface SearchUiState {
     val searchQuery: String

@@ -10,7 +10,7 @@
  *  - 未お気に入りのハート / アバターのプレースホルダ: colorScheme.onSurfaceVariant
  */
 
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -36,6 +36,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.githubfinder.core.designsystem.AppIcons
+import com.example.githubfinder.core.designsystem.GitHubFinderTheme
+import com.example.githubfinder.core.designsystem.gitHubFinderColors
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 
 /**

@@ -1,4 +1,4 @@
-package com.example.githubfinder.core.designsystem
+package com.example.githubfinder.core.ui
 
 import com.example.githubfinder.core.model.AppError
 import java.io.IOException

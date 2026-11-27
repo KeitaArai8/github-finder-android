@@ -13,7 +13,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
 @Singleton
-class FavoriteRepositoryImpl @Inject constructor(
+internal class FavoriteRepositoryImpl @Inject constructor(
     private val localDataSource: FavoriteLocalDataSource,
 ) : FavoriteRepository {
 

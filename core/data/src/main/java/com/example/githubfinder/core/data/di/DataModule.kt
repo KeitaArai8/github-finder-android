@@ -7,12 +7,12 @@ package com.example.githubfinder.core.data.di
 
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSourceImpl
-import com.example.githubfinder.core.data.network.ConnectivityManagerNetworkMonitor
-import com.example.githubfinder.core.data.network.NetworkMonitor
 import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.data.repository.FavoriteRepositoryImpl
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.data.repository.SearchRepositoryImpl
+import com.example.githubfinder.core.data.util.ConnectivityManagerNetworkMonitor
+import com.example.githubfinder.core.data.util.NetworkMonitor
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -31,19 +31,19 @@ abstract class DataModule {
 
     @Binds
     @Singleton
-    abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+    internal abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
 
     @Binds
     @Singleton
-    abstract fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
+    internal abstract fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
 
     @Binds
     @Singleton
-    abstract fun bindSearchHistoryDataSource(impl: SearchHistoryDataSourceImpl): SearchHistoryDataSource
+    internal abstract fun bindSearchHistoryDataSource(impl: SearchHistoryDataSourceImpl): SearchHistoryDataSource
 
     @Binds
     @Singleton
-    abstract fun bindNetworkMonitor(impl: ConnectivityManagerNetworkMonitor): NetworkMonitor
+    internal abstract fun bindNetworkMonitor(impl: ConnectivityManagerNetworkMonitor): NetworkMonitor
 
     companion object {
         /**

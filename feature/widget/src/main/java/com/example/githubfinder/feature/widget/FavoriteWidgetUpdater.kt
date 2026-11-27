@@ -6,8 +6,8 @@
 
 package com.example.githubfinder.feature.widget
 
-import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException

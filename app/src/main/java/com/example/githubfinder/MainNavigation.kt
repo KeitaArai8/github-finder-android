@@ -42,7 +42,10 @@ import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.OfflineBanner
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.feature.favorite.FavoriteRoute
+import com.example.githubfinder.feature.favorite.R as favoriteR
+import com.example.githubfinder.feature.search.R as searchR
 import com.example.githubfinder.feature.search.SearchRoute
+import com.example.githubfinder.feature.settings.R as settingsR
 import com.example.githubfinder.feature.settings.SettingsScreen
 import com.example.githubfinder.tutorial.TutorialScreen
 import kotlinx.serialization.Serializable
@@ -61,9 +64,9 @@ enum class TopLevelRoute(
     val key: NavKey,
     @StringRes val labelRes: Int,
 ) {
-    Search(SearchKey, R.string.nav_search),
-    Favorite(FavoriteKey, R.string.nav_favorite),
-    Settings(SettingsKey, R.string.nav_settings),
+    Search(SearchKey, searchR.string.search_tab_title),
+    Favorite(FavoriteKey, favoriteR.string.favorite_tab_title),
+    Settings(SettingsKey, settingsR.string.settings_tab_title),
     ;
 
     /** `vectorResource` は Composition 内でのみ解決できるため、コンストラクタ引数ではなく Composable getter で提供する。 */

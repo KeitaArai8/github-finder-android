@@ -13,6 +13,6 @@ import dagger.hilt.components.SingletonComponent
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
-interface WidgetEntryPoint {
+internal interface WidgetEntryPoint {
     fun favoriteRepository(): FavoriteRepository
 }

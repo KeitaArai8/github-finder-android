@@ -67,7 +67,7 @@ Closes #42
 - **Kotlin 公式コーディング規約** に準拠
 - `./gradlew lint` で新規 warning を発生させない
 - 整形は Spotless + ktlint（`.editorconfig`）が決める。コミット前に `./gradlew spotlessApply` を実行し、CI は `./gradlew spotlessCheck` で検査する
-- `guard`的な早期 return を優先
+- ネストを深くせず、早期 return を優先
 - **Composable 内でビジネスロジックを書かない**（Stateless Composable 原則）
 - 各 Screen の状態は **単一 `sealed interface UiState`** に集約
 
@@ -78,13 +78,14 @@ Closes #42
 新規ファイル追加時は以下の依存方向を守ってください:
 
 ```
-:app → :feature:{search, favorite, settings, widget}
-     → :core:{data, network, database, designsystem, tutorial, model}
-:feature:* → :core:data, :core:designsystem, :core:model
-:core:data → :core:{network, database, model}
-:core:{network, database, designsystem} → :core:model
-:core:designsystem → :core:tutorial
-:core:testing → :core:{data, model}   （テスト専用。各モジュールは testImplementation でのみ参照）
+:app → :feature:{search, favorite, settings, widget}, :core:{data, designsystem}
+:feature:{search, favorite, settings} → :core:{model, designsystem}   （feature 用 Convention Plugin が全 feature に付与）
+:feature:{search, favorite} → :core:data
+:feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem には依存しない）
+:core:data → :core:{model, network, database}
+:core:{network, database} → :core:model
+:core:designsystem → :core:{model, tutorial}
+:core:testing → :core:{model, data, database, network}   （テスト専用。各モジュールは testImplementation でのみ参照）
 ```
 
 - `:feature:*` 間は**相互参照しない**
@@ -108,14 +109,14 @@ Closes #42
 
 ## Preview の追加
 
-新規 Composable を追加する場合、可能な限り `@Preview` を追加してください。stateful な Screen は内部の stateless Composable（`RepositoryRow` 等）に対して Preview を作成するのが推奨パターンです。
+新規 Composable を追加する場合、可能な限り `@Preview` を追加してください。stateful な Screen は内部の stateless Composable（`RowContent` 等）に対して Preview を作成するのが推奨パターンです。
 
 ## PR の送付
 
 1. フォークしたリポジトリに push
 2. 元リポジトリへ Pull Request を作成
 3. PR テンプレートに従って内容を記述
-4. CI (Build & Test & Lint) が緑になることを確認
+4. CI (Spotless, Test, Lint & Assemble) が緑になることを確認
 5. レビューコメントに対応
 
 ### マージ基準

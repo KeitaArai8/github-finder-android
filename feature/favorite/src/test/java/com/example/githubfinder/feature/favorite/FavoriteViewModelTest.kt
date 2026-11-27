@@ -3,7 +3,7 @@ package com.example.githubfinder.feature.favorite
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
-import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
@@ -176,6 +176,32 @@ class FavoriteViewModelTest {
         assertEquals(2, state.favorites.size) // 本体は残る
         assertEquals(listOf(2), state.displayedFavorites.map { it.id }) // 表示からは消える
         assertEquals(0, fakeFavoriteRepository.removeCallCount) // Room 未到達
+    }
+
+    @Test
+    fun `削除待ちのIDはuiStateのpendingDeleteIDsに含まれUndo猶予が経過すると含まれなくなる`() = runTest {
+        // Arrange: 2件（id=1,2）を読み込み済みにして、id=1 をスワイプ削除する
+        val fav1 = testFavorite(id = 1, fullName = "owner/repo1")
+        val fav2 = testFavorite(id = 2, fullName = "owner/repo2")
+        fakeFavoriteRepository.stored = listOf(fav1, fav2)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.removeFavorite(fav1)
+        runCurrent()
+
+        // Assert: 猶予中は、通知の undoID（=1）が uiState の pendingDeleteIDs に含まれ、削除していない id=2 は含まれない
+        val pending = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertEquals(1, viewModel.userMessages.value.single().undoID)
+        assertTrue(1 in pending.pendingDeleteIDs)
+        assertFalse(2 in pending.pendingDeleteIDs)
+
+        // Act: Undo せずに猶予時間を経過させて実削除させる
+        advanceTimeBy(UNDO_WINDOW_MS)
+        runCurrent()
+
+        // Assert: 実削除後は id=1 が pendingDeleteIDs に含まれない（View はこの通知の SnackBar を出さずに消費する）
+        val committed = viewModel.uiState.value as FavoriteUiState.Loaded
+        assertFalse(1 in committed.pendingDeleteIDs)
     }
 
     @Test
@@ -572,7 +598,7 @@ class FavoriteViewModelTest {
     }
 
     @Test
-    fun `toggleSelectAllは部分選択状態から全選択へトグルする（iOS Photos 同等の挙動）`() = runTest {
+    fun `toggleSelectAllは部分選択状態から全選択へトグルする（全選択済みの判定は isAllSelected）`() = runTest {
         // Arrange: 3件中1件のみ選択
         fakeFavoriteRepository.stored = listOf(
             testFavorite(fullName = "owner/a"),
@@ -584,7 +610,7 @@ class FavoriteViewModelTest {
         viewModel.enterEditMode()
         viewModel.toggleSelection(2)
 
-        // Act: 部分選択中のトグル → iOS Photos.app では「全選択」扱い
+        // Act: 部分選択中のトグル → 「全選択」扱い
         viewModel.toggleSelectAll()
         runCurrent()
 

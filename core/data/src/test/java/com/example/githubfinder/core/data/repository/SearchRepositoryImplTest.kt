@@ -1,12 +1,12 @@
 package com.example.githubfinder.core.data.repository
 
-import com.example.githubfinder.core.data.FakeGitHubApiService
 import com.example.githubfinder.core.data.datasource.SearchCacheDataSource
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
 import com.example.githubfinder.core.network.dto.OwnerDTO
 import com.example.githubfinder.core.network.dto.RepositoryDTO
 import com.example.githubfinder.core.network.dto.SearchResponseDTO
+import com.example.githubfinder.core.testing.FakeGitHubApiService
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,6 +49,54 @@ class SearchRepositoryImplTest {
 
         // Assert: 2回目はキャッシュヒットで Remote 1回のみ
         assertEquals(1, fakeApi.callCount)
+    }
+
+    @Test
+    fun `refreshを指定するとキャッシュを読まずにリモートを再度呼ぶ`() = runTest {
+        // Arrange: 1 回検索してキャッシュ済みにした Repository
+        val fakeApi = FakeGitHubApiService().apply { response = makeResponse(totalCount = 1) }
+        val repository = makeRepository(fakeApi)
+        repository.search("swift", 1)
+
+        // Act: 同じクエリ・ページを refresh = true で検索
+        repository.search("swift", 1, refresh = true)
+
+        // Assert: キャッシュヒットせず Remote が合計 2 回呼ばれる
+        assertEquals(2, fakeApi.callCount)
+    }
+
+    @Test
+    fun `refreshの結果でキャッシュが置き換わり以後の通常検索は新しい値をキャッシュから返す`() = runTest {
+        // Arrange: totalCount=1 でキャッシュ済みにした後、API の応答を totalCount=20 に変える
+        val fakeApi = FakeGitHubApiService().apply { response = makeResponse(totalCount = 1) }
+        val repository = makeRepository(fakeApi)
+        repository.search("swift", 1)
+        fakeApi.response = makeResponse(totalCount = 20)
+
+        // Act: refresh = true で検索し、続けて通常検索する
+        val refreshed = repository.search("swift", 1, refresh = true)
+        val cached = repository.search("swift", 1)
+
+        // Assert: refresh は新しい値(20)を返し、通常検索も新しい値をキャッシュから返す（Remote は合計 2 回のまま）
+        assertEquals(20, refreshed.totalCount)
+        assertEquals(20, cached.totalCount)
+        assertEquals(2, fakeApi.callCount)
+    }
+
+    @Test
+    fun `refreshすると同じクエリの他ページのキャッシュは破棄され再取得される`() = runTest {
+        // Arrange: page=1 と page=2 をキャッシュ済みにする（Remote 2 回）
+        val fakeApi = FakeGitHubApiService().apply { response = makeResponse(totalCount = 100) }
+        val repository = makeRepository(fakeApi)
+        repository.search("swift", 1)
+        repository.search("swift", 2)
+
+        // Act: page=1 を refresh してから page=2 を通常検索する
+        repository.search("swift", 1, refresh = true)
+        repository.search("swift", 2)
+
+        // Assert: page=2 のキャッシュは破棄済みなので Remote が呼ばれ、合計 4 回になる
+        assertEquals(4, fakeApi.callCount)
     }
 
     @Test

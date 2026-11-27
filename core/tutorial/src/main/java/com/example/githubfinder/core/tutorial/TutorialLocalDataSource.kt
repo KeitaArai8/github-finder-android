@@ -36,7 +36,7 @@ interface TutorialLocalDataSource {
     suspend fun setShown()
 }
 
-class TutorialLocalDataSourceImpl @Inject constructor(
+internal class TutorialLocalDataSourceImpl @Inject constructor(
     @TutorialDataStore private val dataStore: DataStore<Preferences>,
 ) : TutorialLocalDataSource {
 
@@ -75,7 +75,7 @@ private val Context.tutorialDataStore by preferencesDataStore(
 abstract class TutorialModule {
     @Binds
     @Singleton
-    abstract fun bindTutorialLocalDataSource(impl: TutorialLocalDataSourceImpl): TutorialLocalDataSource
+    internal abstract fun bindTutorialLocalDataSource(impl: TutorialLocalDataSourceImpl): TutorialLocalDataSource
 
     companion object {
         @Provides

@@ -2,11 +2,6 @@
 <resources>
     <string name="app_name">GitHubFinder</string>
 
-    <!-- Tabs -->
-    <string name="nav_search">検索</string>
-    <string name="nav_favorite">お気に入り</string>
-    <string name="nav_settings">設定</string>
-
     <!-- Tutorial -->
     <string name="tutorial_skip">スキップ</string>
     <string name="tutorial_next">次へ</string>

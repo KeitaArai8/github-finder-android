@@ -38,7 +38,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
-class FavoriteWidget : GlanceAppWidget() {
+internal class FavoriteWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 

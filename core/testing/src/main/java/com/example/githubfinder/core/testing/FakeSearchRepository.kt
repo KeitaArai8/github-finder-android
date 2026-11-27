@@ -12,6 +12,7 @@ class FakeSearchRepository : SearchRepository {
     var searchCallCount = 0
     var lastSearchQuery: String? = null
     var lastSearchPage: Int? = null
+    var lastSearchRefresh: Boolean? = null
 
     /** 非 null の間、search は complete されるまで中断する（通信中のまま止めるためのゲート）。 */
     var searchGate: CompletableDeferred<Unit>? = null
@@ -19,10 +20,11 @@ class FakeSearchRepository : SearchRepository {
     /** ゲート待ち中にキャンセルされたリクエストのクエリ（キャンセル伝播の検証用）。 */
     val cancelledQueries = mutableListOf<String>()
 
-    override suspend fun search(query: String, page: Int): SearchResultEntity {
+    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResultEntity {
         searchCallCount++
         lastSearchQuery = query
         lastSearchPage = page
+        lastSearchRefresh = refresh
         try {
             searchGate?.await()
         } catch (e: CancellationException) {

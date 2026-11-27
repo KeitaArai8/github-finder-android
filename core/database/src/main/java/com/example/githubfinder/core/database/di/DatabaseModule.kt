@@ -8,7 +8,7 @@ package com.example.githubfinder.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.example.githubfinder.core.database.AppDatabase
-import com.example.githubfinder.core.database.FavoriteDao
+import com.example.githubfinder.core.database.dao.FavoriteDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,8 +22,8 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, "github_finder.db").build()
+    internal fun provideDatabase(@ApplicationContext context: Context): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, "github_finder.db").build()
 
     @Provides
-    fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()
+    internal fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()
 }

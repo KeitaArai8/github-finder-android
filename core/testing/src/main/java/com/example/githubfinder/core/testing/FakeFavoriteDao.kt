@@ -1,11 +1,20 @@
-package com.example.githubfinder.core.database
+/*
+ * Abstract:
+ * FavoriteDao のテスト用 in-memory 実装。
+ * FavoriteLocalDataSource に差し込んで永続化動作を検証するために使う。
+ */
 
+package com.example.githubfinder.core.testing
+
+import com.example.githubfinder.core.database.FavoriteDbEntity
+import com.example.githubfinder.core.database.dao.FavoriteDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * テスト用のin-memory FavoriteDao実装。
- * FavoriteLocalDataSourceに差し込んで永続化動作を検証するために使用する。
+ * 本物の DAO と同じく、同じ repositoryID の再 insert は置き換え（REPLACE）、observeAll は savedAt の新しい順で流す。
+ * [insert] は呼び出し順に増える savedAt を割り当てる（実時刻に依存せず順序を確定させるため）。
+ * savedAt を明示したい場合は [insertWithSavedAt] を使う。
  */
 class FakeFavoriteDao : FavoriteDao {
     private val store = mutableListOf<FavoriteDbEntity>()
@@ -31,9 +40,7 @@ class FakeFavoriteDao : FavoriteDao {
         publish()
     }
 
-    /**
-     * テスト用に明示的な savedAt で挿入するヘルパー。
-     */
+    /** 明示的な savedAt で挿入する（並び順の検証用）。 */
     fun insertWithSavedAt(entity: FavoriteDbEntity, savedAt: Long) {
         store.removeAll { it.repositoryID == entity.repositoryID }
         store.add(entity.copy(savedAt = savedAt))

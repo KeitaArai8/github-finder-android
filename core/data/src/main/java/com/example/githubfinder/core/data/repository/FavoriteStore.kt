@@ -14,10 +14,9 @@
  * 注意: Room の読み取りに失敗すると、アプリを再起動するまで favorites は空リストに劣化したまま（購読は再開しない）。
  */
 
-package com.example.githubfinder.core.data
+package com.example.githubfinder.core.data.repository
 
 import com.example.githubfinder.core.data.di.ApplicationScope
-import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import javax.inject.Inject

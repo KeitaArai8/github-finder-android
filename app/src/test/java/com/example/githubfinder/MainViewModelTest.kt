@@ -1,6 +1,6 @@
 package com.example.githubfinder
 
-import com.example.githubfinder.core.data.network.NetworkMonitor
+import com.example.githubfinder.core.data.util.NetworkMonitor
 import com.example.githubfinder.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

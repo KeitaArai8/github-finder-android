@@ -13,4 +13,5 @@
     <string name="search_history_clear_all">Clear all</string>
     <string name="search_history_research_a11y">Search %1$s again</string>
     <string name="search_history_remove_a11y">Remove %1$s from history</string>
+    <string name="search_a11y_clear">Clear</string>
 </resources>

@@ -24,8 +24,8 @@ package com.example.githubfinder.feature.search
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.datasource.SearchHistoryDataSource
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.designsystem.UserMessage
@@ -194,7 +194,7 @@ class SearchViewModel @Inject constructor(
     private suspend fun refreshSearch(query: String) {
         updateLoaded { it.copy(isRefreshing = true) }
         try {
-            performSearch(query)
+            performSearch(query, refresh = true)
         } finally {
             updateLoaded { it.copy(isRefreshing = false) }
         }
@@ -241,12 +241,13 @@ class SearchViewModel @Inject constructor(
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
     }
 
-    private suspend fun performSearch(currentQuery: String) {
+    /** 1 ページ目を検索する。[refresh] が true のときはキャッシュを読まずに再取得する（プル・トゥ・リフレッシュ用）。 */
+    private suspend fun performSearch(currentQuery: String, refresh: Boolean = false) {
         _phase.value = SearchPhase.Loading
 
         Timber.tag(TAG).i("Search started: query=%s, page=1", currentQuery)
         try {
-            val result = searchRepository.search(currentQuery, 1)
+            val result = searchRepository.search(currentQuery, 1, refresh)
             Timber.tag(TAG).i(
                 "Search succeeded: count=%d, totalCount=%d, hasNextPage=%s",
                 result.items.size,

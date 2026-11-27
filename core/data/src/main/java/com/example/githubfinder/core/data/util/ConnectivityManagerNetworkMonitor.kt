@@ -6,7 +6,7 @@
  * （Wi-Fi が切れてモバイルへ切り替わると、新しいデフォルトネットワークの onCapabilitiesChanged で状態が更新される）。
  */
 
-package com.example.githubfinder.core.data.network
+package com.example.githubfinder.core.data.util
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
 @Singleton
-class ConnectivityManagerNetworkMonitor @Inject constructor(
+internal class ConnectivityManagerNetworkMonitor @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : NetworkMonitor {
 
@@ -69,7 +69,7 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
             if (registered) connectivityManager?.unregisterNetworkCallback(callback)
         }
     }
-        // conflate() は不要: 唯一の購読側（MainViewModel の stateIn）が StateFlow で既に conflate する
+        // conflate() は不要: 購読側は stateIn で StateFlow にして受け取る前提で、StateFlow が既に conflate する
         .distinctUntilChanged()
         .onEach { online -> Timber.tag(TAG).i("Network state changed: online=%s", online) }
 

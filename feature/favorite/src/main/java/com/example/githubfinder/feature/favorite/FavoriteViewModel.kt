@@ -17,8 +17,8 @@ package com.example.githubfinder.feature.favorite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.githubfinder.core.data.FavoriteStore
 import com.example.githubfinder.core.data.di.ApplicationScope
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.designsystem.UserMessage
 import com.example.githubfinder.core.model.FavoriteEntity
@@ -161,9 +161,6 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    /** [id] が Undo 待ち（pendingDeleteIDs に含まれる）か。実削除済みの通知を View が表示しないための判定に使う。 */
-    fun isDeletePending(id: Int): Boolean = currentLoaded()?.pendingDeleteIDs?.contains(id) == true
-
     /** View が通知を表示し終えたら呼ぶ。該当 ID の通知をキューから取り除く。 */
     fun userMessageShown(id: Long) {
         _userMessages.update { messages -> messages.filterNot { it.message.id == id } }
@@ -209,7 +206,6 @@ class FavoriteViewModel @Inject constructor(
 
     fun selectAll() {
         // 表示中（filter 後）の集合のみを選択対象にする。フィルタで非表示のお気に入りは含めない。
-        // iOS の selectAll() と挙動を統一。
         val loaded = currentLoaded() ?: return
         updateOwned { it.copy(selectedIDs = loaded.displayedFavorites.map { favorite -> favorite.id }.toSet()) }
     }

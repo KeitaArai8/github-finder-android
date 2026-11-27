@@ -9,6 +9,6 @@ package com.example.githubfinder.feature.widget
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
-class FavoriteWidgetReceiver : GlanceAppWidgetReceiver() {
+internal class FavoriteWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = FavoriteWidget()
 }

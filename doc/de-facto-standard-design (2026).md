@@ -53,10 +53,10 @@ Event → ViewModel → State → View
 ## 💡 実装例
 
 ```kotlin
-data class UiState(
-    val items: List<Item> = emptyList(),
-    val isLoading: Boolean = false
-)
+sealed interface UiState {
+    data object Loading : UiState
+    data class Loaded(val items: List<Item>) : UiState
+}
 ```
 
 ```kotlin
@@ -65,13 +65,13 @@ class ItemViewModel @Inject constructor(
     private val repository: ItemRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(UiState())
-    val uiState: StateFlow<UiState> = _uiState
+    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     fun load() {
         viewModelScope.launch {
             val items = repository.fetch()
-            _uiState.value = UiState(items = items)
+            _uiState.value = UiState.Loaded(items = items)
         }
     }
 }
@@ -80,11 +80,14 @@ class ItemViewModel @Inject constructor(
 ```kotlin
 @Composable
 fun ItemScreen(viewModel: ItemViewModel) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LazyColumn {
-        items(state.items) {
-            Text(it.name)
+    when (val current = state) {
+        UiState.Loading -> CircularProgressIndicator()
+        is UiState.Loaded -> LazyColumn {
+            items(current.items) {
+                Text(it.name)
+            }
         }
     }
 }
@@ -107,11 +110,9 @@ fun ItemScreen(viewModel: ItemViewModel) {
 - ロジック分散
 - Flow乱用
 
-### 対策（Reducer寄せ）
+### 対策（フェーズと派生入力を分けて合成）
 
-```kotlin
-fun reduce(state: UiState, action: Action): UiState
-```
+本プロジェクトは Reducer（`reduce(state, action)`）を採らない。ViewModel の内部状態を「フェーズ（読み込みの段階とそのデータ）」と「派生入力（お気に入り ID・検索履歴など別の Flow）」に分け、`combine` + `stateIn` で 1 つの `UiState` に合成する（`SearchViewModel`）。
 
 ---
 
@@ -127,7 +128,7 @@ fun reduce(state: UiState, action: Action): UiState
 | Google 製ライブラリの版 | 最新安定版（release notes が一次情報） | 安定版が出たら上げる |
 | 第三者 OSS（Coil・Retrofit・OkHttp・Turbine） | NiA の採用 | NiA が移行したら追従する。各ライブラリのリリースでは動かさない |
 
-- 第三者 OSS を NiA に揃えるのは、個々の新版を追うと判断基準が毎回ばらつくため
+- 第三者 OSS を NiA に揃えるのは、個々の新版を追うと判断基準が毎回ばらつくため。この規則は `.github/dependabot.yml` の `ignore`（Coil / Retrofit / OkHttp / Turbine）で担保している
 - Coil は 3 が現行だが、この規則により NiA が移行するまで Coil 2 を維持する（保留）
 - Retrofit 3.0.0 / OkHttp 5.5.1 / Turbine 1.2.1 は、NiA の main（2.11.0 / 4.12.0 / 1.2.0）より先の版を使っている（2026-11-26 確認）。この規則と食い違っているが、版を下げてはいない
 
@@ -144,7 +145,7 @@ fun reduce(state: UiState, action: Action): UiState
 
 ### 反映した個別判断
 
-- **Navigation 3**：安定版で NiA も移行済みのため基準にした。単一の `rememberNavBackStack` に NiA の top-level 規則（開始タブでリセット・他タブは末尾へ・再タップは no-op）を再現する。Favorite / Settings の ViewModel はタブ切替（Search へ戻る）で release される
+- **Navigation 3**：安定版で NiA も移行済みのため基準にした。単一の `rememberNavBackStack` に NiA の top-level 規則（開始タブでリセット・他タブは末尾へ・再タップは no-op）を再現する。Favorite の ViewModel はタブ切替（Search へ戻る）で release される
 - **一度きりの通知は state で持つ**：公式 UI events ガイドに従い `userMessages` + `userMessageShown(id)` にした。Undo の実削除は ViewModel が担い、破棄時は `onCleared` が残りを commit する（README「一度きりの通知も State として持つ」参照）
 - **`material-icons-extended`**：更新が止まっているため、Material Symbols の vector drawable と `AppIcons`（NiA の NiaIcons 相当）に置き換える
 - **リリースビルドのスモーク（R8 後の実機確認）**：本番用の署名設定は未整備のため、debug keystore を一時的に注入して署名する。build.gradle.kts には署名用の分岐を持たせない
@@ -166,8 +167,8 @@ fun reduce(state: UiState, action: Action): UiState
 1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：タブ復帰時の Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
 2. **Undo 削除の commit は ViewModel から `@ApplicationScope` で起動する**（Repository の suspend 関数内で外部スコープを使う形ではない）：ViewModel 破棄後も commit を完了させる所有者を ViewModel 側に置くため
 3. **NetworkMonitor は INTERNET + VALIDATED で判定する**（NiA は INTERNET のみ）：公式ガイドに従い、疎通できない接続をオンラインと誤判定しないため
-5. **NetworkMonitor は `registerDefaultNetworkCallback` で単一の状態を持つ**（NiA は `registerNetworkCallback` でネットワークの集合を自前管理する）：このアプリが知りたいのは「いま使われている接続で通信できるか」だけで、複数ネットワークの追跡は不要なため。Wi-Fi とモバイルの切り替えは OS がデフォルトネットワークとして選ぶので、新しいデフォルトの通知で状態が更新される。切り替え時に旧ネットワークの `onLost` が遅れて届いても、現在のネットワークと一致しなければ無視する
 4. **`@TutorialScope` の DI Provider で `Dispatchers.Default` を直書きしている**（NiA が Dispatcher を直書きする場所と同じ）：core:tutorial は core:data の `@ApplicationScope` に依存しない（フラグを書くためだけに data 層へ依存させない）ため
+5. **NetworkMonitor は `registerDefaultNetworkCallback` で単一の状態を持つ**（NiA は `registerNetworkCallback` でネットワークの集合を自前管理する）：このアプリが知りたいのは「いま使われている接続で通信できるか」だけで、複数ネットワークの追跡は不要なため。Wi-Fi とモバイルの切り替えは OS がデフォルトネットワークとして選ぶので、新しいデフォルトの通知で状態が更新される。切り替え時に旧ネットワークの `onLost` が遅れて届いても、現在のネットワークと一致しなければ無視する
 
 `MainDispatcherRule` の複製は `core:testing` の追加で解消したため、逸脱から外した。
 
@@ -194,15 +195,17 @@ fun reduce(state: UiState, action: Action): UiState
 ## ✅ 1. フレームワークはUI層に閉じ込める
 
 ```
-UI → Domain → Data
+UI → Data
 ```
+
+Domain 層は置かない（公式アーキテクチャガイドでは任意。複数画面で共有する複雑なロジックが出た時点で足す）。
 
 ---
 
 ## ✅ 2. 依存は一方向
 
 ```
-View → Model → Repository
+View → ViewModel → Repository
 ```
 
 ---
@@ -213,8 +216,6 @@ View → Model → Repository
 
 ## ✅ 4. 置き換え可能にする
 
-- Rx → async/await
-- Combine → Observation
 - Flow → suspend
 
 ---
@@ -225,7 +226,6 @@ View → Model → Repository
 
 # 💬 まとめ
 
-- iOS：柔軟・シンプル・自由
 - Android：厳格・UDF・統制
 - 最適解：
   - 公式ベース

@@ -17,6 +17,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
+    testImplementation(project(":core:testing"))
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
 }

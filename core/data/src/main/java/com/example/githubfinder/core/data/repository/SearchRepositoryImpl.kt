@@ -6,6 +6,7 @@
 package com.example.githubfinder.core.data.repository
 
 import com.example.githubfinder.core.data.datasource.SearchCacheDataSource
+import com.example.githubfinder.core.data.model.asExternalModel
 import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.SearchResultEntity
 import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
@@ -14,15 +15,15 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 
 @Singleton
-class SearchRepositoryImpl @Inject constructor(
+internal class SearchRepositoryImpl @Inject constructor(
     private val remoteDataSource: GitHubRemoteDataSource,
     private val cacheDataSource: SearchCacheDataSource,
 ) : SearchRepository {
 
     private val perPage = 30
 
-    override suspend fun search(query: String, page: Int): SearchResultEntity {
-        cacheDataSource.get(query, page)?.let { return it }
+    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResultEntity {
+        if (!refresh) cacheDataSource.get(query, page)?.let { return it }
 
         val dto = try {
             remoteDataSource.searchRepositories(query, page)
@@ -34,14 +35,18 @@ class SearchRepositoryImpl @Inject constructor(
             throw AppError.Unknown(e.message ?: "Unknown error")
         }
 
-        val items = dto.items.map { it.toEntity() }
+        val items = dto.items.map { it.asExternalModel() }
         val hasNextPage = page * perPage < dto.totalCount
         val result = SearchResultEntity(
             totalCount = dto.totalCount,
             items = items,
             hasNextPage = hasNextPage,
         )
-        cacheDataSource.set(query, page, result)
+        if (refresh) {
+            cacheDataSource.replace(query, page, result)
+        } else {
+            cacheDataSource.set(query, page, result)
+        }
         return result
     }
 }

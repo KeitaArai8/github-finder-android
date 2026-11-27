@@ -3,7 +3,7 @@ package com.example.githubfinder.feature.search
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
-import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.UiText
 import com.example.githubfinder.core.model.AppError
@@ -615,6 +615,40 @@ class SearchViewModelTest {
         assertEquals(2, fakeSearchRepository.searchCallCount)
         val state = viewModel.uiState.value as SearchUiState.Loaded
         assertEquals(false, state.isRefreshing)
+    }
+
+    @Test
+    fun `通常の検索はrefreshなしでonRefreshだけがrefreshありでリポジトリを呼ぶ`() = runTest {
+        // Arrange: 1 ページ目に次ページがある検索結果を返す Fake
+        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        fakeSearchRepository.searchResult = Result.success(
+            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
+        )
+        val viewModel = createViewModel()
+
+        // Act: 通常の検索（debounce 経由）
+        viewModel.onQueryChanged("kotlin")
+        advanceUntilIdle()
+
+        // Assert: 1 ページ目の検索は refresh = false
+        assertEquals(1, fakeSearchRepository.lastSearchPage)
+        assertEquals(false, fakeSearchRepository.lastSearchRefresh)
+
+        // Act: 次ページの読み込み
+        viewModel.onLoadMore()
+        advanceUntilIdle()
+
+        // Assert: ページネーションも refresh = false（キャッシュを使う）
+        assertEquals(2, fakeSearchRepository.lastSearchPage)
+        assertEquals(false, fakeSearchRepository.lastSearchRefresh)
+
+        // Act: プル・トゥ・リフレッシュ
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // Assert: 1 ページ目が refresh = true で検索される
+        assertEquals(1, fakeSearchRepository.lastSearchPage)
+        assertEquals(true, fakeSearchRepository.lastSearchRefresh)
     }
 
     @Test

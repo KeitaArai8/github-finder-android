@@ -22,7 +22,7 @@ internal annotation class WidgetUpdate
 
 @Module
 @InstallIn(SingletonComponent::class)
-object WidgetModule {
+internal object WidgetModule {
     @Provides
     @WidgetUpdate
     fun provideWidgetUpdate(@ApplicationContext context: Context): @JvmSuppressWildcards suspend () -> Unit = { FavoriteWidget().updateAll(context) }

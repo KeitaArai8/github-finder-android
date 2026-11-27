@@ -2,11 +2,6 @@
 <resources>
     <string name="app_name">GitHubFinder</string>
 
-    <!-- Tabs -->
-    <string name="nav_search">Search</string>
-    <string name="nav_favorite">Favorites</string>
-    <string name="nav_settings">Settings</string>
-
     <!-- Tutorial -->
     <string name="tutorial_skip">Skip</string>
     <string name="tutorial_next">Next</string>

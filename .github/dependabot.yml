@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Gradle 依存（Retrofit / OkHttp / Room / Hilt / Compose BOM 等の更新 PR を自動生成）
+  # Gradle 依存（Room / Hilt / Compose BOM 等の更新 PR を自動生成。Coil / Retrofit / OkHttp / Turbine は ignore で対象外）
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
@@ -12,6 +12,12 @@ updates:
       - "android"
     commit-message:
       prefix: "chore(deps)"
+    # サードパーティ OSS（Coil / Retrofit / OkHttp / Turbine）は各ライブラリのリリースではなく Now in Android の採用に合わせて更新する
+    ignore:
+      - dependency-name: "io.coil-kt*"
+      - dependency-name: "com.squareup.retrofit2*"
+      - dependency-name: "com.squareup.okhttp3*"
+      - dependency-name: "app.cash.turbine*"
     # Compose BOM など、大きなバージョンアップは手動確認するためにグループ化
     groups:
       compose:

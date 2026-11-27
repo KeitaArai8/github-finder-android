@@ -40,7 +40,7 @@ private val AppShapes = Shapes(
 )
 
 /**
- * Material 3 のロールに存在しない「意味を持つ色」のホルダ（iOS DesignSystem の `Color.Brand.favorite` 相当）。
+ * Material 3 のロールに存在しない「意味を持つ色」のホルダ。
  * Dynamic Color は tertiary 等を壁紙由来の色（紫など）に置き換えるため、Star の琥珀色やお気に入りの赤のように
  * 色そのものが意味を持つものは colorScheme のロールに載せず、ここで固定値を持つ。
  *

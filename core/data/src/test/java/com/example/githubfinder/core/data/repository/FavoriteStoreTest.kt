@@ -1,7 +1,6 @@
-package com.example.githubfinder.core.data
+package com.example.githubfinder.core.data.repository
 
 import app.cash.turbine.test
-import com.example.githubfinder.core.data.repository.FavoriteRepository
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.testing.testFavorite

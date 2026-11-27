@@ -45,6 +45,9 @@ import com.example.githubfinder.core.designsystem.gitHubFinderColors
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkManager
 import com.example.githubfinder.core.designsystem.tutorial.CoachMarkStep
 import com.example.githubfinder.core.designsystem.tutorial.coachMarkAnchor
+import com.example.githubfinder.feature.favorite.R as favoriteR
+import com.example.githubfinder.feature.search.R as searchR
+import com.example.githubfinder.feature.settings.R as settingsR
 
 @Composable
 fun TutorialScreen(coachMarkManager: CoachMarkManager) {
@@ -91,7 +94,7 @@ fun TutorialScreen(coachMarkManager: CoachMarkManager) {
 @Composable
 private fun MockHeader() {
     Text(
-        text = stringResource(R.string.nav_search),
+        text = stringResource(searchR.string.search_tab_title),
         style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
@@ -172,7 +175,7 @@ private fun MockRepositoryRow(onFavoriteTap: () -> Unit, coachMarkManager: Coach
         ) {
             Icon(
                 AppIcons.FavoriteBorder,
-                contentDescription = stringResource(R.string.nav_favorite),
+                contentDescription = stringResource(favoriteR.string.favorite_tab_title),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -195,20 +198,20 @@ private fun MockTabBar(onFavoriteTabTap: () -> Unit, coachMarkManager: CoachMark
         ) {
             MockTabItem(
                 icon = AppIcons.Search,
-                label = stringResource(R.string.nav_search),
+                label = stringResource(searchR.string.search_tab_title),
                 isSelected = true,
                 onClick = {},
             )
             MockTabItem(
                 icon = AppIcons.Favorite,
-                label = stringResource(R.string.nav_favorite),
+                label = stringResource(favoriteR.string.favorite_tab_title),
                 isSelected = false,
                 onClick = onFavoriteTabTap,
                 modifier = Modifier.coachMarkAnchor(CoachMarkStep.FavoriteTab, coachMarkManager),
             )
             MockTabItem(
                 icon = AppIcons.Settings,
-                label = stringResource(R.string.nav_settings),
+                label = stringResource(settingsR.string.settings_tab_title),
                 isSelected = false,
                 onClick = {},
             )

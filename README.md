@@ -80,7 +80,7 @@ sealed interface SearchUiState {
 
 ### 一度きりの通知も State として持つ（userMessages + userMessageShown）
 
-「SnackBar 表示」のような一度きりの通知は、[公式ガイド](https://developer.android.com/topic/architecture/ui-layer/events)の推奨どおり **ViewModel のイベントを必ず UI State の更新として扱う** 形にしています。`Channel` / `SharedFlow` は配信が保証されない（購読者不在時に取りこぼし得る）ため使いません。通知は `uiState` とは別の `StateFlow` に **FIFO のリスト** で持ち、View が表示し終えたら `userMessageShown(id)` で消します（フェーズごとの sealed case に載せないのは、通知がどのフェーズでも発生し得るため。ただし画面の状態であり、View は `StateFlow` として購読します）:
+「SnackBar 表示」のような一度きりの通知は、[公式ガイド](https://developer.android.com/topic/architecture/ui-layer/events)の推奨どおり **ViewModel のイベントを必ず UI State の更新として扱う** 形にしています。`Channel` / `SharedFlow` は配信が保証されない（購読者不在時に取りこぼし得る）ため、ユーザーへの通知の配信には使いません（`SearchViewModel` が内部に持つ private な `MutableSharedFlow` は通知ではなく、「debounce を待たず今すぐ検索したい要求」（履歴選択・プルリフレッシュ）を検索パイプラインへ流す入力で、View には公開しません）。通知は `uiState` とは別の `StateFlow` に **FIFO のリスト** で持ち、View が表示し終えたら `userMessageShown(id)` で消します（フェーズごとの sealed case に載せないのは、通知がどのフェーズでも発生し得るため。ただし画面の状態であり、View は `StateFlow` として購読します）:
 
 ```kotlin
 data class UserMessage(val id: Long, val text: UiText)  // 文言は UiText（文字列リソース ID + 引数）。 id は同文言が連続しても別通知と扱うためだけの値
@@ -116,23 +116,24 @@ LaunchedEffect(Unit) {
 
 **メリット**: 配信が保証される（表示し終えて `userMessageShown` が呼ばれるまで State に残る）/ 複数の通知が近接しても順番にすべて表示される / テストは `userMessages.value` の検証だけで済む。
 
-**注意点（回転時の挙動）**: 表示が完了していない通知は、画面回転後に再表示されます（`userMessageShown` が呼ばれるまで State に残るため。以前の `Channel` 方式の「再表示されない」利点は、配信保証と引き換えに手放しています）。
+**注意点（回転時の挙動）**: 表示が完了していない通知は、画面回転後に再表示されます（`userMessageShown` が呼ばれるまで State に残るため。配信が保証される代わりに、回転で再表示されない性質は持ちません）。
 
 **Undo の確定は ViewModel が持つ**: お気に入り一覧のスワイプ削除は、`removeFavorite` が `pendingDeleteIDs` へ追加し、「元に戻す」付きの通知（`UserMessage.undoID`）を積み、`viewModelScope` の猶予タイマー（約 4 秒）で実削除を確定します（Room への書き込みは `@ApplicationScope` で実行し、書き込み中に ViewModel が破棄されても中断されません）。View が行うのは「元に戻す」が押されたときの `undoDelete(id)`（タイマーのキャンセル + 行の復元）だけです。実削除を View 側の SnackBar の `Dismissed` に結び付けると、`LaunchedEffect` のキャンセル（キー変更・回転）で `Dismissed` が届かず、行が `pendingDeleteIDs` に取り残されるためです。また、猶予中に ViewModel が破棄された場合（タブ切替で back stack から外れるなど）は `onCleared` が残りを即座に実削除します（`viewModelScope` は破棄時にキャンセルされるため、`@ApplicationScope` のアプリ寿命スコープで実行）。
 
 ### combine + stateIn によるリアクティブ State 合成（SearchViewModel）
 
-複数の非同期入力源（フェーズ・お気に入り ID・検索履歴）から最終 UiState を合成する場合は、`combine + stateIn` で **宣言的に合成** する:
+複数の非同期入力源（フェーズ・検索クエリ・お気に入り ID・検索履歴）から最終 UiState を合成する場合は、`combine + stateIn` で **宣言的に合成** する:
 
 ```kotlin
 private val _phase = MutableStateFlow<SearchPhase>(SearchPhase.Idle)  // Idle は data object
 
 val uiState: StateFlow<SearchUiState> = combine(
     _phase,
+    query,  // SavedStateHandle 由来の StateFlow<String>
     favoriteStore.favoriteIDs,
     searchHistoryDataSource.history,
-) { phase, favoriteIDs, history ->
-    phase.toUiState(favoriteIDs, history)  // 純粋な変換関数
+) { phase, query, favoriteIDs, history ->
+    phase.toUiState(query, favoriteIDs, history)  // 純粋な変換関数
 }.stateIn(
     scope = viewModelScope,
     started = SharingStarted.WhileSubscribed(5_000),
@@ -145,6 +146,8 @@ val uiState: StateFlow<SearchUiState> = combine(
 - 全ての非同期入力が「単一の純粋な変換関数」に集約され、テストしやすい
 - フェーズ遷移時に latestHistory を都度参照する手動同期コードが消える
 
+`SearchViewModel` は検索の実行を 1 本のパイプライン（`query` の debounce と、履歴選択・プルリフレッシュの即時要求を `merge` し、`mapLatest` で前の検索をキャンセルする）に集約しています。
+
 ## モジュール構成（NiA準拠）
 
 [Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、12 モジュール + `build-logic`（Convention Plugin）の構成です。
@@ -152,17 +155,17 @@ val uiState: StateFlow<SearchUiState> = combine(
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
 :app                    ← エントリポイント + Navigation 3 + Hilt + TutorialScreen
-:core:model             ← Entity + AppError（共有型）
-:core:data              ← Repository interface/impl + CacheDataSource + FavoriteStore + SearchHistoryDataSource
+:core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）
+:core:data              ← Repository interface/impl（実装は internal）+ CacheDataSource + FavoriteStore + SearchHistoryDataSource + NetworkMonitor + DTO→Entity マッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
-:core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + コーチマーク（CoachMarkManager / Anchor）
+:core:designsystem      ← Material 3 Theme + 共通UIコンポーネント + BrowserLauncher + UiText / UserMessage + コーチマーク（CoachMarkManager / Anchor）
 :core:tutorial          ← チュートリアル表示済みフラグの永続化（DataStore + 旧 SharedPreferences からの移行）。Compose 非依存
-:feature:search         ← SearchViewModel + SearchScreen + SearchUiState + UserMessage
-:feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + UserMessage
+:feature:search         ← SearchViewModel + SearchScreen + SearchUiState
+:feature:favorite       ← FavoriteViewModel + FavoriteScreen + FavoriteUiState + FavoriteUserMessage
 :feature:settings       ← SettingsScreen
 :feature:widget         ← Glance Widget (FavoriteWidget)
-:core:testing           ← テスト専用（MainDispatcherRule + 共有 Fake。本番コードからは依存しない）
+:core:testing           ← テスト専用（MainDispatcherRule + 共有 Fake + TestData。本番コードからは依存しない）
 ```
 
 ### Convention Plugin（`build-logic/`）
@@ -170,12 +173,19 @@ val uiState: StateFlow<SearchUiState> = combine(
 NiA と同じく、`build-logic/convention/` に共通 Gradle 設定を集約。各モジュールの `build.gradle.kts` は Plugin alias と固有依存だけを記述する：
 
 ```kotlin
-// feature/favorite/build.gradle.kts（採用後・5 行）
+// feature/favorite/build.gradle.kts（先頭のコメントを除く全体）
 plugins {
     alias(libs.plugins.githubfinder.android.feature)
 }
-android { namespace = "com.example.githubfinder.feature.favorite" }
-dependencies { implementation(project(":core:data")) }
+
+android {
+    namespace = "com.example.githubfinder.feature.favorite"
+}
+
+dependencies {
+    implementation(project(":core:data"))
+    testImplementation(project(":core:testing"))
+}
 ```
 
 提供される Convention Plugin:
@@ -187,32 +197,28 @@ dependencies { implementation(project(":core:data")) }
 | `githubfinder.android.library` | Library 共通設定 | `:core:model` 等 |
 | `githubfinder.android.library.compose` | Library + Compose（BOM 自動注入） | `:core:designsystem` 等 |
 | `githubfinder.android.hilt` | Hilt + KSP + hilt-android 注入 | `:core:data` 等 |
-| `githubfinder.android.feature` | Library + Compose + Hilt + lifecycle + coil + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
+| `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
 
 ### モジュール依存関係
 
 ```
 :app
-├── :core:model
 ├── :core:data
-├── :core:network
-├── :core:database
 ├── :core:designsystem
-├── :core:tutorial
 ├── :feature:search
 ├── :feature:favorite
 ├── :feature:settings
-└── :feature:widget
+├── :feature:widget
+└── (test) :core:testing
+
+:feature:search / :feature:favorite / :feature:settings
+├── :core:model          ← feature 用 Convention Plugin が全 feature に付与
+└── :core:designsystem   ← 同上
 
 :feature:search / :feature:favorite
-├── :core:model
-├── :core:data
-└── :core:designsystem
+└── :core:data
 
-:feature:settings
-└── :core:designsystem
-
-:feature:widget
+:feature:widget          （library + hilt の Convention のみ。:core:designsystem には依存しない）
 ├── :core:model
 └── :core:data
 
@@ -224,12 +230,15 @@ dependencies { implementation(project(":core:data")) }
 :core:network / :core:database
 └── :core:model
 
-:core:testing（テスト専用。各モジュールの testImplementation からのみ参照）
+:core:testing（テスト専用。各モジュールの testImplementation / androidTestImplementation からのみ参照。いずれも api）
 ├── :core:model
-└── :core:data
+├── :core:data
+├── :core:database   ← 共有 FakeFavoriteDao が FavoriteDao を実装するため
+└── :core:network    ← 共有 FakeGitHubApiService が GitHubApiService を実装するため
 
 :core:designsystem
-└── :core:tutorial（CoachMarkManager が TutorialLocalDataSource を使う）
+├── :core:model      （RepositoryDisplayItem / AppError を使う UI のため）
+└── :core:tutorial   （api。CoachMarkManager が TutorialLocalDataSource を使う）
 
 :core:tutorial
 └── (Hilt / DataStore。Compose には依存しない)
@@ -242,23 +251,25 @@ dependencies { implementation(project(":core:data")) }
 ```
 :core:data
 ├── Repository interface           ← データアクセスの契約
-├── Repository impl                ← Remote + Local + Cache を統合
-├── SearchCacheDataSource          ← Repository の内部実装詳細（外部に公開しない）
-├── SearchHistoryDataSource (i/f)  ← 検索履歴の永続化契約
-├── SearchHistoryDataSourceImpl    ← DataStore Preferences 実装（テスト時は Fake 差し替え）
-├── FavoriteStore                  ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
-├── NetworkMonitor (i/f)           ← isOnline: Flow<Boolean> の契約
-├── ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（デフォルトネットワークの状態を 1 つ持つ）
-└── DI Module                      ← interface ↔ impl のバインド
+├── Repository impl（internal）      ← Remote + Local + Cache を統合
+├── model/                         ← DTO → Entity のマッピング（RepositoryDTO.asExternalModel）
+├── repository/FavoriteStore       ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
+├── datasource/SearchCacheDataSource ← Repository の内部実装詳細（internal）
+├── datasource/SearchHistoryDataSource (i/f) ← 検索履歴の永続化契約
+├── datasource/SearchHistoryDataSourceImpl   ← DataStore Preferences 実装（internal。テスト時は Fake 差し替え）
+├── util/NetworkMonitor (i/f)      ← isOnline: Flow<Boolean> の契約
+├── util/ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（internal。デフォルトネットワークの状態を 1 つ持つ）
+└── di/                            ← interface ↔ impl のバインド、Dispatcher、@ApplicationScope
 ```
 
 ### :core:designsystem と :core:tutorial
 
-`:core:designsystem` は UI 共通ライブラリに加え、コーチマークの描画とステップ管理を持ちます。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
+`:core:designsystem` は UI 共通ライブラリに加え、コーチマークの描画とステップ管理を持ちます。`:core:model`（表示モデルを受け取る UI のため）と `:core:tutorial` に依存し、Compose / Material 3 / `androidx.browser` を `api` で公開します。表示済みフラグの永続化は Compose に依存しないため `:core:tutorial` に分けています:
 
 ```
 :core:designsystem
-├── Theme / EmptyStateView / ErrorView     ← UI コンポーネント
+├── Theme / EmptyStateView / ErrorView / OfflineBanner / RepositoryListItem ← UI コンポーネント
+├── UiText / UserMessage                   ← 文言（文字列リソース + 引数）と通知。AppError → UiText 変換（toUiText）
 ├── BrowserLauncher                        ← Custom Tabs 起動ユーティリティ
 ├── GitHubUrl (githubUrlFor)               ← URL 組み立てヘルパー
 └── tutorial/                              ← CoachMarkManager, CoachMarkStep, CoachMarkAnchor
@@ -276,26 +287,27 @@ Android公式に従い、各DataSourceは**単一のデータソースのみ**�
 | DataSource | モジュール | 責務 | データソース |
 |-----------|----------|------|------------|
 | `GitHubRemoteDataSource` | `:core:network` | GitHub API 通信のみ | Retrofit |
-| `FavoriteLocalDataSource` | `:core:database` | お気に入り CRUD のみ | Room |
-| `SearchCacheDataSource` | `:core:data` | 検索結果のメモリキャッシュ | HashMap |
+| `FavoriteLocalDataSource` | `:core:database` | お気に入り CRUD のみ | Room（`FavoriteDao`） |
+| `SearchCacheDataSource` | `:core:data` | 検索結果のメモリキャッシュ（最大 50 エントリ・Mutex で排他） | メモリ（LinkedHashMap） |
 
 ### SSOT（単一信頼源）
 
 | データ | SSOT | 理由 |
 |--------|------|------|
 | お気に入り | Room DB (ローカル) | アプリ終了後も保持。唯一の真実。Widget からも同じ DB を読む |
-| 検索結果 | API + メモリキャッシュ | API が正。キャッシュはアプリ起動中のみ |
+| 検索結果 | API + メモリキャッシュ | API が正。キャッシュはアプリ起動中のみ・上限あり。プルリフレッシュはキャッシュを読まず再取得して置き換える |
 | チュートリアル表示済み | DataStore Preferences | ローカルフラグ（旧 SharedPreferences 値は初回に移行） |
 
 ### お気に入り設計（Passive View + SSOT）
 
-Entity にフラグを持たせず、ViewModel 内で表示用データクラス `RepositoryDisplayItem` に変換して公開します。Screen は受け取った値をそのまま表示するだけです。
+Entity にフラグを持たせず、ViewModel が表示用データクラス `RepositoryDisplayItem`（`:core:model`）に変換して公開します。Screen は受け取った値をそのまま表示するだけです。
 
 ```
 SearchViewModel（内部）
-├── allItems: List<RepositoryEntity>       ← API から取得した生データ
-├── favoriteStore.favoriteIDs: Set<Int>    ← FavoriteRepository (SSOT = DB)
-└── buildDisplayItems()                    ← 突き合わせて RepositoryDisplayItem に変換
+├── _phase: MutableStateFlow<SearchPhase>  ← 検索の段階。Loaded は API から取得した RepositoryEntity の一覧を持つ
+├── query / history                        ← 検索クエリ（SavedStateHandle）と検索履歴
+├── favoriteStore.favoriteIDs: Set<Int>    ← お気に入り ID（SSOT = DB）
+└── SearchPhase.toUiState(...)             ← combine の中で突き合わせ、RepositoryDisplayItem.from(entity, isFavorite) に変換
 
 SearchViewModel（公開）
 └── uiState: StateFlow<SearchUiState>      ← Screen はこれを表示するだけ
@@ -303,7 +315,7 @@ SearchViewModel（公開）
 
 ### オフライン検知（NetworkMonitor）
 
-`:core:data/network/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。`registerDefaultNetworkCallback` で「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」という単一の状態だけを持ちます（ネットワークの集合は自前で管理しません）。Wi-Fi が切れてモバイルへ切り替わるときのデフォルトネットワークの選択は OS が行い、新しいデフォルトネットワークの通知で状態が更新されます。切り替え時に届く旧ネットワークの `onLost` は、現在のネットワークと一致するときだけオフラインとして扱います。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
+`:core:data` の `util/NetworkMonitor.kt` は `isOnline: Flow<Boolean>` だけを持つ interface で、実装の `ConnectivityManagerNetworkMonitor` が `ConnectivityManager` を `callbackFlow` でラップします。`registerDefaultNetworkCallback` で「現在のデフォルトネットワークが INTERNET かつ VALIDATED か」という単一の状態だけを持ちます（ネットワークの集合は自前で管理しません）。Wi-Fi が切れてモバイルへ切り替わるときのデフォルトネットワークの選択は OS が行い、新しいデフォルトネットワークの通知で状態が更新されます。切り替え時に届く旧ネットワークの `onLost` は、現在のネットワークと一致するときだけオフラインとして扱います。`MainViewModel` が `stateIn` で `StateFlow<Boolean>` にし、`MainNavigation` が `collectAsStateWithLifecycle` で観察します:
 
 ```kotlin
 interface NetworkMonitor {
@@ -331,13 +343,15 @@ class GitHubFinderApplication : Application() {
 }
 ```
 
-各 ViewModel / NetworkMonitor で機能別 tag を付与:
+各クラスで機能別 tag を付与（主なもの）:
 
 | Tag | 用途 |
 |---|---|
 | `Search` | 検索 / API 呼び出し |
 | `Favorite` | お気に入り CRUD / 一括削除 |
 | `Network` | 接続状態変化 |
+| `FavoriteStore` | お気に入りの購読・更新 |
+| `FavoriteWidget` | ウィジェットの描画 |
 
 ```kotlin
 Timber.tag("Search").i("Search succeeded: count=%d", result.items.size)
@@ -366,16 +380,18 @@ Widget は Hilt スコープ外で動作するため `@AndroidEntryPoint` は使
 ### エラーハンドリング
 
 ```
-DataSource → 生の例外を throw
+GitHubRemoteDataSource → HttpException を AppError に変換（403 は RateLimit、他は Server(code)）、
+                         IOException は Network、その他は Unknown（CancellationException は変換せず伝播）
     ↓
-Repository → catch して AppError に変換
+SearchRepositoryImpl → AppError はそのまま通し、想定外の例外だけ AppError.Unknown に包む（CancellationException は伝播）
     ↓
-ViewModel → AppError を UiState.Error に反映
+SearchViewModel → 例外を toUiText()（UiText.kt。AppError は種類ごとの文字列リソース、Unknown は例外メッセージ、
+                  AppError 以外は IOException ならネットワーク文言・それ以外は汎用文言）で UiText にして SearchUiState.Error に反映
     ↓
 Screen → エラーメッセージ + リトライボタン表示
 ```
 
-AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Unknown`）。
+AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）。
 
 ## DI（Hilt）
 
@@ -392,14 +408,17 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 
 @Module DataModule (abstract, @Binds)
 ├── SearchRepository ← SearchRepositoryImpl
-└── FavoriteRepository ← FavoriteRepositoryImpl
+├── FavoriteRepository ← FavoriteRepositoryImpl
+├── SearchHistoryDataSource ← SearchHistoryDataSourceImpl
+├── NetworkMonitor ← ConnectivityManagerNetworkMonitor
+└── @ApplicationScope CoroutineScope（@Provides）
 
 @Module TutorialModule (abstract, @Binds)
 └── TutorialLocalDataSource ← TutorialLocalDataSourceImpl
 ```
 
 自動注入:
-- `GitHubRemoteDataSource` / `FavoriteLocalDataSource` / `SearchCacheDataSource` — `@Inject constructor`
+- `GitHubRemoteDataSource` / `FavoriteLocalDataSource` / `SearchCacheDataSource` / `FavoriteStore` — `@Inject constructor`
 - 各 ViewModel — `@HiltViewModel` + `@Inject constructor`
 - `CoachMarkManager` — `@Singleton` + `@Inject constructor`
 
@@ -418,8 +437,8 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 | **言語フィルタ（メモリ保持）** | 登録済み言語を `FilterChip` で動的提示、トグルで絞り込み・解除（フィルタ中の言語が消失すると自動クリア） |
 | **シェア** | `Intent.ACTION_SEND` の Chooser で GitHub URL をシェア（検索/お気に入り両画面の行に Share IconButton） |
 | **一括選択削除** | 編集モードで複数選択 → AlertDialog 確認 → 一括削除 |
-| メモリキャッシュ | 検索結果をアプリ起動中キャッシュ |
-| プルリフレッシュ | 検索・お気に入り両画面（`PullToRefreshBox`） |
+| メモリキャッシュ | 検索結果をアプリ起動中キャッシュ（上限 50 エントリ） |
+| プルリフレッシュ | 検索・お気に入り両画面（`PullToRefreshBox`）。検索はキャッシュを読まずに再取得する |
 | **オフライン検知** | `ConnectivityManager` を `Flow<Boolean>` で公開、切断時に画面上部にバナー表示 |
 | **アダプティブナビゲーション** | `NavigationSuiteScaffold` で画面幅に応じて切り替え（compact は `NavigationBar`、medium 以上は `NavigationRail`）。キーボード表示時はナビゲーション要素ごとキーボードの上に載る |
 | **予測型「戻る」** | `enableOnBackInvokedCallback`（targetSdk 36 では既定で有効）。Navigation 3 の `NavDisplay` が戻るジェスチャーのプレビューアニメーションを提供 |
@@ -427,7 +446,7 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 | チュートリアル | **スポットライト型専用画面**（TutorialScreen）、初回起動時のみ |
 | 設定画面 | プライバシーポリシー/利用規約（Custom Tab） |
 | ダークモード | システム設定追従（Dynamic Color対応） |
-| エラーハンドリング | 5分類（Network/RateLimit/Server/Decode/Unknown）+ リトライ |
+| エラーハンドリング | 4分類（Network/RateLimit/Server/Unknown）+ リトライ |
 
 ### ホームウィジェット（Glance）
 
@@ -457,7 +476,7 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 |------|------|
 | HTTPS 強制 | `res/xml/network_security_config.xml` で `cleartextTrafficPermitted="false"` |
 | URL 構築 | `Uri.encode(fullName, "/")` で自動 percent-encode（`githubUrlFor`） |
-| パーミッション | `INTERNET`（API 通信）と `ACCESS_NETWORK_STATE`（オフライン検知）のみ（最小） |
+| パーミッション | `INTERNET`（API 通信。`:core:network` の manifest）と `ACCESS_NETWORK_STATE`（オフライン検知。`:core:data` の manifest。`:app` の manifest にも宣言）のみ（最小） |
 | Receiver export | Widget Receiver は `exported="false"` |
 | DB バックアップ除外 | `res/xml/backup_rules.xml` + `res/xml/data_extraction_rules.xml` で `github_finder.db` を除外 |
 | SQL インジェクション | Room `@Query` のパラメータ化で型安全 |
@@ -468,17 +487,17 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 
 | モジュール | テストファイル | 件数 |
 |---|---|---|
-| `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 30 |
-| `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 41 |
+| `:feature:search` | SearchViewModelTest（debounce の順序は Turbine で検証） | 31 |
+| `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 42 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
-| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証） | 21 |
+| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 28 |
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
-| `:core:database` | FavoriteLocalDataSourceTest（FakeDao） | 6 |
+| `:core:database` | FavoriteLocalDataSourceTest（FakeFavoriteDao） | 6 |
 | `:core:designsystem` | UiTextTest, CoachMarkManagerTest | 8 |
 | `:core:tutorial` | TutorialLocalDataSourceTest | 3 |
 | `:app` | MainViewModelTest（オフライン状態の公開） | 2 |
 
-合計 121 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource`）と `MainDispatcherRule` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
+合計 129 件。複数モジュールで使う Fake（`FakeFavoriteRepository` / `FakeSearchRepository` / `FakeSearchHistoryDataSource` / `FakeFavoriteDao` / `FakeGitHubApiService`）・`MainDispatcherRule`・`TestData.kt` は、テスト専用の `:core:testing` に置いています（各モジュールは `testImplementation(project(":core:testing"))` で参照）。
 
 ### UI Tests（Compose UI Tests）
 
@@ -487,7 +506,7 @@ AppError は 5分類（`Network` / `RateLimit` / `Server(code)` / `Decode` / `Un
 ### テスト手法のハイライト
 
 - `FakeGitHubApiService`（GitHubApiService interface の Fake）で `HttpException` / `IOException` を発生させ、エラーマッピングを検証
-- `FakeFavoriteDao`（in-memory HashMap）で Room 実装を bypass したハーメティックなテスト
+- `FakeFavoriteDao`（in-memory のリスト）で Room 実装を bypass したハーメティックなテスト
 - `StandardTestDispatcher` + `advanceUntilIdle()` で Coroutine の完了を決定論的に待機
 - `// Arrange:` / `// Act:` / `// Assert:` の AAA コメント必須
 
@@ -548,7 +567,7 @@ GitHub API は認証なし（Rate Limit: 10 req/min）で動作します。
 
 ### リリースビルドの注意点
 
-`app/build.gradle.kts` の `release` ブロックは R8 によるコード縮小・難読化とリソース縮小を有効にしています（`isMinifyEnabled = true` / `isShrinkResources = true`、ルールは `proguard-android-optimize.txt` の既定のみ。実機で失敗を観測した keep ルールが出たら、観測内容とともに追記します）。
+`app/build.gradle.kts` の `release` ブロックは R8 によるコード縮小・難読化とリソース縮小を有効にしています（`isMinifyEnabled = true` / `isShrinkResources = true`、ルールは `proguard-android-optimize.txt` の既定と `app/proguard-rules.pro`。`proguard-rules.pro` には実機で失敗を観測した keep ルールだけを、観測内容とともに置きます（現在は WorkManager の `InputMerger` の引数なしコンストラクタ 1 件））。
 
 **署名設定は未整備**のため、プロダクション利用する場合は**リリース keystore による署名設定を必ず追加してください**。
 

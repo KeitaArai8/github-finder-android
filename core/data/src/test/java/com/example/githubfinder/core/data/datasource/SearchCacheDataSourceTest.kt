@@ -2,6 +2,7 @@ package com.example.githubfinder.core.data.datasource
 
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -10,7 +11,7 @@ import org.junit.Test
 class SearchCacheDataSourceTest {
 
     @Test
-    fun `未保存のクエリ_ページはnullを返す`() {
+    fun `未保存のクエリ_ページはnullを返す`() = runTest {
         // Arrange: 空のキャッシュ
         val cache = SearchCacheDataSource()
 
@@ -22,7 +23,7 @@ class SearchCacheDataSourceTest {
     }
 
     @Test
-    fun `set後のgetは保存した値を返す`() {
+    fun `set後のgetは保存した値を返す`() = runTest {
         // Arrange: 5件のキャッシュ値を用意
         val cache = SearchCacheDataSource()
         val expected = makeResult(totalCount = 10, itemCount = 5)
@@ -38,7 +39,7 @@ class SearchCacheDataSourceTest {
     }
 
     @Test
-    fun `異なるページは別キーで管理される`() {
+    fun `異なるページは別キーで管理される`() = runTest {
         // Arrange: page=1 と page=2 に異なる結果を保存
         val cache = SearchCacheDataSource()
         val page1 = makeResult(totalCount = 60, itemCount = 30)
@@ -54,7 +55,7 @@ class SearchCacheDataSourceTest {
     }
 
     @Test
-    fun `クエリは大文字小文字を区別しない`() {
+    fun `クエリは大文字小文字を区別しない`() = runTest {
         // Arrange: "Swift"（先頭大文字）で保存
         val cache = SearchCacheDataSource()
         val result = makeResult(totalCount = 1, itemCount = 1)
@@ -68,7 +69,7 @@ class SearchCacheDataSourceTest {
     }
 
     @Test
-    fun `異なるクエリは別キーで管理される`() {
+    fun `異なるクエリは別キーで管理される`() = runTest {
         // Arrange: 2つのクエリで保存
         val cache = SearchCacheDataSource()
         cache.set("swift", 1, makeResult(totalCount = 1, itemCount = 1))
@@ -80,18 +81,31 @@ class SearchCacheDataSourceTest {
     }
 
     @Test
-    fun `clearで全キャッシュが削除される`() {
-        // Arrange: 2つのクエリで保存済みキャッシュ
+    fun `replaceは同じクエリの他ページを破棄し指定ページの値で置き換える`() = runTest {
+        // Arrange: "swift" の page=1,2 と別クエリ "kotlin" の page=1 を保存済み
         val cache = SearchCacheDataSource()
-        cache.set("swift", 1, makeResult(totalCount = 1, itemCount = 1))
+        cache.set("swift", 1, makeResult(totalCount = 60, itemCount = 30))
+        cache.set("swift", 2, makeResult(totalCount = 60, itemCount = 30))
         cache.set("kotlin", 1, makeResult(totalCount = 1, itemCount = 1))
 
-        // Act: clear で全削除
-        cache.clear()
+        // Act: "SWIFT"（大文字違い）の page=1 を新しい値（totalCount=5）で replace
+        cache.replace("SWIFT", 1, makeResult(totalCount = 5, itemCount = 5))
 
-        // Assert: 両方とも null が返る
-        assertNull(cache.get("swift", 1))
-        assertNull(cache.get("kotlin", 1))
+        // Assert: page=1 は新しい値、同じクエリの page=2 は破棄され、別クエリ "kotlin" は残る
+        assertEquals(5, cache.get("swift", 1)?.totalCount)
+        assertNull(cache.get("swift", 2))
+        assertEquals(1, cache.get("kotlin", 1)?.totalCount)
+    }
+
+    @Test
+    fun `保持件数を超えると古いエントリから破棄され新しいエントリは残る`() = runTest {
+        // Arrange: 上限を十分に超える 100 件を、別クエリとして古い順に保存する
+        val cache = SearchCacheDataSource()
+        repeat(100) { index -> cache.set("query$index", 1, makeResult(totalCount = index, itemCount = 1)) }
+
+        // Act & Assert: 最も古い "query0" は破棄され、最後に保存した "query99" は残る
+        assertNull(cache.get("query0", 1))
+        assertEquals(99, cache.get("query99", 1)?.totalCount)
     }
 
     private fun makeResult(totalCount: Int, itemCount: Int): SearchResultEntity {

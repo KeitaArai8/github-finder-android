@@ -8,7 +8,8 @@ package com.example.githubfinder.feature.search
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -16,7 +17,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.githubfinder.core.data.FavoriteStore
+import androidx.test.platform.app.InstrumentationRegistry
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.model.SearchResultEntity
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
@@ -34,6 +36,16 @@ class SearchScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    /** 画面の文言はリソースから解決する（端末の言語に依存して文字列リテラルが食い違わないようにするため）。 */
+    private val idleDescription: String
+        get() = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.search_empty_idle_description)
+
+    private val historyTitle: String
+        get() = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.search_history_title)
+
+    private val clearDescription: String
+        get() = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.search_a11y_clear)
+
     @Test
     fun 初期表示でEmptyStateのdescriptionが見える() {
         // Arrange: Fake のみの ViewModel で SearchRoute を表示（未入力の初期状態）
@@ -44,11 +56,9 @@ class SearchScreenTest {
 
         // Act: 操作なし（初期表示のみ）
 
-        // Assert: 「キーワードを入力して」を含む EmptyState の説明文が見える
+        // Assert: Idle 状態の EmptyState の説明文（search_empty_idle_description）が見える
         composeTestRule
-            .onNode(
-                androidx.compose.ui.test.hasText("キーワードを入力して", substring = true),
-            )
+            .onNode(hasText(idleDescription))
             .assertIsDisplayed()
     }
 
@@ -118,15 +128,16 @@ class SearchScreenTest {
         }
 
         // Act: クリアボタンをタップ
-        composeTestRule.onNodeWithContentDescription("クリア").performClick()
+        composeTestRule.onNodeWithContentDescription(clearDescription).performClick()
 
-        // Assert: Idle 状態の EmptyState 説明文が再び表示される
+        // Assert: Idle 状態に戻り、検索済みのクエリが履歴に残っているため履歴一覧の見出し（search_history_title）が表示される
         composeTestRule.waitUntil(timeoutMillis = 3000) {
             composeTestRule
-                .onAllNodesWithText("キーワードを入力して", substring = true)
+                .onAllNodesWithText(historyTitle)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+        composeTestRule.onNodeWithText(historyTitle).assertIsDisplayed()
     }
 
     private fun makeViewModel(

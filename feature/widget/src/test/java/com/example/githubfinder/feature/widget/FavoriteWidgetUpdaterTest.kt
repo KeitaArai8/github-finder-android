@@ -1,6 +1,6 @@
 package com.example.githubfinder.feature.widget
 
-import com.example.githubfinder.core.data.FavoriteStore
+import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.testing.testFavorite
 import kotlinx.coroutines.CoroutineScope

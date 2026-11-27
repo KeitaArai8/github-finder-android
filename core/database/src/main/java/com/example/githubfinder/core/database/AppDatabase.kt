@@ -7,6 +7,7 @@ package com.example.githubfinder.core.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.example.githubfinder.core.database.dao.FavoriteDao
 
 /**
  * Room データベース。スキーマは `core/database/schemas/` に JSON で書き出してコミットする。
@@ -16,6 +17,6 @@ import androidx.room.RoomDatabase
  * （お気に入りはユーザーが保存したデータのため）。
  */
 @Database(entities = [FavoriteDbEntity::class], version = 1, exportSchema = true)
-abstract class AppDatabase : RoomDatabase() {
+internal abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
 }

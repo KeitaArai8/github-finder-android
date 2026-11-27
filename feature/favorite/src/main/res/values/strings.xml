@@ -38,4 +38,9 @@
     <string name="favorite_sort_star_count_desc">Star が多い順</string>
     <string name="favorite_sort_full_name_asc">名前順 (A→Z)</string>
     <string name="favorite_filter_all">すべて</string>
+
+    <!-- 共通操作・アクセシビリティ -->
+    <string name="favorite_cancel">キャンセル</string>
+    <string name="favorite_a11y_selected">選択済み</string>
+    <string name="favorite_a11y_unselected">未選択</string>
 </resources>

@@ -5,6 +5,7 @@
 
 package com.example.githubfinder.core.database
 
+import com.example.githubfinder.core.database.dao.FavoriteDao
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import javax.inject.Inject

@@ -52,7 +52,6 @@ import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.ErrorView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.UserMessage
 import com.example.githubfinder.core.designsystem.githubUrlFor
@@ -84,7 +83,7 @@ fun SearchRoute(
 }
 
 @Composable
-fun SearchScreen(
+internal fun SearchScreen(
     uiState: SearchUiState,
     userMessages: List<UserMessage>,
     onUserMessageShown: (Long) -> Unit,
@@ -123,7 +122,7 @@ fun SearchScreen(
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
-                            Icon(AppIcons.Close, contentDescription = stringResource(DesignR.string.a11y_clear))
+                            Icon(AppIcons.Close, contentDescription = stringResource(R.string.search_a11y_clear))
                         }
                     }
                 },

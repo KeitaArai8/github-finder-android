@@ -22,7 +22,7 @@ import timber.log.Timber
 private val Context.searchHistoryDataStore by preferencesDataStore(name = "search_history")
 
 @Singleton
-class SearchHistoryDataSourceImpl @Inject constructor(
+internal class SearchHistoryDataSourceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : SearchHistoryDataSource {
 

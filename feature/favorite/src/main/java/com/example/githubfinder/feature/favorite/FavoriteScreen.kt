@@ -64,7 +64,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.designsystem.R as DesignR
 import com.example.githubfinder.core.designsystem.RepositoryListItem
 import com.example.githubfinder.core.designsystem.githubUrlFor
 import com.example.githubfinder.core.designsystem.launchCustomTab
@@ -83,7 +82,6 @@ fun FavoriteRoute(
     FavoriteScreen(
         uiState = uiState,
         userMessages = userMessages,
-        isDeletePending = viewModel::isDeletePending,
         onUserMessageShown = viewModel::userMessageShown,
         onUndoDelete = viewModel::undoDelete,
         onRefresh = viewModel::refresh,
@@ -103,10 +101,9 @@ fun FavoriteRoute(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoriteScreen(
+internal fun FavoriteScreen(
     uiState: FavoriteUiState,
     userMessages: List<FavoriteUserMessage>,
-    isDeletePending: (Int) -> Boolean,
     onUserMessageShown: (Long) -> Unit,
     onUndoDelete: (Int) -> Unit,
     onRefresh: () -> Unit,
@@ -129,13 +126,15 @@ fun FavoriteScreen(
     // 先頭の ID をキーにするので、表示中に後ろへ通知が積まれても前の SnackBar は途切れず、順番に表示される。
     // Undo 猶予後の実削除は ViewModel のタイマーが行うため、ここでは「元に戻す」だけを扱う。
     val currentMessage = userMessages.firstOrNull()
+    // Undo 待ち（pendingDeleteIDs）の ID。実削除済みで Undo できない通知を表示しないための判定に使う
+    val pendingDeleteIDs = (uiState as? FavoriteUiState.Loaded)?.pendingDeleteIDs.orEmpty()
     // LaunchedEffect 内は Composable でないため、文字列化は外で済ませてから渡す
     val messageText = currentMessage?.message?.text?.asString()
     LaunchedEffect(currentMessage?.message?.id) {
         val message = currentMessage ?: return@LaunchedEffect
         if (messageText == null) return@LaunchedEffect
         // 既に実削除済みで Undo できない通知（回転直後の表示遅延など）は、SnackBar を出さずに消費だけする。
-        if (message.undoID != null && !isDeletePending(message.undoID)) {
+        if (message.undoID != null && message.undoID !in pendingDeleteIDs) {
             onUserMessageShown(message.message.id)
             return@LaunchedEffect
         }
@@ -298,7 +297,7 @@ private fun FavoriteTopBar(
                             },
                         )
                     }
-                    // iOS と同じ「完了」テキストボタン（Close icon と並列で提供し、ユーザに馴染みやすい選択肢を残す）
+                    // 「完了」テキストボタン（Close icon と並列で提供し、編集モードを抜ける手段を文言でも示す）
                     TextButton(onClick = onExitEditMode) {
                         Text(stringResource(R.string.favorite_done_edit))
                     }
@@ -409,7 +408,7 @@ private fun LanguageFilterBar(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // iOS と統一：FilterChip 自体の選択色変化のみで状態を表現し、leading icon は持たない
+        // FilterChip 自体の選択色変化のみで状態を表現し、leading icon は持たない
         FilterChip(
             selected = selected == null,
             onClick = { onSelect(null) },
@@ -448,7 +447,7 @@ private fun DeleteConfirmationDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(DesignR.string.common_cancel))
+                Text(stringResource(R.string.favorite_cancel))
             }
         },
     )
@@ -559,7 +558,7 @@ private fun RowContent(
                 Icon(
                     imageVector = if (isSelected) AppIcons.CheckCircle else AppIcons.RadioButtonUnchecked,
                     contentDescription = stringResource(
-                        if (isSelected) DesignR.string.a11y_selected else DesignR.string.a11y_unselected,
+                        if (isSelected) R.string.favorite_a11y_selected else R.string.favorite_a11y_unselected,
                     ),
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),

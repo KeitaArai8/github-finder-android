@@ -13,4 +13,5 @@
     <string name="search_history_clear_all">すべて消去</string>
     <string name="search_history_research_a11y">%1$s を再検索</string>
     <string name="search_history_remove_a11y">%1$s を履歴から削除</string>
+    <string name="search_a11y_clear">クリア</string>
 </resources>

@@ -19,8 +19,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.githubfinder.core.data.repository.FavoriteStore
-import com.example.githubfinder.core.model.RepositoryEntity
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.GitHubRepo
+import com.example.githubfinder.core.model.SearchResult
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.testing.FakeSearchHistoryRepository
 import com.example.githubfinder.core.testing.FakeSearchRepository
@@ -65,7 +65,7 @@ class SearchScreenTest {
     @Test
     fun クエリ入力後にリポジトリ行が表示される() {
         // Arrange: 1 件ヒットする Fake 検索結果で SearchRoute を表示
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "kotlin/kotlinx.coroutines",
             description = "coroutines",
@@ -75,7 +75,7 @@ class SearchScreenTest {
         )
         val searchRepo = FakeSearchRepository().apply {
             searchResult = Result.success(
-                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+                SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
             )
         }
         val viewModel = makeViewModel(searchRepo = searchRepo)
@@ -100,7 +100,7 @@ class SearchScreenTest {
     @Test
     fun クリアボタンでIdle状態に戻る() {
         // Arrange: 1 件ヒットする Fake 検索結果で SearchRoute を表示し、検索済み（Loaded）状態にする
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "kotlin/kotlinx.coroutines",
             description = null,
@@ -110,7 +110,7 @@ class SearchScreenTest {
         )
         val searchRepo = FakeSearchRepository().apply {
             searchResult = Result.success(
-                SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+                SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
             )
         }
         val viewModel = makeViewModel(searchRepo = searchRepo)

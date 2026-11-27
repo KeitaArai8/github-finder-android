@@ -1,8 +1,8 @@
 package com.example.githubfinder.core.database
 
 import com.example.githubfinder.core.testing.FakeFavoriteDao
-import com.example.githubfinder.core.testing.testFavoriteDb
-import com.example.githubfinder.core.testing.testRepository
+import com.example.githubfinder.core.testing.testFavoriteEntity
+import com.example.githubfinder.core.testing.testGitHubRepo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -33,7 +33,7 @@ class FavoriteLocalDataSourceTest {
         val dataSource = makeDataSource()
 
         // Act: id=1 / fullName="owner/repo" を add 後に favorites を取る
-        dataSource.add(testRepository(id = 1, fullName = "owner/repo"))
+        dataSource.add(testGitHubRepo(id = 1, fullName = "owner/repo"))
         val all = dataSource.favorites.first()
 
         // Assert: 追加した1件が取得でき、内容も正しい
@@ -47,9 +47,9 @@ class FavoriteLocalDataSourceTest {
         // Arrange: 明示的な savedAt（1000/2000/3000）で 3件を直接挿入
         val dao = FakeFavoriteDao()
         val dataSource = FavoriteLocalDataSource(dao)
-        dao.insertWithSavedAt(testFavoriteDb(1), savedAt = 1000L)
-        dao.insertWithSavedAt(testFavoriteDb(2), savedAt = 2000L)
-        dao.insertWithSavedAt(testFavoriteDb(3), savedAt = 3000L)
+        dao.insertWithSavedAt(testFavoriteEntity(1), savedAt = 1000L)
+        dao.insertWithSavedAt(testFavoriteEntity(2), savedAt = 2000L)
+        dao.insertWithSavedAt(testFavoriteEntity(3), savedAt = 3000L)
 
         // Act: favorites を取る
         val all = dataSource.favorites.first()
@@ -68,8 +68,8 @@ class FavoriteLocalDataSourceTest {
         }
 
         // Act: id=1, id=2 を add してから id=1 を remove
-        dataSource.add(testRepository(id = 1))
-        dataSource.add(testRepository(id = 2))
+        dataSource.add(testGitHubRepo(id = 1))
+        dataSource.add(testGitHubRepo(id = 2))
         dataSource.remove(1)
         job.cancel()
 
@@ -81,8 +81,8 @@ class FavoriteLocalDataSourceTest {
     fun `removeで該当IDが削除される`() = runTest {
         // Arrange: 2件追加済み
         val dataSource = makeDataSource()
-        dataSource.add(testRepository(id = 1))
-        dataSource.add(testRepository(id = 2))
+        dataSource.add(testGitHubRepo(id = 1))
+        dataSource.add(testGitHubRepo(id = 2))
 
         // Act: id=1 を削除
         dataSource.remove(1)

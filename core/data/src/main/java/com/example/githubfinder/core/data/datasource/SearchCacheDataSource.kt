@@ -6,7 +6,7 @@
 
 package com.example.githubfinder.core.data.datasource
 
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.SearchResult
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
@@ -17,16 +17,16 @@ internal class SearchCacheDataSource @Inject constructor() {
     private val mutex = Mutex()
 
     /** 挿入順を保つ LinkedHashMap。先頭が最も古いエントリ。 */
-    private val cache = LinkedHashMap<CacheKey, SearchResultEntity>()
+    private val cache = LinkedHashMap<CacheKey, SearchResult>()
 
-    suspend fun get(query: String, page: Int): SearchResultEntity? = mutex.withLock { cache[cacheKey(query, page)] }
+    suspend fun get(query: String, page: Int): SearchResult? = mutex.withLock { cache[cacheKey(query, page)] }
 
-    suspend fun set(query: String, page: Int, result: SearchResultEntity) {
+    suspend fun set(query: String, page: Int, result: SearchResult) {
         mutex.withLock { put(cacheKey(query, page), result) }
     }
 
     /** [query] の他ページのキャッシュを破棄したうえで、[page] ページ目の [result] を保存する。 */
-    suspend fun replace(query: String, page: Int, result: SearchResultEntity) {
+    suspend fun replace(query: String, page: Int, result: SearchResult) {
         mutex.withLock {
             val key = cacheKey(query, page)
             cache.keys.removeAll { it.query == key.query }
@@ -34,7 +34,7 @@ internal class SearchCacheDataSource @Inject constructor() {
         }
     }
 
-    private fun put(key: CacheKey, result: SearchResultEntity) {
+    private fun put(key: CacheKey, result: SearchResult) {
         cache[key] = result
         while (cache.size > MAX_ENTRIES) {
             cache.remove(cache.keys.first())

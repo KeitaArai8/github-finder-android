@@ -1,5 +1,5 @@
 /*
- * Android 依存を持たない純粋な Kotlin/JVM モジュール（Entity / 共有型のみ）。
+ * Android 依存を持たない純粋な Kotlin/JVM モジュール（ドメインモデル / 共有型のみ）。
  * Android Gradle Plugin の Convention は適用しないため、Java 17 と警告のエラー扱い（-PwarningsAsErrors=true）をここで設定する。
  */
 

@@ -19,7 +19,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.common.network.di.ApplicationScope
 import com.example.githubfinder.core.data.repository.FavoriteStore
-import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
 import com.example.githubfinder.core.ui.UiText
 import com.example.githubfinder.core.ui.UserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -112,7 +112,7 @@ class FavoriteViewModel @Inject constructor(
      *
      * Room からの実削除は猶予経過まで遅延される。
      */
-    fun removeFavorite(favorite: FavoriteEntity) {
+    fun removeFavorite(favorite: Favorite) {
         // UI からは二重削除できない。万一来ても猶予を延長せず無視する。
         if (favorite.id in pendingDeleteJobs) return
         updateOwned { it.copy(pendingDeleteIDs = it.pendingDeleteIDs + favorite.id) }
@@ -284,7 +284,7 @@ class FavoriteViewModel @Inject constructor(
      * 既知の制限: uiState とこの収集は同じ StateFlow を別々に購読している。お気に入りが空 → 非空に戻るまでの間に
      * この収集が空の値を観測できなかった場合（StateFlow の conflation）、画面の操作状態はリセットされない。
      */
-    private fun syncOwned(favorites: List<FavoriteEntity>) {
+    private fun syncOwned(favorites: List<Favorite>) {
         if (favorites.isEmpty()) {
             _owned.value = OwnedState()
             return
@@ -309,7 +309,7 @@ private data class OwnedState(
 )
 
 /** 一覧から消えた ID / 言語を owned から落とす。syncOwned（書き込み側）と deriveUiState（読み取り側）で共有する。 */
-private fun OwnedState.reconciledWith(favorites: List<FavoriteEntity>): OwnedState {
+private fun OwnedState.reconciledWith(favorites: List<Favorite>): OwnedState {
     val visibleIDs = favorites.map { it.id }.toSet()
     return copy(
         pendingDeleteIDs = pendingDeleteIDs.intersect(visibleIDs),
@@ -322,7 +322,7 @@ private fun OwnedState.reconciledWith(favorites: List<FavoriteEntity>): OwnedSta
  * combine と、現在値を必要とするイベントハンドラ（currentLoaded）が同じ関数を通す。
  * displayedFavorites / availableLanguages もここで計算する。
  */
-private fun deriveUiState(favorites: List<FavoriteEntity>?, owned: OwnedState): FavoriteUiState {
+private fun deriveUiState(favorites: List<Favorite>?, owned: OwnedState): FavoriteUiState {
     if (favorites == null) return FavoriteUiState.Loading
     if (favorites.isEmpty()) return FavoriteUiState.Empty
 

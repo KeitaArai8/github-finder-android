@@ -8,7 +8,7 @@ package com.example.githubfinder.core.data.repository
 import com.example.githubfinder.core.data.datasource.SearchCacheDataSource
 import com.example.githubfinder.core.data.model.asExternalModel
 import com.example.githubfinder.core.model.AppError
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.SearchResult
 import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +22,7 @@ internal class SearchRepositoryImpl @Inject constructor(
 
     private val perPage = 30
 
-    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResultEntity {
+    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResult {
         if (!refresh) cacheDataSource.get(query, page)?.let { return it }
 
         val dto = try {
@@ -37,7 +37,7 @@ internal class SearchRepositoryImpl @Inject constructor(
 
         val items = dto.items.map { it.asExternalModel() }
         val hasNextPage = page * perPage < dto.totalCount
-        val result = SearchResultEntity(
+        val result = SearchResult(
             totalCount = dto.totalCount,
             items = items,
             hasNextPage = hasNextPage,

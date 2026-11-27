@@ -155,11 +155,11 @@ val uiState: StateFlow<SearchUiState> = combine(
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
 :app                    ← エントリポイント + Navigation 3 + Hilt（MainActivity で CoachMarkManager を注入）
-:core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）。Android 依存を持たない純粋な Kotlin/JVM モジュール
+:core:model             ← ドメインモデル（GitHubRepo / Favorite / SearchResult）+ RepositoryDisplayItem + AppError（共有型）。Android 依存を持たない純粋な Kotlin/JVM モジュール
 :core:common            ← @Dispatcher / GitHubFinderDispatchers と @ApplicationScope（アプリ寿命の CoroutineScope）の Provider。Android ライブラリ（Timber で未捕捉例外をログに残すため）
-:core:data              ← Repository interface/impl（実装は internal。検索履歴・チュートリアル表示済みフラグ・ネットワーク接続状態も Repository で公開）+ CacheDataSource + NetworkMonitor（internal）+ FavoriteStore + DTO→Entity マッピング
+:core:data              ← Repository interface/impl（実装は internal。検索履歴・チュートリアル表示済みフラグ・ネットワーク接続状態も Repository で公開）+ CacheDataSource + NetworkMonitor（internal）+ FavoriteStore + DTO→ドメインモデルのマッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
-:core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
+:core:database          ← Room + Dao + Room Entity（model/）+ LocalDataSource + DI
 :core:designsystem      ← Material 3 Theme + アイコン + 汎用の状態表示コンポーネント（EmptyStateView / ErrorView / OfflineBanner）。他のプロジェクトモジュールにも Hilt にも依存しない
 :core:ui                ← モデルを描画するコンポーネント（RepositoryListItem）+ UI 補助（UiText / UserMessage / BrowserLauncher / ShareRepository / GitHubUrl）
 :core:datastore         ← DataStore Preferences のデータソース（SearchHistoryLocalDataSource / TutorialLocalDataSource）+ DataStore を提供する DataStoreModule（旧 SharedPreferences からの移行を含む）。利用側は :core:data のみ
@@ -265,7 +265,7 @@ dependencies {
 :core:data
 ├── Repository interface           ← データアクセスの契約
 ├── Repository impl（internal）      ← Remote + Local + Cache を統合
-├── model/                         ← DTO → Entity のマッピング（RepositoryDTO.asExternalModel）
+├── model/                         ← DTO → ドメインモデルのマッピング（RepositoryDTO.asExternalModel）
 ├── repository/FavoriteStore       ← Room の Flow を StateFlow にして共有する薄い橋渡し（@Singleton。SSOT は Room）
 ├── datasource/SearchCacheDataSource ← Repository の内部実装詳細（internal）
 ├── repository/SearchHistoryRepository ← 検索履歴の契約（実装は :core:datastore の SearchHistoryLocalDataSource に委譲）
@@ -328,14 +328,14 @@ ViewModel や `CoachMarkManager` はこれらを直接使わず、`:core:data` �
 
 ### お気に入り設計（Passive View + SSOT）
 
-Entity にフラグを持たせず、ViewModel が表示用データクラス `RepositoryDisplayItem`（`:core:model`）に変換して公開します。Screen は受け取った値をそのまま表示するだけです。
+ドメインモデルにフラグを持たせず、ViewModel が表示用データクラス `RepositoryDisplayItem`（`:core:model`）に変換して公開します。Screen は受け取った値をそのまま表示するだけです。
 
 ```
 SearchViewModel（内部）
-├── _phase: MutableStateFlow<SearchPhase>  ← 検索の段階。Loaded は API から取得した RepositoryEntity の一覧を持つ
+├── _phase: MutableStateFlow<SearchPhase>  ← 検索の段階。Loaded は API から取得した GitHubRepo の一覧を持つ
 ├── query / history                        ← 検索クエリ（SavedStateHandle）と検索履歴
 ├── favoriteStore.favoriteIDs: Set<Int>    ← お気に入り ID（SSOT = DB）
-└── SearchPhase.toUiState(...)             ← combine の中で突き合わせ、RepositoryDisplayItem.from(entity, isFavorite) に変換
+└── SearchPhase.toUiState(...)             ← combine の中で突き合わせ、RepositoryDisplayItem.from(repository, isFavorite) に変換
 
 SearchViewModel（公開）
 └── uiState: StateFlow<SearchUiState>      ← Screen はこれを表示するだけ
@@ -527,7 +527,7 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 | `:feature:favorite` | FavoriteViewModelTest（一括削除・Undo 含む） | 42 |
 | `:feature:widget` | FavoriteWidgetUpdaterTest（お気に入り変更ごとの更新・更新失敗後の継続） | 2 |
 | `:feature:tutorial` | CoachMarkManagerTest | 5 |
-| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, SearchHistoryRepositoryImplTest, TutorialRepositoryImplTest, NetworkStatusRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, RepositoryEntityTest | 35 |
+| `:core:data` | SearchCacheDataSourceTest, SearchRepositoryImplTest, FavoriteRepositoryImplTest, SearchHistoryRepositoryImplTest, TutorialRepositoryImplTest, NetworkStatusRepositoryImplTest, FavoriteStoreTest（Turbine で emission 順序も検証）, GitHubRepoTest | 35 |
 | `:core:network` | GitHubRemoteDataSourceTest（HTTP / IO / キャンセルのエラー変換） | 7 |
 | `:core:database` | FavoriteLocalDataSourceTest（FakeFavoriteDao） | 6 |
 | `:core:ui` | UiTextTest | 3 |
@@ -564,9 +564,9 @@ GitHub API は認証なし（Rate Limit: 10 req/min）で動作します。
 
 | 種類 | 命名 |
 |------|------|
-| Entity | `〇〇Entity` |
+| ドメインモデル（`:core:model`） | 接尾辞なし（`GitHubRepo` / `Favorite` / `SearchResult`） |
 | DTO | `〇〇DTO` |
-| Room Entity | `〇〇DbEntity` |
+| Room Entity（`:core:database` の `model/`） | `〇〇Entity`（Entity → ドメインモデルは `asExternalModel()`） |
 | Repository interface | `〇〇Repository` |
 | Repository 実装 | `〇〇RepositoryImpl` |
 | DataSource | `〇〇RemoteDataSource` / `〇〇LocalDataSource` / `〇〇CacheDataSource` |

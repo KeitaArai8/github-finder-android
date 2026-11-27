@@ -1,6 +1,6 @@
 /*
  * Abstract:
- * 検索結果の表示用データクラス。Entityとお気に入り状態を統合しPassive Viewを実現。
+ * 検索結果の表示用データクラス。ドメインモデルとお気に入り状態を統合しPassive Viewを実現。
  */
 
 package com.example.githubfinder.core.model
@@ -15,7 +15,7 @@ data class RepositoryDisplayItem(
     val isFavorite: Boolean,
 ) {
     companion object {
-        fun from(repository: RepositoryEntity, isFavorite: Boolean) = RepositoryDisplayItem(
+        fun from(repository: GitHubRepo, isFavorite: Boolean) = RepositoryDisplayItem(
             id = repository.id,
             fullName = repository.fullName,
             description = repository.description,

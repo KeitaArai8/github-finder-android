@@ -1,16 +1,15 @@
 /*
  * Abstract:
- * お気に入りに保存されたリポジトリを表すドメインエンティティ。
+ * GitHubリポジトリを表すドメインモデル。
  */
 
 package com.example.githubfinder.core.model
 
-data class FavoriteEntity(
+data class GitHubRepo(
     val id: Int,
     val fullName: String,
     val description: String?,
     val starCount: Int,
     val language: String?,
     val ownerAvatarURL: String?,
-    val savedAt: Long,
 )

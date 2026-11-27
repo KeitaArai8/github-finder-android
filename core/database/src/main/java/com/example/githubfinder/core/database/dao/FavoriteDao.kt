@@ -9,17 +9,17 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.githubfinder.core.database.FavoriteDbEntity
+import com.example.githubfinder.core.database.model.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FavoriteDao {
     /** 保存日時の新しい順に全件を流す。テーブル更新のたびに最新リストが再送される（お気に入りの SSOT）。 */
     @Query("SELECT * FROM favorites ORDER BY savedAt DESC")
-    fun observeAll(): Flow<List<FavoriteDbEntity>>
+    fun observeAll(): Flow<List<FavoriteEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entity: FavoriteDbEntity)
+    suspend fun insert(entity: FavoriteEntity)
 
     @Query("DELETE FROM favorites WHERE repositoryID = :id")
     suspend fun deleteById(id: Int)

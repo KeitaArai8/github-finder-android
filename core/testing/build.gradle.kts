@@ -14,7 +14,7 @@ android {
 }
 
 dependencies {
-    // Fake が公開 API に出す型（FavoriteEntity / FavoriteRepository など）を使う側のテストが参照できるよう api で公開する
+    // Fake が公開 API に出す型（Favorite / FavoriteRepository など）を使う側のテストが参照できるよう api で公開する
     api(project(":core:model"))
     api(project(":core:data"))
     api(project(":core:database"))

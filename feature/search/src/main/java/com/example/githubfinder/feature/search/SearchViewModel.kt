@@ -28,8 +28,8 @@ import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.data.repository.SearchHistoryRepository
 import com.example.githubfinder.core.data.repository.SearchRepository
 import com.example.githubfinder.core.model.AppError
+import com.example.githubfinder.core.model.GitHubRepo
 import com.example.githubfinder.core.model.RepositoryDisplayItem
-import com.example.githubfinder.core.model.RepositoryEntity
 import com.example.githubfinder.core.ui.UiText
 import com.example.githubfinder.core.ui.UserMessage
 import com.example.githubfinder.core.ui.toUiText
@@ -66,7 +66,7 @@ private sealed interface SearchPhase {
     data object Idle : SearchPhase
     data object Loading : SearchPhase
     data class Loaded(
-        val items: List<RepositoryEntity>,
+        val items: List<GitHubRepo>,
         /** 取得済みの最後のページ番号（1 始まり）。 */
         val currentPage: Int = 1,
         val hasNextPage: Boolean = false,
@@ -216,11 +216,11 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val loaded = _phase.value as? SearchPhase.Loaded ?: return@launch
-                val entity = loaded.items.find { it.id == item.id } ?: return@launch
+                val repo = loaded.items.find { it.id == item.id } ?: return@launch
                 if (favoriteStore.favoriteIDs.value.contains(item.id)) {
                     favoriteStore.remove(item.id)
                 } else {
-                    favoriteStore.add(entity)
+                    favoriteStore.add(repo)
                 }
                 // favoriteStore.favoriteIDs は StateFlow で combine に流れているため、
                 // ここで明示的に UI を更新する必要なし（リアクティブに自動反映）

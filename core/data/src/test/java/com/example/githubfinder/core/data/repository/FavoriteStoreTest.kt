@@ -1,8 +1,8 @@
 package com.example.githubfinder.core.data.repository
 
 import app.cash.turbine.test
-import com.example.githubfinder.core.model.FavoriteEntity
-import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.model.Favorite
+import com.example.githubfinder.core.model.GitHubRepo
 import com.example.githubfinder.core.testing.testFavorite
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,8 +21,8 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavoriteStoreTest {
 
-    private class StubRepository(override val favorites: Flow<List<FavoriteEntity>>) : FavoriteRepository {
-        override suspend fun add(repository: RepositoryEntity) = Unit
+    private class StubRepository(override val favorites: Flow<List<Favorite>>) : FavoriteRepository {
+        override suspend fun add(repository: GitHubRepo) = Unit
         override suspend fun remove(id: Int) = Unit
     }
 
@@ -39,7 +39,7 @@ class FavoriteStoreTest {
     @Test
     fun `Roomの最初のemissionが届くまでfavoritesはnullでfavoriteIDsは空集合`() = runTest {
         // Arrange: まだ何も emit していない Flow を持つ Repository
-        val source = MutableSharedFlow<List<FavoriteEntity>>()
+        val source = MutableSharedFlow<List<Favorite>>()
         val scope = newScope()
         val store = FavoriteStore(StubRepository(source), scope)
 
@@ -58,21 +58,21 @@ class FavoriteStoreTest {
     @Test
     fun `Roomの購読が例外で失敗しても落ちずに空リストへ倒れる`() = runTest {
         // Arrange: collect 開始時に例外を投げる Flow
-        val failing = flow<List<FavoriteEntity>> { throw IllegalStateException("room failure") }
+        val failing = flow<List<Favorite>> { throw IllegalStateException("room failure") }
         val scope = newScope()
 
         // Act: ストアを作る（Eagerly なので即購読される。catch が無ければ scope が例外で落ちる）
         val store = FavoriteStore(StubRepository(failing), scope)
 
         // Assert: 例外は伝播せず、favorites は空リスト（null ではない）になる
-        assertEquals(emptyList<FavoriteEntity>(), store.favorites.value)
+        assertEquals(emptyList<Favorite>(), store.favorites.value)
         assertEquals(emptySet<Int>(), store.favoriteIDs.value)
     }
 
     @Test
     fun `favoritesは変更のたびに順番どおり流れ同じ内容の再emissionは流れない`() = runTest {
         // Arrange: 手動で emit できる Flow を持つ Repository と、最初の emission 前のストア
-        val source = MutableSharedFlow<List<FavoriteEntity>>()
+        val source = MutableSharedFlow<List<Favorite>>()
         val store = FavoriteStore(StubRepository(source), newScope())
 
         store.favorites.test {
@@ -94,7 +94,7 @@ class FavoriteStoreTest {
     @Test
     fun `favoriteIDsは購読前の最新値から始まり変更に追従する`() = runTest {
         // Arrange: Eagerly 購読のため、テスト側の購読前に emit した値もストアが保持している
-        val source = MutableSharedFlow<List<FavoriteEntity>>()
+        val source = MutableSharedFlow<List<Favorite>>()
         val store = FavoriteStore(StubRepository(source), newScope())
         source.emit(listOf(testFavorite(1), testFavorite(2)))
 

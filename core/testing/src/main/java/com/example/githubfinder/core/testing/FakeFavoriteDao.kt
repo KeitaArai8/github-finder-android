@@ -6,8 +6,8 @@
 
 package com.example.githubfinder.core.testing
 
-import com.example.githubfinder.core.database.FavoriteDbEntity
 import com.example.githubfinder.core.database.dao.FavoriteDao
+import com.example.githubfinder.core.database.model.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -17,18 +17,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * savedAt を明示したい場合は [insertWithSavedAt] を使う。
  */
 class FakeFavoriteDao : FavoriteDao {
-    private val store = mutableListOf<FavoriteDbEntity>()
+    private val store = mutableListOf<FavoriteEntity>()
     private var nextSavedAt = 0L
-    private val snapshot = MutableStateFlow<List<FavoriteDbEntity>>(emptyList())
+    private val snapshot = MutableStateFlow<List<FavoriteEntity>>(emptyList())
 
-    override fun observeAll(): Flow<List<FavoriteDbEntity>> = snapshot
+    override fun observeAll(): Flow<List<FavoriteEntity>> = snapshot
 
     /** store の変更を購読者へ流す（Room のテーブル更新通知の代わり）。 */
     private fun publish() {
         snapshot.value = store.sortedByDescending { it.savedAt }
     }
 
-    override suspend fun insert(entity: FavoriteDbEntity) {
+    override suspend fun insert(entity: FavoriteEntity) {
         store.removeAll { it.repositoryID == entity.repositoryID }
         nextSavedAt += 1
         store.add(entity.copy(savedAt = nextSavedAt))
@@ -41,7 +41,7 @@ class FakeFavoriteDao : FavoriteDao {
     }
 
     /** 明示的な savedAt で挿入する（並び順の検証用）。 */
-    fun insertWithSavedAt(entity: FavoriteDbEntity, savedAt: Long) {
+    fun insertWithSavedAt(entity: FavoriteEntity, savedAt: Long) {
         store.removeAll { it.repositoryID == entity.repositoryID }
         store.add(entity.copy(savedAt = savedAt))
         publish()

@@ -1,10 +1,10 @@
 package com.example.githubfinder.core.testing
 
-import com.example.githubfinder.core.database.FavoriteDbEntity
-import com.example.githubfinder.core.model.FavoriteEntity
-import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.database.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
+import com.example.githubfinder.core.model.GitHubRepo
 
-/** テスト用の [FavoriteEntity] を作る。テストごとに関係する項目だけ指定し、残りは既定値にする。 */
+/** テスト用の [Favorite] を作る。テストごとに関係する項目だけ指定し、残りは既定値にする。 */
 fun testFavorite(
     id: Int = 1,
     fullName: String = "owner/repo",
@@ -13,7 +13,7 @@ fun testFavorite(
     language: String? = null,
     ownerAvatarURL: String? = null,
     savedAt: Long = 0L,
-): FavoriteEntity = FavoriteEntity(
+): Favorite = Favorite(
     id = id,
     fullName = fullName,
     description = description,
@@ -23,11 +23,11 @@ fun testFavorite(
     savedAt = savedAt,
 )
 
-/** テスト用の [RepositoryEntity] を作る。fullName の既定は `owner/repo<id>`。 */
-fun testRepository(
+/** テスト用の [GitHubRepo] を作る。fullName の既定は `owner/repo<id>`。 */
+fun testGitHubRepo(
     id: Int = 1,
     fullName: String = "owner/repo$id",
-): RepositoryEntity = RepositoryEntity(
+): GitHubRepo = GitHubRepo(
     id = id,
     fullName = fullName,
     description = null,
@@ -36,8 +36,8 @@ fun testRepository(
     ownerAvatarURL = null,
 )
 
-/** テスト用の [FavoriteDbEntity] を作る。savedAt は指定しない限り実時刻になる。 */
-fun testFavoriteDb(id: Int = 1): FavoriteDbEntity = FavoriteDbEntity(
+/** テスト用の [FavoriteEntity] を作る。savedAt は指定しない限り実時刻になる。 */
+fun testFavoriteEntity(id: Int = 1): FavoriteEntity = FavoriteEntity(
     repositoryID = id,
     fullName = "owner/repo$id",
     description = null,

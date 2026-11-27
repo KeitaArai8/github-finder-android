@@ -1,7 +1,7 @@
 package com.example.githubfinder.core.data.datasource
 
-import com.example.githubfinder.core.model.RepositoryEntity
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.GitHubRepo
+import com.example.githubfinder.core.model.SearchResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -108,9 +108,9 @@ class SearchCacheDataSourceTest {
         assertEquals(99, cache.get("query99", 1)?.totalCount)
     }
 
-    private fun makeResult(totalCount: Int, itemCount: Int): SearchResultEntity {
+    private fun makeResult(totalCount: Int, itemCount: Int): SearchResult {
         val items = (0 until itemCount).map { index ->
-            RepositoryEntity(
+            GitHubRepo(
                 id = index,
                 fullName = "owner/repo$index",
                 description = null,
@@ -119,6 +119,6 @@ class SearchCacheDataSourceTest {
                 ownerAvatarURL = null,
             )
         }
-        return SearchResultEntity(totalCount = totalCount, items = items, hasNextPage = false)
+        return SearchResult(totalCount = totalCount, items = items, hasNextPage = false)
     }
 }

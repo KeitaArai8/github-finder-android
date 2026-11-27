@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.model.AppError
-import com.example.githubfinder.core.model.FavoriteEntity
-import com.example.githubfinder.core.model.RepositoryEntity
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.Favorite
+import com.example.githubfinder.core.model.GitHubRepo
+import com.example.githubfinder.core.model.SearchResult
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.testing.FakeSearchHistoryRepository
 import com.example.githubfinder.core.testing.FakeSearchRepository
@@ -79,7 +79,7 @@ class SearchViewModelTest {
     fun `SavedStateHandleに保存済みのクエリで起動すると入力欄に復元され、debounce後に再検索される`() = runTest {
         // Arrange: プロセス死後の復元を想定し、query="kotlin" を持つ SavedStateHandle と、1 件返す検索結果
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(RepositoryEntity(1, "JetBrains/kotlin", null, 10, "Kotlin", null)), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(GitHubRepo(1, "JetBrains/kotlin", null, 10, "Kotlin", null)), hasNextPage = false),
         )
 
         // Act: そのハンドルで ViewModel を作る
@@ -126,7 +126,7 @@ class SearchViewModelTest {
     @Test
     fun `検索成功時にLoaded状態になる`() = runTest {
         // Arrange: owner/repo 1 件（★100・Kotlin）を返す検索結果と ViewModel
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "owner/repo",
             description = "test",
@@ -135,7 +135,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -155,7 +155,7 @@ class SearchViewModelTest {
     fun `検索結果が空の場合Empty状態になる`() = runTest {
         // Arrange: 0 件（hasNextPage なし）を返す検索結果
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false),
+            SearchResult(totalCount = 0, items = emptyList(), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -201,7 +201,7 @@ class SearchViewModelTest {
     @Test
     fun `クエリを空にするとIdle状態に戻る`() = runTest {
         // Arrange: 検索成功（owner/repo 1 件）で Loaded にした ViewModel
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "owner/repo",
             description = null,
@@ -210,7 +210,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -227,7 +227,7 @@ class SearchViewModelTest {
     @Test
     fun `お気に入りトグルでisFavoriteがtrueになる`() = runTest {
         // Arrange: id=42 の 1 件が Loaded になっていて、お気に入りは未登録
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 42,
             fullName = "owner/repo",
             description = null,
@@ -236,7 +236,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -256,7 +256,7 @@ class SearchViewModelTest {
     @Test
     fun `お気に入り解除でisFavoriteがfalseになる`() = runTest {
         // Arrange: id=42 が検索結果にあり、お気に入りにも登録済みの状態で Loaded にした ViewModel
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 42,
             fullName = "owner/repo",
             description = null,
@@ -265,7 +265,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         fakeFavoriteRepository.stored = listOf(
             testFavorite(
@@ -297,7 +297,7 @@ class SearchViewModelTest {
     @Test
     fun `onLoadMoreで次ページが追加される`() = runTest {
         // Arrange: page1/repo 1 件・次ページありの Loaded 状態
-        val page1Repo = RepositoryEntity(
+        val page1Repo = GitHubRepo(
             id = 1,
             fullName = "page1/repo",
             description = null,
@@ -306,14 +306,14 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(page1Repo), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(page1Repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
         // Act: 次ページ（page2/repo・最終ページ）を返す設定にして onLoadMore する
-        val page2Repo = RepositoryEntity(
+        val page2Repo = GitHubRepo(
             id = 2,
             fullName = "page2/repo",
             description = null,
@@ -322,7 +322,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(page2Repo), hasNextPage = false),
+            SearchResult(totalCount = 60, items = listOf(page2Repo), hasNextPage = false),
         )
         viewModel.onLoadMore()
         advanceUntilIdle()
@@ -338,7 +338,7 @@ class SearchViewModelTest {
     @Test
     fun `スペースのみのクエリはIdleにリセットされる`() = runTest {
         // Arrange: 検索済み状態を作る
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "owner/repo",
             description = null,
@@ -347,7 +347,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -365,7 +365,7 @@ class SearchViewModelTest {
     @Test
     fun `ページ追加読み込み失敗時に既存データが維持される`() = runTest {
         // Arrange: 1ページ目を表示
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "page1/repo",
             description = null,
@@ -374,7 +374,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -397,7 +397,7 @@ class SearchViewModelTest {
     @Test
     fun `お気に入り追加失敗時にuserMessagesへ通知が積まれuserMessageShownで消える`() = runTest {
         // Arrange: 1件ヒットした検索結果を表示し、お気に入り追加が失敗するよう設定
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 42,
             fullName = "owner/repo",
             description = null,
@@ -406,7 +406,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         fakeFavoriteRepository.shouldThrowOnAdd = true
         val viewModel = createViewModel()
@@ -433,9 +433,9 @@ class SearchViewModelTest {
     @Test
     fun `追加読み込み失敗時にuserMessagesへ通知が積まれuserMessageShownで消える`() = runTest {
         // Arrange: 次ページありの 1 ページ目を表示
-        val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "page1/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -461,7 +461,7 @@ class SearchViewModelTest {
     @Test
     fun `onRefreshで再検索が実行され結果が更新される`() = runTest {
         // Arrange: 初回検索
-        val repo1 = RepositoryEntity(
+        val repo1 = GitHubRepo(
             id = 1,
             fullName = "old/repo",
             description = null,
@@ -470,14 +470,14 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo1), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo1), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
         advanceUntilIdle()
 
         // Act: 新しいデータで再検索
-        val repo2 = RepositoryEntity(
+        val repo2 = GitHubRepo(
             id = 2,
             fullName = "new/repo",
             description = null,
@@ -486,7 +486,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo2), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo2), hasNextPage = false),
         )
         viewModel.onRefresh()
         advanceUntilIdle()
@@ -500,7 +500,7 @@ class SearchViewModelTest {
     @Test
     fun `hasNextPageがfalseの場合onLoadMoreは何もしない`() = runTest {
         // Arrange: hasNextPage = false
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "owner/repo",
             description = null,
@@ -509,7 +509,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -527,9 +527,9 @@ class SearchViewModelTest {
     @Test
     fun `検索成功時に履歴に追加される`() = runTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -560,9 +560,9 @@ class SearchViewModelTest {
     @Test
     fun `selectHistoryで即時検索が実行される`() = runTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -579,9 +579,9 @@ class SearchViewModelTest {
     @Test
     fun `selectHistoryは検索を1回だけ実行し履歴追加も1回だけである`() = runTest {
         // Arrange: owner/repo 1 件を返す検索結果と ViewModel
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
 
@@ -598,9 +598,9 @@ class SearchViewModelTest {
     @Test
     fun `onRefreshは同じクエリを debounce 待ちなしで1回だけ再検索する`() = runTest {
         // Arrange: "kotlin" で検索済み（Loaded）の ViewModel
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("kotlin")
@@ -620,9 +620,9 @@ class SearchViewModelTest {
     @Test
     fun `通常の検索はrefreshなしでonRefreshだけがrefreshありでリポジトリを呼ぶ`() = runTest {
         // Arrange: 1 ページ目に次ページがある検索結果を返す Fake
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
 
@@ -654,9 +654,9 @@ class SearchViewModelTest {
     @Test
     fun `次ページ取得中にクエリが変わったら古いページの結果は破棄される`() = runTest {
         // Arrange: "a" の 1 ページ目（a/page1・次ページあり）を表示中
-        val pageOne = RepositoryEntity(1, "a/page1", null, 10, null, null)
+        val pageOne = GitHubRepo(1, "a/page1", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(pageOne), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(pageOne), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("a")
@@ -668,15 +668,15 @@ class SearchViewModelTest {
         viewModel.onLoadMore()
         runCurrent()
         fakeSearchRepository.searchGate = null
-        val newResult = RepositoryEntity(2, "b/page1", null, 5, null, null)
+        val newResult = GitHubRepo(2, "b/page1", null, 5, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(newResult), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(newResult), hasNextPage = false),
         )
         viewModel.onQueryChanged("b")
         advanceUntilIdle()
         // その後で "a" の 2 ページ目（a/page2）の通信が完了する
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(RepositoryEntity(3, "a/page2", null, 1, null, null)), hasNextPage = false),
+            SearchResult(totalCount = 60, items = listOf(GitHubRepo(3, "a/page2", null, 1, null, null)), hasNextPage = false),
         )
         gate.complete(Unit)
         advanceUntilIdle()
@@ -708,9 +708,9 @@ class SearchViewModelTest {
     fun `Loaded状態からクエリ消去でIdleに戻る際 履歴が反映される（combine 経由）`() = runTest {
         // Arrange: 初期履歴をシード + 検索成功で Loaded 状態にする
         fakeSearchHistoryRepository.setHistoryForTest(listOf("kotlin", "swift"))
-        val repo = RepositoryEntity(1, "owner/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("compose")
@@ -734,7 +734,7 @@ class SearchViewModelTest {
     @Test
     fun `存在しないIDのtoggleFavoriteは何もしない`() = runTest {
         // Arrange: owner/repo 1 件が Loaded になっている ViewModel
-        val repo = RepositoryEntity(
+        val repo = GitHubRepo(
             id = 1,
             fullName = "owner/repo",
             description = null,
@@ -743,7 +743,7 @@ class SearchViewModelTest {
             ownerAvatarURL = null,
         )
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -751,7 +751,7 @@ class SearchViewModelTest {
 
         // Act: 存在しないIDでtoggle
         val fakeItem = com.example.githubfinder.core.model.RepositoryDisplayItem.from(
-            RepositoryEntity(
+            GitHubRepo(
                 id = 999,
                 fullName = "fake/repo",
                 description = null,
@@ -772,9 +772,9 @@ class SearchViewModelTest {
     @Test
     fun `追加読み込み中にスコープがキャンセルされても失敗通知は積まれない`() = runTest {
         // Arrange: 次ページありの 1 ページ目を表示し、2 ページ目の取得を中断させておく
-        val repo = RepositoryEntity(1, "page1/repo", null, 10, null, null)
+        val repo = GitHubRepo(1, "page1/repo", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 60, items = listOf(repo), hasNextPage = true),
+            SearchResult(totalCount = 60, items = listOf(repo), hasNextPage = true),
         )
         val viewModel = createViewModel()
         viewModel.onQueryChanged("test")
@@ -795,9 +795,9 @@ class SearchViewModelTest {
     @Test
     fun `通信中に入力した新しいクエリが検索結果で上書きされない`() = runTest {
         // Arrange: "kotlin" の検索を通信中のまま止めておく（結果は 1 件）
-        val repo = RepositoryEntity(1, "owner/kotlin", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/kotlin", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val gate = CompletableDeferred<Unit>()
         fakeSearchRepository.searchGate = gate
@@ -821,9 +821,9 @@ class SearchViewModelTest {
     @Test
     fun `新しいクエリが確定すると通信中の古い検索がキャンセルされ最新クエリの結果だけが残る`() = runTest {
         // Arrange: "kotlin" の検索を通信中のまま止めておく
-        val repo = RepositoryEntity(2, "owner/compose", null, 10, null, null)
+        val repo = GitHubRepo(2, "owner/compose", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         val gate = CompletableDeferred<Unit>()
         fakeSearchRepository.searchGate = gate
@@ -859,9 +859,9 @@ class SearchViewModelTest {
     @Test
     fun `連続入力はdebounce後に最後のクエリで1回だけ検索しIdleからLoadingそしてLoadedの順に遷移する`() = runTest {
         // Arrange: 1 件返す検索結果を持つ ViewModel
-        val repo = RepositoryEntity(1, "owner/kotlin", null, 10, null, null)
+        val repo = GitHubRepo(1, "owner/kotlin", null, 10, null, null)
         fakeSearchRepository.searchResult = Result.success(
-            SearchResultEntity(totalCount = 1, items = listOf(repo), hasNextPage = false),
+            SearchResult(totalCount = 1, items = listOf(repo), hasNextPage = false),
         )
         // 通信中の Loading を観測できるよう、結果の返却をゲートで止めておく
         val gate = CompletableDeferred<Unit>()

@@ -6,10 +6,10 @@
 
 package com.example.githubfinder.core.data.model
 
-import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.model.GitHubRepo
 import com.example.githubfinder.core.network.dto.RepositoryDTO
 
-internal fun RepositoryDTO.asExternalModel() = RepositoryEntity(
+internal fun RepositoryDTO.asExternalModel() = GitHubRepo(
     id = id,
     fullName = fullName,
     description = description,

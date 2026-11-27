@@ -32,7 +32,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -72,7 +72,7 @@ internal class FavoriteWidget : GlanceAppWidget() {
         }
     }
 
-    private suspend fun loadFavorites(context: Context): List<FavoriteEntity> = try {
+    private suspend fun loadFavorites(context: Context): List<Favorite> = try {
         val entryPoint = EntryPointAccessors.fromApplication(
             context,
             WidgetEntryPoint::class.java,
@@ -90,9 +90,9 @@ internal class FavoriteWidget : GlanceAppWidget() {
         private const val MAX_ITEMS = 5
 
         private val PREVIEW_FAVORITES = listOf(
-            FavoriteEntity(1, "JetBrains/kotlin", null, 53_548, "Kotlin", null, 0L),
-            FavoriteEntity(2, "square/okhttp", null, 47_107, "Kotlin", null, 0L),
-            FavoriteEntity(3, "android/compose-samples", null, 20_100, "Kotlin", null, 0L),
+            Favorite(1, "JetBrains/kotlin", null, 53_548, "Kotlin", null, 0L),
+            Favorite(2, "square/okhttp", null, 47_107, "Kotlin", null, 0L),
+            Favorite(3, "android/compose-samples", null, 20_100, "Kotlin", null, 0L),
         )
     }
 }
@@ -100,7 +100,7 @@ internal class FavoriteWidget : GlanceAppWidget() {
 @Composable
 private fun FavoriteWidgetContent(
     context: Context,
-    favorites: List<FavoriteEntity>,
+    favorites: List<Favorite>,
     launchIntent: Intent?,
     modifier: GlanceModifier = GlanceModifier,
 ) {
@@ -148,7 +148,7 @@ private fun EmptyState(context: Context) {
 }
 
 @Composable
-private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
+private fun FavoriteList(context: Context, favorites: List<Favorite>) {
     Column(modifier = GlanceModifier.fillMaxSize()) {
         Text(
             text = context.getString(R.string.widget_title),
@@ -170,7 +170,7 @@ private fun FavoriteList(context: Context, favorites: List<FavoriteEntity>) {
 }
 
 @Composable
-private fun FavoriteRow(favorite: FavoriteEntity) {
+private fun FavoriteRow(favorite: Favorite) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()

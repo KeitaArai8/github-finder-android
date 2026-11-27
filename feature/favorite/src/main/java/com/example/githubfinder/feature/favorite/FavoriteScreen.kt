@@ -64,7 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.githubfinder.core.designsystem.AppIcons
 import com.example.githubfinder.core.designsystem.EmptyStateView
 import com.example.githubfinder.core.designsystem.GitHubFinderTheme
-import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.ui.RepositoryListItem
 import com.example.githubfinder.core.ui.githubUrlFor
@@ -107,7 +107,7 @@ internal fun FavoriteScreen(
     onUserMessageShown: (Long) -> Unit,
     onUndoDelete: (Int) -> Unit,
     onRefresh: () -> Unit,
-    onRemoveFavorite: (FavoriteEntity) -> Unit,
+    onRemoveFavorite: (Favorite) -> Unit,
     onSetFilterLanguage: (String?) -> Unit,
     onSetSortKey: (FavoriteSortKey) -> Unit,
     onEnterEditMode: () -> Unit,
@@ -456,7 +456,7 @@ private fun DeleteConfirmationDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FavoriteRow(
-    favorite: FavoriteEntity,
+    favorite: Favorite,
     isEditMode: Boolean,
     isSelected: Boolean,
     onDismiss: () -> Unit,
@@ -537,7 +537,7 @@ private fun DismissBackground(modifier: Modifier = Modifier) {
 
 @Composable
 private fun RowContent(
-    favorite: FavoriteEntity,
+    favorite: Favorite,
     isEditMode: Boolean,
     isSelected: Boolean,
     onRowTap: () -> Unit,
@@ -571,7 +571,7 @@ private fun RowContent(
 }
 
 /** お気に入り（常に登録済み）を共通行 UI の表示モデルへ変換する。 */
-private fun FavoriteEntity.toDisplayItem() = RepositoryDisplayItem(
+private fun Favorite.toDisplayItem() = RepositoryDisplayItem(
     id = id,
     fullName = fullName,
     description = description,
@@ -586,7 +586,7 @@ private fun previewFavorite(
     fullName: String,
     starCount: Int,
     language: String? = "Kotlin",
-): FavoriteEntity = FavoriteEntity(
+): Favorite = Favorite(
     id = id,
     fullName = fullName,
     description = "Sample repository description",

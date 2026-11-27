@@ -17,8 +17,8 @@
 package com.example.githubfinder.core.data.repository
 
 import com.example.githubfinder.core.common.network.di.ApplicationScope
-import com.example.githubfinder.core.model.FavoriteEntity
-import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.model.Favorite
+import com.example.githubfinder.core.model.GitHubRepo
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +36,7 @@ class FavoriteStore @Inject constructor(
     @ApplicationScope applicationScope: CoroutineScope,
 ) {
     /** お気に入り一覧。最初の emission が届くまで null（= 読み込み中）。 */
-    val favorites: StateFlow<List<FavoriteEntity>?> = favoriteRepository.favorites
+    val favorites: StateFlow<List<Favorite>?> = favoriteRepository.favorites
         .catch { e ->
             // アプリスコープの購読が例外で落ちるとプロセスごと落ちるため、ログに残して空リストとして扱う
             Timber.tag("FavoriteStore").e(e, "Favorites collection failed")
@@ -50,7 +50,7 @@ class FavoriteStore @Inject constructor(
         .map { list -> list?.map { it.id }?.toSet() ?: emptySet() }
         .stateIn(applicationScope, SharingStarted.Eagerly, emptySet())
 
-    suspend fun add(repository: RepositoryEntity) = favoriteRepository.add(repository)
+    suspend fun add(repository: GitHubRepo) = favoriteRepository.add(repository)
 
     suspend fun remove(id: Int) = favoriteRepository.remove(id)
 }

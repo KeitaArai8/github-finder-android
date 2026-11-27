@@ -2,7 +2,7 @@ package com.example.githubfinder.core.data.repository
 
 import com.example.githubfinder.core.database.FavoriteLocalDataSource
 import com.example.githubfinder.core.testing.FakeFavoriteDao
-import com.example.githubfinder.core.testing.testRepository
+import com.example.githubfinder.core.testing.testGitHubRepo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -18,7 +18,7 @@ class FavoriteRepositoryImplTest {
         val repository = makeRepository()
 
         // Act: id=1 を add 後に favorites を取る
-        repository.add(testRepository(id = 1))
+        repository.add(testGitHubRepo(id = 1))
         val all = repository.favorites.first()
 
         // Assert: 追加した1件が取得できる
@@ -30,8 +30,8 @@ class FavoriteRepositoryImplTest {
     fun `removeで削除される`() = runTest {
         // Arrange: 2件追加済みの Repository
         val repository = makeRepository()
-        repository.add(testRepository(id = 1))
-        repository.add(testRepository(id = 2))
+        repository.add(testGitHubRepo(id = 1))
+        repository.add(testGitHubRepo(id = 2))
 
         // Act: id=1 を削除
         repository.remove(1)

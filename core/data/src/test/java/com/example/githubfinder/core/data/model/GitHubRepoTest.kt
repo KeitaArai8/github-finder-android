@@ -1,12 +1,12 @@
 package com.example.githubfinder.core.data.model
 
-import com.example.githubfinder.core.model.RepositoryEntity
+import com.example.githubfinder.core.model.GitHubRepo
 import com.example.githubfinder.core.network.dto.OwnerDTO
 import com.example.githubfinder.core.network.dto.RepositoryDTO
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class RepositoryEntityTest {
+class GitHubRepoTest {
 
     @Test
     fun `asExternalModelはDTOの各項目をドメインモデルへ対応づける`() {
@@ -21,11 +21,11 @@ class RepositoryEntityTest {
         )
 
         // Act: ドメインモデルへ変換する
-        val entity = dto.asExternalModel()
+        val repo = dto.asExternalModel()
 
         // Assert: stargazersCount は starCount、owner.avatarUrl は ownerAvatarURL に入り、他の項目はそのまま移る
         assertEquals(
-            RepositoryEntity(
+            GitHubRepo(
                 id = 7,
                 fullName = "owner/repo",
                 description = "説明",
@@ -33,7 +33,7 @@ class RepositoryEntityTest {
                 language = "Kotlin",
                 ownerAvatarURL = "https://example.com/a.png",
             ),
-            entity,
+            repo,
         )
     }
 
@@ -50,10 +50,10 @@ class RepositoryEntityTest {
         )
 
         // Act: ドメインモデルへ変換する
-        val entity = dto.asExternalModel()
+        val repo = dto.asExternalModel()
 
         // Assert: description と language は null のまま
-        assertEquals(null, entity.description)
-        assertEquals(null, entity.language)
+        assertEquals(null, repo.description)
+        assertEquals(null, repo.language)
     }
 }

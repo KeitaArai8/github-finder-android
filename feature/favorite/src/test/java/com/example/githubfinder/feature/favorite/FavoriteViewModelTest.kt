@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import com.example.githubfinder.core.data.repository.FavoriteStore
-import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
 import com.example.githubfinder.core.testing.FakeFavoriteRepository
 import com.example.githubfinder.core.testing.MainDispatcherRule
 import com.example.githubfinder.core.testing.testFavorite
@@ -77,10 +77,10 @@ class FavoriteViewModelTest {
     @Test
     fun `Roomの初回emissionが届くまでEmptyにならずLoadingのままで届いた後に遷移する`() = runTest {
         // Arrange: まだ emit しない Flow を持つ Repository から作った Store と ViewModel
-        val source = kotlinx.coroutines.flow.MutableSharedFlow<List<FavoriteEntity>>()
+        val source = kotlinx.coroutines.flow.MutableSharedFlow<List<Favorite>>()
         val repository = object : com.example.githubfinder.core.data.repository.FavoriteRepository {
-            override val favorites: kotlinx.coroutines.flow.Flow<List<FavoriteEntity>> = source
-            override suspend fun add(repository: com.example.githubfinder.core.model.RepositoryEntity) = Unit
+            override val favorites: kotlinx.coroutines.flow.Flow<List<Favorite>> = source
+            override suspend fun add(repository: com.example.githubfinder.core.model.GitHubRepo) = Unit
             override suspend fun remove(id: Int) = Unit
         }
         val viewModel = FavoriteViewModel(
@@ -918,7 +918,7 @@ class FavoriteViewModelTest {
 
         // Act: 検索画面のお気に入りトグルと同じ経路（FavoriteStore.add）で id=7 を追加する
         favoriteStore.add(
-            com.example.githubfinder.core.model.RepositoryEntity(
+            com.example.githubfinder.core.model.GitHubRepo(
                 id = 7,
                 fullName = "owner/added",
                 description = null,

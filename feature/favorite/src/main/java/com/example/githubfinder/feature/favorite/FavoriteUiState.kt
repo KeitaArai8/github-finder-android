@@ -12,7 +12,7 @@
 package com.example.githubfinder.feature.favorite
 
 import androidx.annotation.StringRes
-import com.example.githubfinder.core.model.FavoriteEntity
+import com.example.githubfinder.core.model.Favorite
 
 /** お気に入り一覧の並び替え基準。 */
 enum class FavoriteSortKey(@StringRes val labelRes: Int) {
@@ -25,7 +25,7 @@ sealed interface FavoriteUiState {
     data object Loading : FavoriteUiState
 
     data class Loaded(
-        val favorites: List<FavoriteEntity>,
+        val favorites: List<Favorite>,
         val isRefreshing: Boolean = false,
         val isEditMode: Boolean = false,
         val selectedIDs: Set<Int> = emptySet(),
@@ -42,7 +42,7 @@ sealed interface FavoriteUiState {
          * sortKey/filterLanguage/pendingDelete を適用した表示用リスト（ViewModel が導出時に計算した値を載せる）。
          * 既定の空リストのまま公開しないこと。
          */
-        val displayedFavorites: List<FavoriteEntity> = emptyList(),
+        val displayedFavorites: List<Favorite> = emptyList(),
         /** 言語フィルタチップに出す選択肢（生データから抽出した重複なしソート済み。ViewModel が計算済みの値を載せる）。 */
         val availableLanguages: List<String> = emptyList(),
     ) : FavoriteUiState {

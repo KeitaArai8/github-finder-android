@@ -1,13 +1,13 @@
 package com.example.githubfinder.core.testing
 
 import com.example.githubfinder.core.data.repository.SearchRepository
-import com.example.githubfinder.core.model.SearchResultEntity
+import com.example.githubfinder.core.model.SearchResult
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 
 class FakeSearchRepository : SearchRepository {
-    var searchResult: Result<SearchResultEntity> = Result.success(
-        SearchResultEntity(totalCount = 0, items = emptyList(), hasNextPage = false),
+    var searchResult: Result<SearchResult> = Result.success(
+        SearchResult(totalCount = 0, items = emptyList(), hasNextPage = false),
     )
     var searchCallCount = 0
     var lastSearchQuery: String? = null
@@ -20,7 +20,7 @@ class FakeSearchRepository : SearchRepository {
     /** ゲート待ち中にキャンセルされたリクエストのクエリ（キャンセル伝播の検証用）。 */
     val cancelledQueries = mutableListOf<String>()
 
-    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResultEntity {
+    override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResult {
         searchCallCount++
         lastSearchQuery = query
         lastSearchPage = page

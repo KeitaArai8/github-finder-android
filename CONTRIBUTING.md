@@ -90,6 +90,7 @@ Closes #42
 ```
 
 - `:feature:*` 間は**相互参照しない**
+- Kotlin ソースは各モジュールの `src/main/kotlin`（テストは `src/test/kotlin` / `src/androidTest/kotlin`）に置く
 - `:core:designsystem` は `:core:model` に依存しない。モデル型を描画するコンポーネントと UI 補助（`UiText` / `BrowserLauncher` 等）は `:core:ui` に置く
 - `:core:model` は **純粋なドメインモデル**（`GitHubRepo` / `Favorite` / `SearchResult`）と共有型のみ。Android 依存を持たない Kotlin/JVM モジュール（`android.*` / `androidx.*` を import しない。Room / Retrofit 依存も持ち込まない）
 - `:core:common` は `@Dispatcher` と `@ApplicationScope`（アプリ寿命の CoroutineScope）の置き場。他の `:core` モジュールには依存しない

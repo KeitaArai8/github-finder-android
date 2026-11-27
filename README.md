@@ -150,12 +150,13 @@ val uiState: StateFlow<SearchUiState> = combine(
 
 ## モジュール構成（NiA準拠）
 
-[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、13 モジュール + `build-logic`（Convention Plugin）の構成です。
+[Now in Android](https://github.com/android/nowinandroid) のモジュール設計思想に準拠し、14 モジュール + `build-logic`（Convention Plugin）の構成です。
 
 ```
 :build-logic/convention  ← Convention Plugin（共通 Gradle 設定を集約）
 :app                    ← エントリポイント + Navigation 3 + Hilt + TutorialScreen
-:core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）
+:core:model             ← Entity + RepositoryDisplayItem + AppError（共有型）。Android 依存を持たない純粋な Kotlin/JVM モジュール
+:core:common            ← @Dispatcher / GitHubFinderDispatchers と @ApplicationScope（アプリ寿命の CoroutineScope）の Provider。Android ライブラリ（Timber で未捕捉例外をログに残すため）
 :core:data              ← Repository interface/impl（実装は internal）+ CacheDataSource + FavoriteStore + SearchHistoryDataSource + NetworkMonitor + DTO→Entity マッピング
 :core:network           ← Retrofit + DTO + RemoteDataSource + DI
 :core:database          ← Room + Dao + DbEntity + LocalDataSource + DI
@@ -195,9 +196,9 @@ dependencies {
 |-----------|------|----------------|
 | `githubfinder.android.application` | App ターゲット共通設定（compileSdk/minSdk/Java/Kotlin/buildConfig） | `:app` |
 | `githubfinder.android.application.compose` | App + Compose | `:app` |
-| `githubfinder.android.library` | Library 共通設定 | `:core:model` 等 |
+| `githubfinder.android.library` | Library 共通設定 | `:core:common`, `:core:data` 等（`:core:model` は Android を使わない Kotlin/JVM モジュールのため適用しない） |
 | `githubfinder.android.library.compose` | Library + Compose（BOM 自動注入） | `:core:designsystem`, `:core:ui` 等 |
-| `githubfinder.android.hilt` | Hilt + KSP + hilt-android 注入 | `:core:data` 等 |
+| `githubfinder.android.hilt` | Hilt + KSP + hilt-android 注入 | `:core:common`, `:core:data` 等 |
 | `githubfinder.android.feature` | Library + Compose + Hilt + `:core:model` / `:core:designsystem` / `:core:ui` 依存 + lifecycle + coil + timber + テスト共通（Feature 集約） | `:feature:search`, `:feature:favorite`, `:feature:settings` |
 
 ### モジュール依存関係
@@ -225,9 +226,13 @@ dependencies {
 └── :core:data
 
 :core:data
+├── :core:common         （api。@ApplicationScope / @Dispatcher を依存先にも公開する）
 ├── :core:model
 ├── :core:network
 └── :core:database
+
+:core:common
+└── (Hilt / Coroutines / Timber。他の :core モジュールには依存しない)
 
 :core:network / :core:database
 └── :core:model
@@ -264,7 +269,7 @@ dependencies {
 ├── datasource/SearchHistoryDataSourceImpl   ← DataStore Preferences 実装（internal。テスト時は Fake 差し替え）
 ├── util/NetworkMonitor (i/f)      ← isOnline: Flow<Boolean> の契約
 ├── util/ConnectivityManagerNetworkMonitor ← ConnectivityManager 実装（internal。デフォルトネットワークの状態を 1 つ持つ）
-└── di/                            ← interface ↔ impl のバインド、Dispatcher、@ApplicationScope
+└── di/                            ← interface ↔ impl のバインド（@Binds のみ。Dispatcher と @ApplicationScope は :core:common）
 ```
 
 ### :core:designsystem と :core:tutorial
@@ -420,7 +425,12 @@ AppError は 4 分類（`Network` / `RateLimit` / `Server(code)` / `Unknown`）�
 ├── FavoriteRepository ← FavoriteRepositoryImpl
 ├── SearchHistoryDataSource ← SearchHistoryDataSourceImpl
 ├── NetworkMonitor ← ConnectivityManagerNetworkMonitor
-└── @ApplicationScope CoroutineScope（@Provides）
+
+@Module DispatchersModule（:core:common）
+└── @Dispatcher(Default) CoroutineDispatcher
+
+@Module CoroutineScopesModule（:core:common）
+└── @ApplicationScope CoroutineScope（SupervisorJob + Default + 未捕捉例外を Timber に記録）
 
 @Module TutorialModule (abstract, @Binds)
 └── TutorialLocalDataSource ← TutorialLocalDataSourceImpl

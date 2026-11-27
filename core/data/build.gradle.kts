@@ -8,6 +8,8 @@ android {
 }
 
 dependencies {
+    // @ApplicationScope / @Dispatcher を使う core:data の依存先（feature:favorite / feature:widget 等）にも公開する
+    api(project(":core:common"))
     implementation(project(":core:model"))
     implementation(project(":core:network"))
     implementation(project(":core:database"))

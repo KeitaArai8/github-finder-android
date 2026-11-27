@@ -21,6 +21,7 @@ rootProject.name = "GitHubFinderAndroid"
 
 include(":app")
 include(":core:model")
+include(":core:common")
 include(":core:data")
 include(":core:network")
 include(":core:database")

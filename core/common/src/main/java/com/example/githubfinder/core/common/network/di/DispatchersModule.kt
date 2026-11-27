@@ -3,8 +3,10 @@
  * [Dispatcher] Qualifier 付きの CoroutineDispatcher を提供する Hilt モジュール。
  */
 
-package com.example.githubfinder.core.data.di
+package com.example.githubfinder.core.common.network.di
 
+import com.example.githubfinder.core.common.network.Dispatcher
+import com.example.githubfinder.core.common.network.GitHubFinderDispatchers
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DispatchersModule {
+internal object DispatchersModule {
 
     @Provides
     @Dispatcher(GitHubFinderDispatchers.Default)

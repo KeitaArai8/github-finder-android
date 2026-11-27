@@ -16,7 +16,7 @@
 
 package com.example.githubfinder.core.data.repository
 
-import com.example.githubfinder.core.data.di.ApplicationScope
+import com.example.githubfinder.core.common.network.di.ApplicationScope
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.model.RepositoryEntity
 import javax.inject.Inject

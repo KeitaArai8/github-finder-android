@@ -1,9 +1,9 @@
 /*
  * Abstract:
- * CoroutineDispatcher を識別する Qualifier（Now in Android 方式）。
+ * CoroutineDispatcher を識別する Qualifier と、選べる Dispatcher の種類（Now in Android の NiaDispatchers 相当）。
  */
 
-package com.example.githubfinder.core.data.di
+package com.example.githubfinder.core.common.network
 
 import javax.inject.Qualifier
 

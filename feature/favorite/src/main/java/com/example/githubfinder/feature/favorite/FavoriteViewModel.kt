@@ -17,7 +17,7 @@ package com.example.githubfinder.feature.favorite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.githubfinder.core.data.di.ApplicationScope
+import com.example.githubfinder.core.common.network.di.ApplicationScope
 import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.model.FavoriteEntity
 import com.example.githubfinder.core.ui.UiText

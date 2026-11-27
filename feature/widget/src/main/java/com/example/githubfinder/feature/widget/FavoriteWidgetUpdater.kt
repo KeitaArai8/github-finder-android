@@ -6,7 +6,7 @@
 
 package com.example.githubfinder.feature.widget
 
-import com.example.githubfinder.core.data.di.ApplicationScope
+import com.example.githubfinder.core.common.network.di.ApplicationScope
 import com.example.githubfinder.core.data.repository.FavoriteStore
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -82,7 +82,7 @@ Closes #42
 :feature:{search, favorite, settings} → :core:{model, designsystem, ui}   （feature 用 Convention Plugin が全 feature に付与）
 :feature:{search, favorite} → :core:data
 :feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem / :core:ui には依存しない）
-:core:data → :core:{model, network, database}
+:core:data → :core:{common, model, network, database}   （:core:common は api で公開）
 :core:{network, database} → :core:model
 :core:ui → :core:{model, designsystem}   （どちらも api で公開）
 :core:designsystem → :core:tutorial
@@ -91,7 +91,8 @@ Closes #42
 
 - `:feature:*` 間は**相互参照しない**
 - `:core:designsystem` は `:core:model` に依存しない。モデル型を描画するコンポーネントと UI 補助（`UiText` / `BrowserLauncher` 等）は `:core:ui` に置く
-- `:core:model` は **純粋な Entity** のみ（Room / Retrofit 依存を持ち込まない）
+- `:core:model` は **純粋な Entity** のみ。Android 依存を持たない Kotlin/JVM モジュール（`android.*` / `androidx.*` を import しない。Room / Retrofit 依存も持ち込まない）
+- `:core:common` は `@Dispatcher` と `@ApplicationScope`（アプリ寿命の CoroutineScope）の置き場。他の `:core` モジュールには依存しない
 - チュートリアルの表示済みフラグの永続化は `:core:tutorial`（Compose 非依存）、コーチマークの描画とステップ管理（`CoachMarkManager` 等）は `:core:designsystem/tutorial/` に配置
 
 ## テスト

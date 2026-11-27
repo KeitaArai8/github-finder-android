@@ -27,7 +27,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.githubfinder.core.data.repository.FavoriteStore
 import com.example.githubfinder.core.data.repository.SearchHistoryRepository
 import com.example.githubfinder.core.data.repository.SearchRepository
-import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.GitHubRepo
 import com.example.githubfinder.core.model.RepositoryDisplayItem
 import com.example.githubfinder.core.ui.UiText
@@ -241,9 +240,13 @@ class SearchViewModel @Inject constructor(
         _userMessages.update { it + UserMessage(id = nextMessageID++, text = text) }
     }
 
-    /** 1 ページ目を検索する。[refresh] が true のときはキャッシュを読まずに再取得する（プル・トゥ・リフレッシュ用）。 */
+    /**
+     * 1 ページ目を検索する。[refresh] が true のときはキャッシュを読まずに再取得する（プル・トゥ・リフレッシュ用）。
+     * 一覧を表示中のリフレッシュでは Loading に切り替えず、一覧を出したまま取得する。失敗しても一覧は残し、通知で伝える。
+     */
     private suspend fun performSearch(currentQuery: String, refresh: Boolean = false) {
-        _phase.value = SearchPhase.Loading
+        val keepsList = refresh && _phase.value is SearchPhase.Loaded
+        if (!keepsList) _phase.value = SearchPhase.Loading
 
         Timber.tag(TAG).i("Search started: query=%s, page=1", currentQuery)
         try {
@@ -261,15 +264,12 @@ class SearchViewModel @Inject constructor(
             } else {
                 SearchPhase.Loaded(items = result.items, currentPage = 1, hasNextPage = result.hasNextPage)
             }
-        } catch (e: AppError) {
-            Timber.tag(TAG).w(e, "Search failed (AppError)")
-            _phase.value = SearchPhase.Error(message = e.toUiText())
         } catch (e: CancellationException) {
             // キャンセルは失敗ではない。Error 状態にせず呼び出し元へ伝播させる
             throw e
         } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Search failed (unknown)")
-            _phase.value = SearchPhase.Error(message = e.toUiText())
+            Timber.tag(TAG).w(e, "Search failed")
+            if (keepsList) enqueueMessage(e.toUiText()) else _phase.value = SearchPhase.Error(message = e.toUiText())
         }
     }
 

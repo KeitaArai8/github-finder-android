@@ -28,7 +28,7 @@ class AndroidLibraryComposeConventionPlugin : Plugin<Project> {
                 compose = true
             }
 
-            configureAndroidCompose(extension)
+            configureAndroidCompose()
         }
     }
 }

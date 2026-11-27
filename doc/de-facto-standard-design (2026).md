@@ -78,11 +78,16 @@ class ItemViewModel @Inject constructor(
 ```
 
 ```kotlin
+// Route が ViewModel から State を集め、Screen は値だけを受け取る（Screen は ViewModel を知らない）
 @Composable
-fun ItemScreen(viewModel: ItemViewModel) {
+fun ItemRoute(viewModel: ItemViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ItemScreen(uiState = state)
+}
 
-    when (val current = state) {
+@Composable
+fun ItemScreen(uiState: UiState) {
+    when (val current = uiState) {
         UiState.Loading -> CircularProgressIndicator()
         is UiState.Loaded -> LazyColumn {
             items(current.items) {
@@ -145,7 +150,7 @@ fun ItemScreen(viewModel: ItemViewModel) {
 
 ### 反映した個別判断
 
-- **Navigation 3**：安定版で NiA も移行済みのため基準にした。単一の `rememberNavBackStack` に NiA の top-level 規則（開始タブでリセット・他タブは末尾へ・再タップは no-op）を再現する。Favorite の ViewModel はタブ切替（Search へ戻る）で release される
+- **Navigation 3**：安定版で NiA も移行済みのため基準にした。NiA の `NavigationState` / 公式レシピ「Multiple back stacks」と同じく、タブの履歴（top-level stack）とタブごとの back stack を `rememberNavBackStack` で持ち、decorator（保存可能な UI 状態・ViewModelStore）を stack ごとに付ける（`app` の `NavigationState.kt`）。タブ選択は NiA の top-level 規則（開始タブでリセット・他タブは末尾へ・再タップは no-op）。タブを切り替えても各タブの ViewModel とスクロール位置は残る。タブの中でさらに画面を積む遷移は無いため、NiA の `Navigator`（`goToKey` / `clearSubStack`）や `core:navigation` モジュールは持たない
 - **一度きりの通知は state で持つ**：公式 UI events ガイドに従い `userMessages` + `userMessageShown(id)` にした。Undo の実削除は ViewModel が担い、破棄時は `onCleared` が残りを commit する（README「一度きりの通知も State として持つ」参照）
 - **`material-icons-extended`**：更新が止まっているため、Material Symbols の vector drawable と `AppIcons`（NiA の NiaIcons 相当）に置き換える
 - **リリースビルドのスモーク（R8 後の実機確認）**：本番用の署名設定は未整備のため、debug keystore を一時的に注入して署名する。build.gradle.kts には署名用の分岐を持たせない
@@ -164,7 +169,7 @@ fun ItemScreen(viewModel: ItemViewModel) {
 
 公式・NiA と異なる実装を、理由つきで意図的に残している。
 
-1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：タブ復帰時の Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
+1. **FavoriteStore は app スコープの `stateIn(Eagerly)`、ViewModel は `init` でパイプラインを開始する**（`stateIn(WhileSubscribed(5_000))` ではない）：お気に入り画面の ViewModel が作られた時点（タブを初めて開いたとき）で読み込み済みの値を渡して Loading のちらつきを避け、`onCleared` の Undo commit 経路を保つため
 2. **Undo 削除の commit は ViewModel から `@ApplicationScope` で起動する**（Repository の suspend 関数内で外部スコープを使う形ではない）：ViewModel 破棄後も commit を完了させる所有者を ViewModel 側に置くため
 3. **NetworkMonitor は INTERNET + VALIDATED で判定する**（NiA は INTERNET のみ）：公式ガイドに従い、疎通できない接続をオンラインと誤判定しないため
 4. **NetworkMonitor は `registerDefaultNetworkCallback` で単一の状態を持つ**（NiA は `registerNetworkCallback` でネットワークの集合を自前管理する）：このアプリが知りたいのは「いま使われている接続で通信できるか」だけで、複数ネットワークの追跡は不要なため。Wi-Fi とモバイルの切り替えは OS がデフォルトネットワークとして選ぶので、新しいデフォルトの通知で状態が更新される。切り替え時に旧ネットワークの `onLost` が遅れて届いても、現在のネットワークと一致しなければ無視する

@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +40,7 @@ private const val TERMS_URL = "https://www.apple.com/legal/internet-services/itu
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val appVersion = remember(context) { getAppVersion(context) }
 
     Scaffold(
         modifier = modifier,
@@ -78,7 +80,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 Text(stringResource(R.string.settings_version), modifier = Modifier.padding(start = 16.dp))
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    getAppVersion(context),
+                    appVersion,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

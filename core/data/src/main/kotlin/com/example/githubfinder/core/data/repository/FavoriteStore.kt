@@ -5,7 +5,7 @@
  * 状態の SSOT は Room（Repository.favorites の Flow）。ここは手製キャッシュを持たず、
  * アプリ寿命スコープで Flow を購読して StateFlow として保持するだけの薄い橋渡し。
  * add / remove は Repository へ委譲するだけで、Room の emission が favorites / favoriteIDs を更新する。
- * Eagerly にしているのは、タブ復帰時に初期値を経由する Loading 点滅を避け、
+ * Eagerly にしているのは、お気に入り画面を初めて開いたときに初期値を経由する Loading 点滅を避け、
  * SearchViewModel が購読する favoriteIDs を常に最新に保つため。
  *
  * favorites は「Room の最初の emission が届くまで null」。空リストを初期値にすると、

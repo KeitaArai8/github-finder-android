@@ -1,7 +1,7 @@
 /*
  * Abstract:
  * お気に入り一覧の状態管理を担当するViewModel。UDF単一状態原則に従い、
- * FavoriteUiState 1つに全状態（フェーズ・リフレッシュ・編集モード・選択）を集約して公開する。
+ * FavoriteUiState 1つに全状態（フェーズ・編集モード・選択）を集約して公開する。
  *
  * お気に入りの持ち主は FavoriteStore（Room）なので、ここには一覧のコピーを保存しない。
  * ViewModel が持つのは画面自身の操作状態（OwnedState）だけで、
@@ -91,23 +91,12 @@ class FavoriteViewModel @Inject constructor(
     }
 
     /**
-     * プル・トゥ・リフレッシュ。Room が SSOT で常に最新のため再取得は不要で、
-     * スピナーを開いて閉じるだけ。
-     */
-    fun refresh() {
-        viewModelScope.launch {
-            setRefreshing(true)
-            setRefreshing(false)
-        }
-    }
-
-    /**
      * スワイプ削除のエントリーポイント（Gmail スタイル楽観的更新）。
      *
      * 1. pendingDeleteIDs に追加 → UI から即座に行が消える（displayedFavorites から除外）
      * 2. undoID 付きの FavoriteUserMessage を積む → SnackBar に「元に戻す」を表示
      * 3. [UNDO_WINDOW_MS] の猶予タイマーを ViewModel のスコープで開始し、経過したら [commitDelete]。
-     *    猶予中に ViewModel が破棄される場合（タブ切替で back stack から外れる等）は [onCleared] が残りを即 commit する
+     *    タブを切り替えても ViewModel は残るのでタイマーはそのまま進む。猶予中に ViewModel が破棄される場合（Activity の終了等）は [onCleared] が残りを即 commit する
      * 4. View で「元に戻す」が押されたら [undoDelete] がタイマーをキャンセルして行を復元
      *
      * Room からの実削除は猶予経過まで遅延される。
@@ -126,7 +115,7 @@ class FavoriteViewModel @Inject constructor(
     }
 
     /**
-     * 画面を離れて ViewModel が破棄されると Undo の機会も終わるため、猶予中の削除はここで即 commit する。
+     * ViewModel が破棄されると Undo の機会も終わるため、猶予中の削除はここで即 commit する。
      * viewModelScope は既にキャンセルされるので、アプリ寿命スコープで実行する。
      */
     override fun onCleared() {
@@ -265,10 +254,6 @@ class FavoriteViewModel @Inject constructor(
     /** 現在の入力（favorites + owned）から Loaded を導出する。ハンドラが uiState の購読有無に依存しないための入口。 */
     private fun currentLoaded(): FavoriteUiState.Loaded? = deriveUiState(favoriteStore.favorites.value, _owned.value) as? FavoriteUiState.Loaded
 
-    private fun setRefreshing(isRefreshing: Boolean) {
-        updateOwned { it.copy(isRefreshing = isRefreshing) }
-    }
-
     /** Loaded（お気に入りが 1 件以上）の間だけ操作状態を更新する。Loading / Empty 中の操作は無視する。 */
     private fun updateOwned(transform: (OwnedState) -> OwnedState) {
         if (favoriteStore.favorites.value.isNullOrEmpty()) return
@@ -299,7 +284,6 @@ class FavoriteViewModel @Inject constructor(
 
 /** ViewModel が持つ操作状態。お気に入り一覧（持ち主は FavoriteStore）は含めない。 */
 private data class OwnedState(
-    val isRefreshing: Boolean = false,
     val isEditMode: Boolean = false,
     val selectedIDs: Set<Int> = emptySet(),
     val isDeleteConfirmationShown: Boolean = false,
@@ -344,7 +328,6 @@ private fun deriveUiState(favorites: List<Favorite>?, owned: OwnedState): Favori
     }
     return FavoriteUiState.Loaded(
         favorites = favorites,
-        isRefreshing = owned.isRefreshing,
         isEditMode = owned.isEditMode,
         selectedIDs = owned.selectedIDs,
         isDeleteConfirmationShown = owned.isDeleteConfirmationShown,

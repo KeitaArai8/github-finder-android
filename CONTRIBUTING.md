@@ -81,7 +81,7 @@ Closes #42
 :app → :feature:{search, favorite, settings, widget, tutorial}, :core:{data, designsystem}
 :feature:{search, favorite, settings, tutorial} → :core:{model, designsystem, ui}   （feature 用 Convention Plugin が全 feature に付与）
 :feature:{search, favorite, tutorial} → :core:data
-:feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみ。:core:designsystem / :core:ui には依存しない）
+:feature:widget → :core:{model, data}   （Convention Plugin は library + hilt のみで、Glance の @Composable 用に Compose Compiler plugin を直接適用する。:core:designsystem / :core:ui には依存しない）
 :core:data → :core:{common, model, network, database, datastore}   （:core:common は api で公開）
 :core:{network, database} → :core:model
 :core:ui → :core:{model, designsystem}   （どちらも api で公開）

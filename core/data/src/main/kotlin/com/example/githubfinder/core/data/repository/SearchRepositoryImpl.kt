@@ -7,12 +7,11 @@ package com.example.githubfinder.core.data.repository
 
 import com.example.githubfinder.core.data.datasource.SearchCacheDataSource
 import com.example.githubfinder.core.data.model.asExternalModel
-import com.example.githubfinder.core.model.AppError
 import com.example.githubfinder.core.model.SearchResult
+import com.example.githubfinder.core.network.SEARCH_PER_PAGE
 import com.example.githubfinder.core.network.datasource.GitHubRemoteDataSource
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
 
 @Singleton
 internal class SearchRepositoryImpl @Inject constructor(
@@ -20,23 +19,14 @@ internal class SearchRepositoryImpl @Inject constructor(
     private val cacheDataSource: SearchCacheDataSource,
 ) : SearchRepository {
 
-    private val perPage = 30
-
     override suspend fun search(query: String, page: Int, refresh: Boolean): SearchResult {
         if (!refresh) cacheDataSource.get(query, page)?.let { return it }
 
-        val dto = try {
-            remoteDataSource.searchRepositories(query, page)
-        } catch (e: AppError) {
-            throw e
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            throw AppError.Unknown(e.message ?: "Unknown error")
-        }
+        // 失敗は GitHubRemoteDataSource が AppError に変換済みなので、ここでは包み直さない
+        val dto = remoteDataSource.searchRepositories(query, page)
 
         val items = dto.items.map { it.asExternalModel() }
-        val hasNextPage = page * perPage < dto.totalCount
+        val hasNextPage = page * SEARCH_PER_PAGE < dto.totalCount
         val result = SearchResult(
             totalCount = dto.totalCount,
             items = items,

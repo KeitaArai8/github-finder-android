@@ -44,7 +44,6 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,7 +83,6 @@ fun FavoriteRoute(
         userMessages = userMessages,
         onUserMessageShown = viewModel::userMessageShown,
         onUndoDelete = viewModel::undoDelete,
-        onRefresh = viewModel::refresh,
         onRemoveFavorite = viewModel::removeFavorite,
         onSetFilterLanguage = viewModel::setFilterLanguage,
         onSetSortKey = viewModel::setSortKey,
@@ -106,7 +104,6 @@ internal fun FavoriteScreen(
     userMessages: List<FavoriteUserMessage>,
     onUserMessageShown: (Long) -> Unit,
     onUndoDelete: (Int) -> Unit,
-    onRefresh: () -> Unit,
     onRemoveFavorite: (Favorite) -> Unit,
     onSetFilterLanguage: (String?) -> Unit,
     onSetSortKey: (FavoriteSortKey) -> Unit,
@@ -187,47 +184,41 @@ internal fun FavoriteScreen(
             is FavoriteUiState.Loaded -> {
                 val context = LocalContext.current
                 val displayed = state.displayedFavorites
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.padding(padding),
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // 編集モード中はフィルタ操作を抑止（誤操作防止）
-                        if (!state.isEditMode) {
-                            LanguageFilterBar(
-                                languages = state.availableLanguages,
-                                selected = state.filterLanguage,
-                                onSelect = onSetFilterLanguage,
-                            )
-                        }
-                        if (displayed.isEmpty()) {
-                            // フィルタ後 0 件 — DesignSystem の EmptyStateView で他の Empty と統一感を出す
-                            EmptyStateView(
-                                icon = AppIcons.FilterList,
-                                title = stringResource(R.string.favorite_filter_no_match_title),
-                                description = stringResource(R.string.favorite_filter_no_match_description),
-                            )
-                        } else {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(displayed, key = { it.id }) { favorite ->
-                                    FavoriteRow(
-                                        favorite = favorite,
-                                        isEditMode = state.isEditMode,
-                                        isSelected = state.selectedIDs.contains(favorite.id),
-                                        onDismiss = { onRemoveFavorite(favorite) },
-                                        onRowTap = {
-                                            if (state.isEditMode) {
-                                                onToggleSelection(favorite.id)
-                                            } else {
-                                                launchCustomTab(context, githubUrlFor(favorite.fullName))
-                                            }
-                                        },
-                                        onShare = {
-                                            context.shareRepository(favorite.fullName)
-                                        },
-                                    )
-                                }
+                Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                    // 編集モード中はフィルタ操作を抑止（誤操作防止）
+                    if (!state.isEditMode) {
+                        LanguageFilterBar(
+                            languages = state.availableLanguages,
+                            selected = state.filterLanguage,
+                            onSelect = onSetFilterLanguage,
+                        )
+                    }
+                    if (displayed.isEmpty()) {
+                        // フィルタ後 0 件 — DesignSystem の EmptyStateView で他の Empty と統一感を出す
+                        EmptyStateView(
+                            icon = AppIcons.FilterList,
+                            title = stringResource(R.string.favorite_filter_no_match_title),
+                            description = stringResource(R.string.favorite_filter_no_match_description),
+                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(displayed, key = { it.id }) { favorite ->
+                                FavoriteRow(
+                                    favorite = favorite,
+                                    isEditMode = state.isEditMode,
+                                    isSelected = state.selectedIDs.contains(favorite.id),
+                                    onDismiss = { onRemoveFavorite(favorite) },
+                                    onRowTap = {
+                                        if (state.isEditMode) {
+                                            onToggleSelection(favorite.id)
+                                        } else {
+                                            launchCustomTab(context, githubUrlFor(favorite.fullName))
+                                        }
+                                    },
+                                    onShare = {
+                                        context.shareRepository(favorite.fullName)
+                                    },
+                                )
                             }
                         }
                     }
